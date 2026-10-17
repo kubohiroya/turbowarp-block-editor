@@ -1,3 +1,5 @@
+import type {DescendantEditorHost} from './descendant-types.js';
+
 export const EDITOR_API_VERSION = 1 as const;
 
 export type LiteralValue = string | number | boolean;
@@ -33,6 +35,8 @@ export interface CommitRequest {
 }
 
 export interface BlockEditorHost {
+  /** Optional additional capability; the single-block contract remains unchanged. */
+  readonly descendants?: DescendantEditorHost;
   /** Return null for missing, inactive or non-editable blocks. Never evaluate reporters. */
   readBlock(reference: BlockReference): BlockSnapshot | null;
   /**

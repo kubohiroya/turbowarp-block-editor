@@ -90,7 +90,7 @@ draft-07 を基本とし、未解決の外部参照や不正な schema は登録
 
 初版は単一ブロックの編集です。`read` は初期下書き、`validate` は検証、`createPatch` は変更案だけを扱い、実際の書き込みはホストの `commit` に集約します。本文 UI は外側のモーダルや HTML form を所有しません。標準フォームも本文を `div` として描画します。
 
-[次版 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2) の階層編集では、ノードごとの検証・変更案を集め、全体を1回で commit する設計が必要です。子セッションの `save()` を順に呼ぶ方法では原子性を保証できません。子孫探索、構造変更、複数ブロック commit は現行 API の対応範囲に含めず、追加 capability/API として設計します。機能の世代と `apiVersion: 1` を混同せず、未実装の機能を対応済みと宣言しません。
+[次版 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2) の階層編集は、[追加 capability と階層セッション](descendants.md) として実装しています。ノードごとの検証・変更案を集め、全体を1回で commit します。単一ブロックの `EditorSession` / `commit` は維持し、子セッションの `save()` を順に呼ぶ方法では代用しません。構造変更は対象外で、実 GUI の探索・一括適用は scratch-gui #2 で接続する契約です。機能の世代と `apiVersion: 1` を混同せず、未実装・未結合のホスト機能を対応済みとは扱いません。
 
 ## 検証状況と後続
 
