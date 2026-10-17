@@ -6,7 +6,7 @@ TurboWarp の機能拡張ブロックに専用編集 UI を関連づける実験
 
 ## 標準の JSON Schema エディター
 
-JSON を格納する文字列引数と JSON Schema を宣言すると、react-jsonschema-form がフォームを生成します。
+JSON/YAML を格納する文字列引数と JSON Schema を宣言すると、react-jsonschema-form がフォームを生成します。
 GUI の登録 API は `schema` を検出して標準エディターを選びます。本文 UI の実装は不要です。
 
 ```js
@@ -16,6 +16,7 @@ const unregister = Scratch.gui.blockEditors.register({
   editorId: 'properties',
   opcodes: ['story_scene'],
   argument: 'PROPERTIES',
+  format: 'yaml', // Omit for JSON compatibility.
   schema: {
     type: 'object',
     properties: {
@@ -35,6 +36,17 @@ const unregister = Scratch.gui.blockEditors.register({
 スキーマの検証は AJV 8、描画は React 16.14 に対応する RJSF 5.24.13 を使用します。
 対応の基本は JSON Schema draft-07 とローカル参照です。外部参照の取得は行わず、解決できない参照は登録時に拒否します。
 `default` は下書きへ補完し、保存するまで元ブロックへ書き込みません。
+
+`format: 'json' | 'yaml'` を指定できます。省略時は従来どおり JSON です。
+YAML はホスト側の `yaml` 2.x で単一の YAML 1.2 core 文書を decode し、
+JSON と同じ Schema で検証した後、指定形式で encode します。
+文字列キーの mapping、sequence、有限数値・文字列・真偽値・null が対象です。
+重複キー、非文字列キー、独自 tag、非有限数値、循環 alias、複数文書、YAML 1.1 は拒否し、元の引数は変更しません。
+非循環 alias は制限付きで展開します。merge key の特別な展開は行いません。
+変更なしの保存はコメント・空白を含む元文字列を保持し、commit しません。
+変更がある保存はデータの意味を保持して再出力しますが、コメント・引用符・anchor・キー順の保持は保証しません。
+フォームで編集しない追加プロパティも、Schema が許可する限り保持します。
+GUI の webpack 4 では RJSF と同様に `yaml` の browser JS を Babel 変換対象に含めてください。
 
 ## API とトランザクション
 
@@ -68,7 +80,7 @@ pnpm test
 GUI の [起動・制約・検証手順](../scratch-gui/docs/block-editor.md) に従ってください。
 既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
 
-現在の GUI 適用範囲は、配置済みブロックの通常の text shadow に保存された JSON 文字列です。
+現在の GUI 適用範囲は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列です。
 reporter、メニュー、独自 validator 付きフィールドは書き換えません。
 `.sb3` の実保存と標準 `project_url` 経路での再読込を確認済みです。OS のファイル選択による再読込、アイコンがないブロックへの追加表示、翻訳・全テーマは後続の確認項目です。
 

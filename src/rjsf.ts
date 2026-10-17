@@ -6,6 +6,8 @@ import * as RjsfAjv from '@rjsf/validator-ajv8';
 import type {FormProps, IChangeEvent} from '@rjsf/core';
 import type {RJSFSchema, UiSchema} from '@rjsf/utils';
 import {cloneJson} from './data.js';
+import {decodeSource, encodeSource, sameData} from './codec.js';
+import type {SourceFormat} from './codec.js';
 import {EDITOR_API_VERSION} from './types.js';
 import type {
   BlockSnapshot, EditorDefinition, JsonObject, JsonValue, ValidationIssue
@@ -26,8 +28,10 @@ export interface SchemaEditorOptions {
   readonly extensionId: string;
   readonly editorId: string;
   readonly opcodes: readonly string[];
-  /** The string argument that persists the JSON value. */
+  /** The string argument that persists the JSON-compatible value. */
   readonly argument: string;
+  /** Defaults to JSON for compatibility with existing registrations. */
+  readonly format?: SourceFormat;
   readonly schema: RJSFSchema;
   readonly uiSchema?: JsonObject;
   /** Optional business validation, always run after schema validation when saving. */
@@ -36,12 +40,14 @@ export interface SchemaEditorOptions {
   ): readonly ValidationIssue[] | Promise<readonly ValidationIssue[]>;
 }
 
-/** Build an editor with JSON serialization, schema validation and the standard RJSF body. */
+/** Build an editor with JSON/YAML serialization, schema validation and the standard RJSF body. */
 export function createSchemaEditor(options: SchemaEditorOptions): EditorDefinition {
   if (options.apiVersion !== EDITOR_API_VERSION || typeof options.argument !== 'string' || !options.argument) {
     throw new TypeError('A supported API version and JSON argument name are required.');
   }
   const argument = options.argument;
+  const format = options.format ?? 'json';
+  if (format !== 'json' && format !== 'yaml') throw new TypeError('Unsupported source format.');
   const schema = cloneJson(options.schema as JsonObject) as RJSFSchema;
   const uiSchema = options.uiSchema ? cloneJson(options.uiSchema) as UiSchema<unknown> : {};
   const validateData = options.validateData;
@@ -73,16 +79,26 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
     read: snapshot => {
       const slot = snapshot.arguments[argument];
       if (!slot || slot.kind !== 'literal' || typeof slot.value !== 'string') {
-        throw new TypeError('Schema editors require a literal JSON string argument.');
+        throw new TypeError('Schema editors require a literal JSON/YAML string argument.');
       }
-      return {data: JSON.parse(slot.value) as JsonValue};
+      return {data: decodeSource(slot.value, format)};
     },
     validate: (draft, snapshot) => {
       const data = dataFor(draft);
       const issues = issuesFor(data);
       return issues.length || !validateData ? issues : validateData(cloneJson(data), snapshot);
     },
-    createPatch: draft => [{argument, value: JSON.stringify(dataFor(draft))}],
+    createPatch: (draft, snapshot) => {
+      const data = dataFor(draft);
+      const slot = snapshot.arguments[argument];
+      if (!slot || slot.kind !== 'literal' || typeof slot.value !== 'string') {
+        throw new TypeError('Missing source string.');
+      }
+      // A save without data changes preserves the exact source, comments and undo history.
+      const value = sameData(data, decodeSource(slot.value, format))
+        ? slot.value : encodeSource(data, format);
+      return [{argument, value}];
+    },
     mount: (container, context) => {
       let active = true;
       let scheduled = false;
