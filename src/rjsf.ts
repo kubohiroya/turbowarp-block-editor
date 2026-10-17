@@ -22,6 +22,7 @@ function moduleExports<T>(namespace: T): T {
 const Form = moduleExports(RjsfCore).default as unknown as React.ComponentType<FormProps<unknown>>;
 const {getDefaultFormState} = moduleExports(RjsfUtils);
 const {customizeValidator} = moduleExports(RjsfAjv);
+let nextViewId = 0;
 
 export interface SchemaEditorOptions {
   readonly apiVersion: typeof EDITOR_API_VERSION;
@@ -81,7 +82,9 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
       if (!slot || slot.kind !== 'literal' || typeof slot.value !== 'string') {
         throw new TypeError('Schema editors require a literal JSON/YAML string argument.');
       }
-      return {data: decodeSource(slot.value, format)};
+      const data = decodeSource(slot.value, format);
+      // Initialize the session draft once; remounting must not reset edits or errors.
+      return {data: formValue(getDefaultFormState<unknown>(validator, schema, data, schema))};
     },
     validate: (draft, snapshot) => {
       const data = dataFor(draft);
@@ -103,15 +106,22 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
       let active = true;
       let scheduled = false;
       let unsubscribe = () => {};
-      const initial = getDefaultFormState<unknown>(validator, schema, dataFor(context.getDraft()), schema);
-      context.setDraft({data: formValue(initial)});
-      context.setValidationIssues(issuesFor(dataFor(context.getDraft())));
+      const idPrefix = `block-editor-${++nextViewId}`;
+      if (context.getState().issues.length === 0) {
+        context.setValidationIssues(issuesFor(dataFor(context.getDraft())));
+      }
       const render = () => {
         if (!active) return;
         const state = context.getState();
         const props = {
-          schema, uiSchema, validator,
+          schema, uiSchema, validator, idPrefix,
           formData: dataFor(context.getDraft()),
+          // Defaults belong to read(), not subsequent renders or remounts.
+          experimental_defaultFormStateBehavior: {
+            emptyObjectFields: 'skipDefaults' as const,
+            arrayMinItems: {populate: 'never' as const},
+            constAsDefaults: 'never' as const
+          },
           tagName: 'div' as const,
           liveValidate: true,
           showErrorList: false as const,

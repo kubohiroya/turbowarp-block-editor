@@ -1,7 +1,7 @@
 import {captureReference, captureSnapshot, cloneJson, isLiteral, sameSnapshot} from './data.js';
 import {BlockEditorConflictError} from './types.js';
 import type {
-  BlockEditorHost, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
+  BlockEditorHost, BlockReference, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
   LiteralArgumentChange, SaveResult, SessionState, SessionStatus, ValidationIssue
 } from './types.js';
 
@@ -23,6 +23,11 @@ export class EditorSession implements EditorViewContext {
     this.#snapshot = captureSnapshot(snapshot, captureReference(snapshot));
     this.#host = host;
     this.#draft = this.#copyDraft(definition.read(this.#snapshot));
+  }
+
+  /** Stable instance identity remains available after the session closes. */
+  get reference(): BlockReference {
+    return captureReference(this.#snapshot);
   }
 
   getDraft(): JsonObject {
@@ -63,25 +68,51 @@ export class EditorSession implements EditorViewContext {
     }
     const mount = this.#definition.mount;
     if (!mount) throw new Error('No editor view is registered.');
+    let active = true;
+    const subscriptions = new Set<() => void>();
+    const assertMounted = () => {
+      if (!active) throw new Error('The editor view is unmounted.');
+    };
+    const release = () => {
+      active = false;
+      for (const unsubscribe of subscriptions) unsubscribe();
+      subscriptions.clear();
+    };
     const context: EditorViewContext = Object.freeze({
       getDraft: () => this.getDraft(),
-      setDraft: (draft: JsonObject) => this.setDraft(draft),
-      setValidationIssues: (issues: readonly ValidationIssue[]) => this.setValidationIssues(issues),
+      setDraft: (draft: JsonObject) => { assertMounted(); this.setDraft(draft); },
+      setValidationIssues: (issues: readonly ValidationIssue[]) => {
+        assertMounted();
+        this.setValidationIssues(issues);
+      },
       getState: () => this.getState(),
-      subscribe: (listener: () => void) => this.subscribe(listener)
+      subscribe: (listener: () => void) => {
+        assertMounted();
+        const unsubscribe = this.subscribe(() => { if (active) listener(); });
+        const remove = () => { subscriptions.delete(remove); unsubscribe(); };
+        subscriptions.add(remove);
+        return remove;
+      }
     });
     this.#mounting = true;
     let cleanup: () => void;
-    try { cleanup = mount(container, context); } finally { this.#mounting = false; }
-    if (typeof cleanup !== 'function') throw new TypeError('mount() must return a cleanup function.');
-    if (this.#status !== 'editing') {
+    try {
+      cleanup = mount(container, context);
+      if (typeof cleanup !== 'function') throw new TypeError('mount() must return a cleanup function.');
+    } catch (error) {
+      release();
+      throw error;
+    } finally {
+      this.#mounting = false;
+    }
+    if (this.#status !== 'editing' && this.#status !== 'saving') {
+      release();
       cleanup();
       return () => {};
     }
-    let active = true;
     const unmount = () => {
       if (!active) return;
-      active = false;
+      release();
       this.#unmount = undefined;
       cleanup();
     };

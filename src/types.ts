@@ -59,10 +59,12 @@ export interface SessionState {
 
 export interface EditorViewContext {
   getDraft(): JsonObject;
+  /** Updates are rejected after this view unmounts, even when its session stays open. */
   setDraft(draft: JsonObject): void;
   /** Report live UI validation; save() always independently validates again. */
   setValidationIssues(issues: readonly ValidationIssue[]): void;
   getState(): SessionState;
+  /** The session releases view subscriptions on unmount, including failed mounts. */
   subscribe(listener: () => void): () => void;
 }
 
