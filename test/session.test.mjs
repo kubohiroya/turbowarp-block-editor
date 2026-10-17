@@ -346,6 +346,105 @@ test('closing during mount immediately releases the returned view', () => {
   assert.equal(cleanups, 1);
 });
 
+test('a save started during mount keeps the view until validation and commit finish', async () => {
+  let s;
+  let saving;
+  let validate;
+  let cleanups = 0;
+  const f = fixture({
+    validate: () => new Promise(resolve => { validate = resolve; }),
+    mount: () => {
+      saving = s.save();
+      return () => { cleanups++; };
+    }
+  });
+  s = f.open();
+  s.setDraft({properties: 'changed'});
+  const unmount = s.mount({});
+  assert.equal(s.getState().status, 'saving');
+  assert.equal(cleanups, 0);
+  assert.equal(s.cancel(), false);
+  validate([]);
+  assert.equal((await saving).status, 'saved');
+  assert.equal(f.calls(), 1);
+  unmount();
+  assert.equal(cleanups, 1);
+});
+
+test('unmount retains the draft and errors while invalidating only that view', async () => {
+  const contexts = [];
+  let viewNotifications = 0;
+  let hostNotifications = 0;
+  const f = fixture({mount: (_container, context) => {
+    contexts.push(context);
+    context.subscribe(() => { viewNotifications++; });
+    return () => {};
+  }});
+  const s = f.open();
+  s.subscribe(() => { hostNotifications++; });
+  const unmount = s.mount({});
+  contexts[0].setDraft({properties: 'unfinished'});
+  contexts[0].setValidationIssues([{message: 'Fix the field.', path: 'properties'}]);
+  const state = s.getState();
+  const notifications = viewNotifications;
+  unmount();
+  assert.deepEqual(s.getDraft(), {properties: 'unfinished'});
+  assert.deepEqual(s.getState(), state);
+  assert.throws(() => contexts[0].setDraft({properties: 'late result'}), /unmounted/);
+  assert.throws(() => contexts[0].setValidationIssues([]), /unmounted/);
+  assert.throws(() => contexts[0].subscribe(() => {}), /unmounted/);
+  const unmountAgain = s.mount({});
+  contexts[1].setDraft({properties: 'corrected'});
+  assert.equal(viewNotifications, notifications + 1);
+  assert.equal(hostNotifications, 3);
+  assert.equal(f.calls(), 0);
+  unmountAgain();
+  assert.equal((await s.save()).status, 'saved');
+  assert.equal(viewNotifications, notifications + 1);
+  assert.equal(f.snapshot().arguments.PROPERTIES.value, 'corrected');
+});
+
+test('mount failure releases view subscriptions and allows a fresh view', () => {
+  let failedContext;
+  let notifications = 0;
+  let fail = true;
+  const f = fixture({mount: (_container, context) => {
+    if (!fail) return () => {};
+    failedContext = context;
+    context.subscribe(() => { notifications++; });
+    throw new Error('Mount failed');
+  }});
+  const s = f.open();
+  assert.throws(() => s.mount({}), /Mount failed/);
+  s.setDraft({properties: 'retained'});
+  assert.equal(notifications, 0);
+  assert.throws(() => failedContext.setDraft({properties: 'stale'}), /unmounted/);
+  fail = false;
+  s.mount({});
+  assert.deepEqual(s.getDraft(), {properties: 'retained'});
+  s.dispose();
+});
+
+test('sessions expose immutable instance references and keep separate drafts', async () => {
+  const f = fixture();
+  const secondBlock = {...structuredClone(f.snapshot()), blockId: 'block-2'};
+  const host = {...f.host, readBlock: ref => ref.blockId === secondBlock.blockId
+    ? secondBlock : f.host.readBlock(ref)};
+  const first = f.registry.open(reference, host);
+  const second = f.registry.open(secondBlock, host);
+  assert.deepEqual(first.reference, reference);
+  assert.deepEqual(second.reference, {targetId: reference.targetId, blockId: 'block-2'});
+  assert.throws(() => { first.reference.blockId = 'block-2'; }, TypeError);
+  assert.throws(() => { first.reference = second.reference; }, TypeError);
+  first.setDraft({properties: 'first'});
+  second.setDraft({properties: 'second'});
+  assert.equal(first.cancel(), true);
+  assert.equal(second.getDraft().properties, 'second');
+  assert.deepEqual(first.reference, reference);
+  second.dispose();
+  assert.equal(f.calls(), 0);
+});
+
 test('unregistered editors stop opening sessions while an existing session keeps its definition', () => {
   const f = fixture();
   const s = f.open();

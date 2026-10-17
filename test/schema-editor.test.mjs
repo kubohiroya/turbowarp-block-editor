@@ -143,6 +143,85 @@ test('schema defaults affect only the draft until the user saves', async t => {
   assert.equal(f.block.arguments.PROPERTIES.value, '{"duration":2}');
 });
 
+test('remount preserves the session draft and business validation errors', async t => {
+  const f = fixture({validateData: () => [{message: 'Choose another label.', path: '.label'}]});
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { f.session.dispose(); container.remove(); });
+  let unmount;
+  await act(async () => { unmount = f.session.mount(container); });
+  await act(async () => {
+    Simulate.change(container.querySelector('input[type="text"]'), {target: {value: 'Forbidden'}});
+  });
+  await act(async () => {
+    assert.equal((await f.session.save()).status, 'invalid');
+  });
+  const draft = f.session.getDraft();
+  const state = f.session.getState();
+  await act(async () => { unmount(); });
+  assert.deepEqual(f.session.getDraft(), draft);
+  await act(async () => { f.session.mount(container); });
+  assert.deepEqual(f.session.getDraft(), draft);
+  assert.deepEqual(f.session.getState(), state);
+  assert.equal(container.querySelector('input[type="text"]').value, 'Forbidden');
+  assert.equal(f.committed(), 0);
+});
+
+test('cleared default values remain cleared across unmount and remount', async t => {
+  const f = fixture({schema: {type: 'object', properties: {
+    duration: {type: 'number', default: 2, minimum: 1}
+  }, required: ['duration']}}, '{}');
+  assert.deepEqual(f.session.getDraft(), {data: {duration: 2}});
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { f.session.dispose(); container.remove(); });
+  let unmount;
+  await act(async () => { unmount = f.session.mount(container); });
+  await act(async () => {
+    Simulate.change(container.querySelector('input[type="number"]'), {target: {value: ''}});
+  });
+  const draft = f.session.getDraft();
+  const state = f.session.getState();
+  assert.deepEqual(draft, {data: {}});
+  assert.equal(state.canSave, false);
+  await act(async () => { unmount(); });
+  await act(async () => { f.session.mount(container); });
+  assert.deepEqual(f.session.getDraft(), draft);
+  assert.deepEqual(f.session.getState(), state);
+  assert.equal(container.querySelector('input[type="number"]').value, '');
+  assert.equal(f.block.arguments.PROPERTIES.value, '{}');
+  assert.equal(f.committed(), 0);
+});
+
+test('simultaneous standard forms have separate field IDs and drafts', async t => {
+  const first = fixture();
+  const second = fixture();
+  const containers = [document.createElement('div'), document.createElement('div')];
+  containers.forEach(container => document.body.appendChild(container));
+  t.after(() => {
+    act(() => { first.session.dispose(); second.session.dispose(); });
+    containers.forEach(container => container.remove());
+  });
+  await act(async () => {
+    first.session.mount(containers[0]);
+    second.session.mount(containers[1]);
+  });
+  const ids = containers.flatMap(container => [...container.querySelectorAll('[id]')].map(node => node.id));
+  assert.equal(new Set(ids).size, ids.length);
+  for (const container of containers) {
+    for (const label of container.querySelectorAll('label[for]')) {
+      assert.ok(container.contains(document.getElementById(label.htmlFor)));
+    }
+  }
+  await act(async () => {
+    Simulate.change(containers[0].querySelector('input[type="text"]'), {target: {value: 'First only'}});
+  });
+  assert.equal(first.session.getDraft().data.label, 'First only');
+  assert.equal(second.session.getDraft().data.label, 'Opening');
+  assert.equal(first.committed(), 0);
+  assert.equal(second.committed(), 0);
+});
+
 const yamlSource = '# Existing YAML, not JSON\nlabel: \'日本語「春」 & "scene"\'\nduration: 2\nbody: |\n  一行目\n  二行目\n';
 const yamlSchema = {...schema, additionalProperties: true};
 
