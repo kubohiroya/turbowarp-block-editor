@@ -3,6 +3,7 @@ import {after, test} from 'node:test';
 import {createRequire} from 'node:module';
 import {JSDOM} from 'jsdom';
 import {EditorRegistry} from '../dist/index.js';
+import {decodeSource} from '../dist/codec.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {url: 'http://localhost/'});
 for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node']) {
@@ -140,4 +141,87 @@ test('schema defaults affect only the draft until the user saves', async t => {
   assert.equal(f.committed(), 0);
   await act(async () => { assert.equal((await f.session.save()).status, 'saved'); });
   assert.equal(f.block.arguments.PROPERTIES.value, '{"duration":2}');
+});
+
+const yamlSource = '# Existing YAML, not JSON\nlabel: \'日本語「春」 & "scene"\'\nduration: 2\nbody: |\n  一行目\n  二行目\n';
+const yamlSchema = {...schema, additionalProperties: true};
+
+test('YAML reads existing source, retains unedited properties, and saves as YAML', async () => {
+  const f = fixture({format: 'yaml', schema: yamlSchema}, yamlSource);
+  const data = f.session.getDraft().data;
+  assert.equal(data.label, '日本語「春」 & "scene"');
+  assert.equal(data.body, '一行目\n二行目\n');
+  f.session.setDraft({data: {...data, duration: 3}});
+  assert.equal((await f.session.save()).status, 'saved');
+  const saved = f.block.arguments.PROPERTIES.value;
+  assert.deepEqual(decodeSource(saved, 'yaml'), {...data, duration: 3});
+  assert.throws(() => JSON.parse(saved));
+  assert.equal(f.committed(), 1);
+});
+
+test('unchanged JSON/YAML keeps the original bytes and creates no undo entry', async () => {
+  for (const [format, stored] of [['json', ' { "duration": 2, "label": "Opening" } '], ['yaml', yamlSource]]) {
+    const f = fixture({format, schema: yamlSchema}, stored);
+    const data = f.session.getDraft().data;
+    f.session.setDraft({data: Object.fromEntries(Object.entries(data).reverse())});
+    assert.deepEqual(await f.session.save(), {status: 'saved', changed: false});
+    assert.equal(f.committed(), 0);
+    assert.equal(f.block.arguments.PROPERTIES.value, stored);
+  }
+});
+
+test('invalid YAML/schema/format does not initialize or commit replacement values', async () => {
+  for (const source of ['label: [broken', 'label: one\nlabel: two', 'label: !custom name']) {
+    assert.throws(() => fixture({format: 'yaml'}, source));
+  }
+  assert.throws(() => fixture({format: 'toml'}), /Unsupported source format/);
+  const f = fixture({format: 'yaml', schema: yamlSchema}, yamlSource);
+  f.session.setDraft({data: {...f.session.getDraft().data, duration: 0}});
+  assert.equal((await f.session.save()).status, 'invalid');
+  assert.equal(f.block.arguments.PROPERTIES.value, yamlSource);
+  assert.equal(f.committed(), 0);
+  f.session.cancel();
+});
+
+test('YAML form disables invalid Save and async validation locks editing, saving and closing', async t => {
+  let finish;
+  const f = fixture({format: 'yaml', schema: yamlSchema,
+    validateData: () => new Promise(resolve => { finish = resolve; })}, yamlSource);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { f.session.dispose(); container.remove(); });
+  await act(async () => { f.session.mount(container); });
+  const number = container.querySelector('input[type="number"]');
+  await act(async () => { Simulate.change(number, {target: {value: '0'}}); });
+  assert.equal(f.session.getState().canSave, false);
+  assert.equal((await f.session.save()).status, 'invalid');
+  await act(async () => { Simulate.change(number, {target: {value: '4'}}); });
+  let saving;
+  await act(async () => { saving = f.session.save(); });
+  assert.equal(f.session.getState().status, 'saving');
+  assert.equal(container.querySelector('input[type="number"]').disabled, true);
+  assert.equal((await f.session.save()).status, 'busy');
+  assert.equal(f.session.cancel(), false);
+  assert.equal(f.session.dispose(), false);
+  assert.throws(() => f.session.setDraft({data: {}}), /not editable/);
+  assert.equal(f.block.arguments.PROPERTIES.value, yamlSource);
+  await act(async () => { finish([]); await saving; });
+  assert.equal(f.committed(), 1);
+  assert.equal(decodeSource(f.block.arguments.PROPERTIES.value, 'yaml').duration, 4);
+  assert.equal(container.childNodes.length, 0);
+});
+
+test('YAML Cancel retains exact source and unmounts the form', async t => {
+  const f = fixture({format: 'yaml', schema: yamlSchema}, yamlSource);
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => container.remove());
+  await act(async () => { f.session.mount(container); });
+  await act(async () => {
+    Simulate.change(container.querySelector('input[type="number"]'), {target: {value: '9'}});
+    assert.equal(f.session.cancel(), true);
+  });
+  assert.equal(container.childNodes.length, 0);
+  assert.equal(f.committed(), 0);
+  assert.equal(f.block.arguments.PROPERTIES.value, yamlSource);
 });

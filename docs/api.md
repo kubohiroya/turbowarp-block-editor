@@ -52,12 +52,16 @@
 ## 標準 JSON Schema フォーム
 
 `/rjsf` サブパスの `createSchemaEditor(options)` は通常の `EditorDefinition` を作ります。
-共通の識別情報に加え、JSON 文字列を保存する `argument`、`schema`、任意の JSON `uiSchema` を指定します。
+共通の識別情報に加え、JSON/YAML 文字列を保存する `argument`、`format: 'json' | 'yaml'`（省略時 JSON）、`schema`、任意の JSON `uiSchema` を指定します。
 GUI の `Scratch.gui.blockEditors.register()` は `mount` がなく `schema` がある定義にこれを適用します。
 `registerSchema()` による明示指定も可能です。登録解除は通常と同じです。
 
 JSON の object / array / scalar を内部の `{data: value}` に包んで下書きとして扱います。
-引数が文字列でない場合、不正な JSON の場合は起動を拒否します。
+引数が文字列でない場合、不正な JSON/YAML の場合は起動を拒否します。
+YAML は単一の YAML 1.2 core 文書、文字列キー、JSON 互換値に限定します。
+未解決 tag、重複キー、循環 alias、非有限数値等は診断可能な例外として拒否します。
+詳細な制約と書式保持の範囲は README を参照してください。
+データの変更がない保存は元文字列を返し、コメント・空白の正規化による Undo を作りません。
 RJSF が `default` を補完しても下書きだけを更新します。
 AJV の型変換・検証による default 補完・余剰プロパティの削除は無効です。
 draft-07 を基本とし、未解決の外部参照や不正な schema は登録時に拒否します。
