@@ -1,11 +1,16 @@
 import {captureReference, captureSnapshot} from './data.js';
 import {EditorSession} from './session.js';
+import {DescendantSession} from './descendants.js';
+import {supportsDescendantEditing} from './descendant-types.js';
+import type {DescendantLimits} from './descendant-types.js';
+import {captureSubtree, descendantLimits} from './subtree.js';
 import {EDITOR_API_VERSION} from './types.js';
 import type {BlockEditorHost, BlockReference, EditorDefinition, EditorDescriptor} from './types.js';
 
 export class EditorRegistry {
   #editors = new Map<string, EditorDefinition>();
   #opcodes = new Map<string, EditorDefinition>();
+  #changes = new Set<() => void>();
 
   register(definition: EditorDefinition): () => void {
     if (definition.apiVersion !== EDITOR_API_VERSION) throw new TypeError('Unsupported editor API version.');
@@ -40,10 +45,12 @@ export class EditorRegistry {
     });
     this.#editors.set(key, entry);
     for (const opcode of entry.opcodes) this.#opcodes.set(opcode, entry);
+    this.#notifyChanges();
     return () => {
       if (this.#editors.get(key) !== entry) return;
       this.#editors.delete(key);
       for (const opcode of entry.opcodes) this.#opcodes.delete(opcode);
+      this.#notifyChanges();
     };
   }
 
@@ -63,5 +70,24 @@ export class EditorRegistry {
     const snapshot = captureSnapshot(live, capturedReference);
     const entry = this.#opcodes.get(snapshot.opcode);
     return entry ? new EditorSession(entry, snapshot, host) : undefined;
+  }
+
+  openDescendants(reference: BlockReference, host: BlockEditorHost, limits?: DescendantLimits): DescendantSession | undefined {
+    if (!supportsDescendantEditing(host)) return undefined;
+    const port = host.descendants;
+    const capturedReference = captureReference(reference);
+    const resolvedLimits = descendantLimits(limits);
+    const live = port.readSubtree(capturedReference);
+    if (!live) return undefined;
+    const captured = captureSubtree(live, capturedReference, resolvedLimits);
+    if (!this.#opcodes.has(captured.snapshot.nodes[0]!.block.opcode)) return undefined;
+    return new DescendantSession(captured, port, opcode => this.#opcodes.get(opcode), listener => {
+      this.#changes.add(listener);
+      return () => { this.#changes.delete(listener); };
+    }, resolvedLimits);
+  }
+
+  #notifyChanges(): void {
+    for (const listener of [...this.#changes]) listener();
   }
 }

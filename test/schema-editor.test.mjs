@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {after, test} from 'node:test';
 import {createRequire} from 'node:module';
 import {JSDOM} from 'jsdom';
-import {EditorRegistry} from '../dist/index.js';
+import {DESCENDANT_EDITING_CAPABILITY, EditorRegistry} from '../dist/index.js';
 import {decodeSource} from '../dist/codec.js';
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {url: 'http://localhost/'});
@@ -12,6 +12,7 @@ for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element',
 Object.defineProperty(globalThis, 'MessageChannel', {value: undefined, configurable: true});
 after(() => dom.window.close());
 const {createSchemaEditor} = await import('../dist/rjsf.js');
+const {registerDescendantExample, createDescendantExampleSnapshot} = await import('../examples/descendant-properties.mjs');
 const require = createRequire(import.meta.url);
 const {act, Simulate} = require('react-dom/test-utils');
 
@@ -303,4 +304,83 @@ test('YAML Cancel retains exact source and unmounts the form', async t => {
   assert.equal(container.childNodes.length, 0);
   assert.equal(f.committed(), 0);
   assert.equal(f.block.arguments.PROPERTIES.value, yamlSource);
+});
+
+test('API v1 schema bodies compose inside an aggregate and validate an unmounted grandchild', async t => {
+  const registry = new EditorRegistry();
+  registerDescendantExample(registry);
+  const snapshot = createDescendantExampleSnapshot();
+  const before = structuredClone(snapshot);
+  const requests = [];
+  const host = {
+    readBlock: () => { throw new Error('Must use the subtree snapshot.'); },
+    commit: () => { throw new Error('Must use one aggregate commit.'); },
+    descendants: {
+      capability: DESCENDANT_EDITING_CAPABILITY,
+      readSubtree: () => snapshot,
+      commitSubtree: request => {
+        requests.push(request);
+        for (const change of request.changes) {
+          snapshot.nodes.find(n => n.block.blockId === change.blockId)
+            .block.arguments[change.argument].value = change.value;
+        }
+      }
+    }
+  };
+  const session = registry.openDescendants(snapshot, host);
+  const modalBody = document.createElement('div');
+  document.body.appendChild(modalBody);
+  const containers = new Map();
+  const unmounts = new Map();
+  t.after(() => { act(() => { session.dispose(); }); modalBody.remove(); });
+  await act(async () => {
+    for (const node of session.getNodes()) {
+      const section = document.createElement('section');
+      section.dataset.blockId = node.reference.blockId;
+      const parentId = node.inputPath.at(-1)?.blockId;
+      (containers.get(parentId) ?? modalBody).appendChild(section);
+      containers.set(node.reference.blockId, section);
+      const editor = session.getEditor(node.reference.blockId);
+      if (editor) {
+        const body = document.createElement('div');
+        section.appendChild(body);
+        unmounts.set(node.reference.blockId, editor.mount(body));
+      }
+    }
+  });
+  assert.ok(containers.get('intermediate').contains(containers.get('grandchild')));
+  assert.equal(modalBody.querySelectorAll('form, button[type="submit"]').length, 0);
+  const ids = [...modalBody.querySelectorAll('[id]')].map(node => node.id);
+  assert.equal(new Set(ids).size, ids.length);
+  await act(async () => {
+    Simulate.change(containers.get('grandchild').querySelector('input[type="number"]'), {target: {value: '0'}});
+  });
+  await act(async () => { unmounts.get('grandchild')(); });
+  assert.equal(session.getState().canSave, false);
+  assert.equal(session.getEditor('grandchild').getDraft().data.amount, 0);
+  let result;
+  await act(async () => { result = await session.save(); });
+  assert.equal(result.status, 'invalid');
+  assert.equal(result.issues[0].reference.blockId, 'grandchild');
+  assert.deepEqual(result.issues[0].inputPath.map(step => step.blockId), ['group', 'intermediate']);
+  assert.match(result.issues[0].path, /amount/);
+  assert.deepEqual(snapshot, before);
+  assert.equal(requests.length, 0);
+  await act(async () => {
+    for (const id of ['group', 'first', 'grandchild']) {
+      const editor = session.getEditor(id);
+      editor.setDraft({data: {...editor.getDraft().data, amount: 3}});
+    }
+  });
+  await act(async () => { result = await session.save(); });
+  assert.equal(result.status, 'saved');
+  assert.equal(requests.length, 1);
+  assert.equal(requests[0].changes.length, 3);
+  for (const id of ['group', 'first', 'grandchild']) {
+    const block = snapshot.nodes.find(n => n.block.blockId === id).block;
+    assert.equal(JSON.parse(block.arguments.PROPERTIES.value).amount, 3);
+  }
+  assert.deepEqual(snapshot.nodes.find(n => n.block.blockId === 'second'),
+    before.nodes.find(n => n.block.blockId === 'second'));
+  assert.equal(modalBody.querySelectorAll('input').length, 0);
 });

@@ -61,6 +61,19 @@ GUI ホストは画面と VM を同期し、保存を Undo/Redo 各1回にまと
 解除済みビューからの更新を拒否し、ビューの購読を解放します。標準フォームのフィールド ID も各表示で分離します。
 詳しくは [API とホスト契約](docs/api.md) を参照してください。
 
+## 子孫をまとめる階層セッション
+
+[共通基盤 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2) の追加 API として、
+`EditorRegistry.openDescendants()` と `DescendantSession` を提供します。
+ホストが `descendant-editing-v1` capability と完全な subtree snapshot / 一括 commit を提供する場合だけ使用します。
+既存の API v1 の本文を再利用し、親子孫・複数枝の下書きと検証結果を保持して、全変更を1回でホストへ渡します。
+未登録の中間ノードを構造として保持し、非表示ノードも検証します。構造・値・登録の競合、上限超過、非同期処理中の無効化に対応します。
+
+上限は500ノード・深さ32。GUI は起動時固定・既定 OFF の `blockEditorDescendants` と基盤フラグで選択し、
+フラグ OFF／未対応ホストでは既存の単一編集を使う設計です。
+詳細と業務非依存サンプルは [階層セッションの契約](docs/descendants.md) を参照してください。
+実 GUI の探索・階層モーダル・一括 Undo/Redo・`.sb3` 結合確認は scratch-gui #2 での接続が必要です。
+
 ## ローカル検証
 
 Node.js 22.18 以降と pnpm を使用します。

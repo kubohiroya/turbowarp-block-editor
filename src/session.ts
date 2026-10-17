@@ -1,5 +1,6 @@
 import {captureReference, captureSnapshot, cloneJson, isLiteral, sameSnapshot} from './data.js';
 import {BlockEditorConflictError} from './types.js';
+import {EditorView} from './view.js';
 import type {
   BlockEditorHost, BlockReference, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
   LiteralArgumentChange, SaveResult, SessionState, SessionStatus, ValidationIssue
@@ -11,8 +12,7 @@ export class EditorSession implements EditorViewContext {
   #issues: readonly ValidationIssue[] = [];
   #error: unknown;
   #listeners = new Set<() => void>();
-  #unmount: (() => void) | undefined;
-  #mounting = false;
+  readonly #view = new EditorView();
   readonly #definition: EditorDefinition;
   readonly #snapshot: BlockSnapshot;
   readonly #host: BlockEditorHost;
@@ -63,61 +63,7 @@ export class EditorSession implements EditorViewContext {
   }
 
   mount(container: HTMLElement): () => void {
-    if (this.#status !== 'editing' || this.#unmount || this.#mounting) {
-      throw new Error('The session cannot mount another view.');
-    }
-    const mount = this.#definition.mount;
-    if (!mount) throw new Error('No editor view is registered.');
-    let active = true;
-    const subscriptions = new Set<() => void>();
-    const assertMounted = () => {
-      if (!active) throw new Error('The editor view is unmounted.');
-    };
-    const release = () => {
-      active = false;
-      for (const unsubscribe of subscriptions) unsubscribe();
-      subscriptions.clear();
-    };
-    const context: EditorViewContext = Object.freeze({
-      getDraft: () => this.getDraft(),
-      setDraft: (draft: JsonObject) => { assertMounted(); this.setDraft(draft); },
-      setValidationIssues: (issues: readonly ValidationIssue[]) => {
-        assertMounted();
-        this.setValidationIssues(issues);
-      },
-      getState: () => this.getState(),
-      subscribe: (listener: () => void) => {
-        assertMounted();
-        const unsubscribe = this.subscribe(() => { if (active) listener(); });
-        const remove = () => { subscriptions.delete(remove); unsubscribe(); };
-        subscriptions.add(remove);
-        return remove;
-      }
-    });
-    this.#mounting = true;
-    let cleanup: () => void;
-    try {
-      cleanup = mount(container, context);
-      if (typeof cleanup !== 'function') throw new TypeError('mount() must return a cleanup function.');
-    } catch (error) {
-      release();
-      throw error;
-    } finally {
-      this.#mounting = false;
-    }
-    if (this.#status !== 'editing' && this.#status !== 'saving') {
-      release();
-      cleanup();
-      return () => {};
-    }
-    const unmount = () => {
-      if (!active) return;
-      release();
-      this.#unmount = undefined;
-      cleanup();
-    };
-    this.#unmount = unmount;
-    return unmount;
+    return this.#view.mount(container, this.#definition.mount, this);
   }
 
   async save(): Promise<SaveResult> {
@@ -219,7 +165,7 @@ export class EditorSession implements EditorViewContext {
     this.#status = status;
     this.#draft = {};
     this.#notify();
-    try { this.#unmount?.(); } catch (error) { this.#reportObserverError(error); }
+    try { this.#view.unmount(); } catch (error) { this.#reportObserverError(error); }
     this.#listeners.clear();
   }
 
