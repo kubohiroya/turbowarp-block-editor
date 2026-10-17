@@ -1,0 +1,81 @@
+# turbowarp-block-editor
+
+TurboWarp の機能拡張ブロックに専用編集 UI を関連づける実験的な共通 API v1 です。
+[共通基盤 #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1) と
+[GUI 接続 #1](https://github.com/kubohiroya/scratch-gui/issues/1) に対応します。
+
+## 標準の JSON Schema エディター
+
+JSON を格納する文字列引数と JSON Schema を宣言すると、react-jsonschema-form がフォームを生成します。
+GUI の登録 API は `schema` を検出して標準エディターを選びます。本文 UI の実装は不要です。
+
+```js
+const unregister = Scratch.gui.blockEditors.register({
+  apiVersion: 1,
+  extensionId: 'story',
+  editorId: 'properties',
+  opcodes: ['story_scene'],
+  argument: 'PROPERTIES',
+  schema: {
+    type: 'object',
+    properties: {
+      label: {type: 'string', minLength: 1, title: '名前'},
+      duration: {type: 'number', minimum: 1, maximum: 60, title: '秒数'}
+    },
+    required: ['label', 'duration'],
+    additionalProperties: false
+  },
+  uiSchema: {'ui:order': ['label', 'duration']}
+});
+```
+
+`registerSchema()` も同じ標準エディターを明示的に登録できます。
+必須項目・型・範囲などの検証エラーがある間は保存ボタンを無効化し、保存時にも必ず再検証します。
+任意の非同期 `validateData(data, snapshot)` による業務検証は保存時に追加実行されます。
+スキーマの検証は AJV 8、描画は React 16.14 に対応する RJSF 5.24.13 を使用します。
+対応の基本は JSON Schema draft-07 とローカル参照です。外部参照の取得は行わず、解決できない参照は登録時に拒否します。
+`default` は下書きへ補完し、保存するまで元ブロックへ書き込みません。
+
+## API とトランザクション
+
+ルートの `EditorRegistry` / `EditorSession` は React / Blockly に依存しません。
+`@kubohiroya/turbowarp-block-editor/rjsf` の `createSchemaEditor()` が標準フォームを提供します。
+通常 DOM や独自 React UI の `mount()` を持つ定義も登録できます。
+
+開始時のスナップショットと独立した JSON の下書きを持ち、キャンセルでは変更を破棄します。
+保存は検証、引数の許可リスト、reporter 保護、競合確認を通し、ホストへ1回だけ変更を要求します。
+GUI ホストは画面と VM を同期し、保存を Undo/Redo 各1回にまとめます。失敗時の復元もホストの責務です。
+詳しくは [API とホスト契約](docs/api.md) を参照してください。
+
+## ローカル検証
+
+Node.js 22.18 以降と pnpm を使用します。
+
+```sh
+pnpm install
+pnpm typecheck
+pnpm test
+```
+
+`pnpm test` は型宣言を含むビルド後、コアと標準フォームのテストを実行します。
+パッケージは ESM です。ブラウザには ES2022 の組み込み API が必要です。
+標準フォームの React / ReactDOM peer は 16.14 / 17 / 18。GUI は既存の 16.14 を共有します。
+未公開の初期実装として `private: true` にしています。
+
+## GUI で試す
+
+隣接する `../scratch-gui` が本パッケージを `file:../turbowarp-block-editor` で参照します。
+GUI の [起動・制約・検証手順](../scratch-gui/docs/block-editor.md) に従ってください。
+既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
+
+現在の GUI 適用範囲は、配置済みブロックの通常の text shadow に保存された JSON 文字列です。
+reporter、メニュー、独自 validator 付きフィールドは書き換えません。
+`.sb3` の実保存と標準 `project_url` 経路での再読込を確認済みです。OS のファイル選択による再読込、アイコンがないブロックへの追加表示、翻訳・全テーマは後続の確認項目です。
+
+## フラグとロールバック
+
+GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs` を読み取り、既定 OFF とします。
+`?blockEditorDialogs=1` の場合だけ登録 API と UI 接続を初期化します。
+標準フォームは機能有効時の既定の描画方法であり、機能フラグ自体を既定 ON にしません。
+フラグを外して再読込すれば従来の操作へ戻せます。
+確定値は既存引数へ保存し、UI・下書き・関数・revision をプロジェクトデータへ追加しません。
