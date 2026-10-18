@@ -1,0 +1,202 @@
+{
+  "results": [
+    {
+      "consumer": "3d-scene-runtime",
+      "producer": "scene-graph",
+      "installedVersion": "0.2.0",
+      "bundleFingerprint": "e7bd3757debac9c58855391c82d512e4fdb7b6fd5d6c2c1e4a3bbe922fc7d5a4",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "camera-calibration",
+      "producer": "camera-source",
+      "installedVersion": "0.16.0",
+      "bundleFingerprint": "517fbefdbc0e479660729b0101953911383ac47cb07adca1c95f5259b3a3b812",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "realtime-motion-capture",
+      "producer": "camera-source",
+      "installedVersion": "0.16.0",
+      "bundleFingerprint": "517fbefdbc0e479660729b0101953911383ac47cb07adca1c95f5259b3a3b812",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "3d-scene-runtime",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "aframe",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "camera-calibration",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "camera-source",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "extension-template",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "realtime-motion-capture",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "scene-graph",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "time-space-sync",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    }
+  ],
+  "review_fix_artifacts": {
+    "observed_at_utc": "2026-10-18T06:12:49.765581+00:00",
+    "manifest_and_lock_pins_changed": false,
+    "common_pure_files_unchanged": true,
+    "pinned_common_revision": "a1ab4f4f5b384eef08ef26e544186ee9d8ad4543",
+    "local_common_base_head": "e389e707449313423b0645a8daa4d4097467617f",
+    "local_common_source_snapshot_sha256": "0268d64a6f5484aa07c5c39b91891b79b8a168a7393d76fd0e0f7b57a0d213e0",
+    "local_rjsf_type": {
+      "path": "/tmp/schema-stage1-worktrees-20261018/editor/dist/rjsf.d.ts",
+      "sha256": "6b68cfc2a04c7b730234968bdd6fac380747e2de6631e1752caf07fd8b9b0c90",
+      "default_settings": "null",
+      "uncommitted": true
+    },
+    "pinned_rjsf_type": {
+      "path": "/private/tmp/schema-stage1-worktrees-20261018/camera-calibration/node_modules/.pnpm/@kubohiroya+turbowarp-extension-data-editor@https+++codeload.github.com+kubohiroya+turb_5f902832b16dc00a1fc95546529ab82c/node_modules/@kubohiroya/turbowarp-extension-data-editor/dist/rjsf.d.ts",
+      "sha256": "a033777e0ee2f15a97d6e0efe8ba3e0fe5c4be4d23c22bd3437c4fc69ef84886",
+      "default_settings": "unknown",
+      "contains_R4_fix": false
+    },
+    "stage2_UI_start_condition": "Select a formal corrected commit/package and align manifest, lock and resolution before using corrected UI options. Current producer/common pure pins are not claimed to contain R4.",
+    "resolved_dependency_checks": [
+      {
+        "consumer": "3d-scene-runtime",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "3d-scene-runtime",
+        "dependency": "@kubohiroya/turbowarp-ar",
+        "version": "0.3.0",
+        "manifest_sha256": "318d4db614f802f299edf9bcbaebef3f6f07ad1631f311ad5ed5d9bfa86a7b47",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "3d-scene-runtime",
+        "dependency": "@kubohiroya/turbowarp-scene-graph",
+        "version": "0.2.0",
+        "manifest_sha256": "458ebc3e7c70547a7d6e71294ee8e3ca256bdca18ef87379d822acb3c9572bb8",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "aframe",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "camera-calibration",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "camera-calibration",
+        "dependency": "@kubohiroya/turbowarp-camera-source",
+        "version": "0.16.0",
+        "manifest_sha256": "bf0cb76f0f9625ad08210faec866c2bf2536cb366f4543ea556ab2e1989449d3",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "camera-source",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "extension-template",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "realtime-motion-capture",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "realtime-motion-capture",
+        "dependency": "@kubohiroya/turbowarp-camera-source",
+        "version": "0.16.0",
+        "manifest_sha256": "bf0cb76f0f9625ad08210faec866c2bf2536cb366f4543ea556ab2e1989449d3",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "scene-graph",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "scene-graph",
+        "dependency": "@kubohiroya/turbowarp-ar",
+        "version": "0.3.0",
+        "manifest_sha256": "318d4db614f802f299edf9bcbaebef3f6f07ad1631f311ad5ed5d9bfa86a7b47",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "time-space-sync",
+        "dependency": "@kubohiroya/turbowarp-extension-data-editor",
+        "version": "0.1.0",
+        "manifest_sha256": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+        "recorded_artifact_matches": true
+      },
+      {
+        "consumer": "time-space-sync",
+        "dependency": "@kubohiroya/turbowarp-camera-source",
+        "version": "0.7.0",
+        "manifest_sha256": "0e57d20e1011d66be4673eef8a60e948d1f261bfade0b0836c33b3f1f00e0c62",
+        "recorded_artifact_matches": true
+      }
+    ]
+  }
+}

@@ -5,6 +5,7 @@ import {readFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
 import {EditorRegistry, EditorSession} from '../dist/webpack4/index.js';
 import {createBlockEditorService} from '../dist/webpack4/rjsf.js';
+import {compileSchemaBundle, validateSchemaInput} from '../dist/webpack4/schema.js';
 const require = createRequire(import.meta.url);
 const {withBlockEditorWebpack4} = require('../webpack4.cjs');
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -33,6 +34,7 @@ test('webpack helper preserves host aliases and loaders without mutating single 
   assert.equal(first.resolve.alias['react$'], require.resolve('react'));
   assert.equal(first.resolve.alias['react-dom$'], require.resolve('react-dom'));
   assert.match(first.resolve.alias['@kubohiroya/turbowarp-extension-data-editor$'], /dist\/webpack4\/index.js$/);
+  assert.match(first.resolve.alias['@kubohiroya/turbowarp-extension-data-editor/schema$'], /dist\/webpack4\/schema.js$/);
   assert.deepEqual(first, second);
   assert.deepEqual(withBlockEditorWebpack4(first, {hostRoot: root}), first);
   assert.throws(() => withBlockEditorWebpack4(config, {hostRoot: 'relative'}), /absolute/);
@@ -46,6 +48,17 @@ test('webpack 4 root graph stays React-free and optional entries externalize onl
     return meta.outputs[output].imports.flatMap(item => item.external ? [item.path] : visit(item.path, seen));
   };
   assert.deepEqual(visit('dist/webpack4/index.js'), []);
+  assert.deepEqual(visit('dist/webpack4/schema.js'), []);
   assert.deepEqual(new Set(visit('dist/webpack4/rjsf.js')), new Set(['react', 'react-dom', 'react/jsx-runtime.js']));
   assert.deepEqual(new Set(visit('dist/webpack4/react.js')), new Set(['react']));
+});
+
+test('webpack 4 schema entry validates offline without a React or DOM import', () => {
+  const source = {repository: 'fixture', path: 'value.json'};
+  const compiled = compileSchemaBundle({identity: {ownerId: 'fixture', contractId: 'value', revision: '1', variantId: 'default'},
+    dialect: 'draft-07', root: {retrievalUri: 'urn:fixture:value', document: {type: 'number'}, artifact: {role: 'canonical-schema', source}},
+    resources: [], provenance: {canonicalSources: [source], generatedFiles: [], referenceSchemas: [], generationSources: []}});
+  assert.equal(compiled.kind, 'compiled');
+  assert.equal(validateSchemaInput(compiled.validator, 2, {context: {consumerId: 'webpack4', nowMs: 0, settings: null}}).kind, 'valid');
+  assert.equal(validateSchemaInput(compiled.validator, '2', {context: {consumerId: 'webpack4', nowMs: 0, settings: null}}).kind, 'invalid');
 });

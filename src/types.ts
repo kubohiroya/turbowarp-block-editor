@@ -1,3 +1,5 @@
+import type {ValidationIssue} from './schema-types.js';
+export type {ValidationIssue} from './schema-types.js';
 import type {DescendantEditorHost} from './descendant-types.js';
 
 export const EDITOR_API_VERSION = 1 as const;
@@ -45,11 +47,6 @@ export interface BlockEditorHost {
    * Resolving means the full commit succeeded. A rejected promise must mean no change.
    */
   commit(request: CommitRequest): void | Promise<void>;
-}
-
-export interface ValidationIssue {
-  readonly message: string;
-  readonly path?: string;
 }
 
 export type SessionStatus = 'editing' | 'saving' | 'saved' | 'cancelled' | 'disposed';

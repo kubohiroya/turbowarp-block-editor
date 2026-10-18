@@ -4,7 +4,7 @@ import {rm} from 'node:fs/promises';
 // Share chunks across all entry points to preserve registry and error class identities.
 await rm('dist/webpack4', {recursive: true, force: true});
 await build({
-    entryPoints: ['dist/index.js', 'dist/rjsf.js', 'dist/react.js', 'dist/turbowarp.js'],
+    entryPoints: ['dist/index.js', 'dist/rjsf.js', 'dist/react.js', 'dist/turbowarp.js', 'dist/schema.js'],
     outdir: 'dist/webpack4',
     bundle: true,
     splitting: true,

@@ -1,0 +1,10 @@
+{
+  "platform": "browser",
+  "consumer": "fusion-pose2d",
+  "version": 2,
+  "result": "valid",
+  "globalAccesses": 0,
+  "imports": 367,
+  "forbiddenImports": [],
+  "bundleBytes": 719822
+}
