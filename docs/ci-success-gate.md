@@ -51,3 +51,43 @@ probe自身にPages/OIDC/write権限やdeploy処理はありません。実CIが
 失敗fixtureが必要な場合は、この共通repoの独立した一時branchに限り `ci.yml` をread-only・`exit 1` のCIへ変更してpushします。そのCIの失敗を確認後、mainのprobeから同じbranch/SHAを検証します。main/developや実公開用workflowを故意に壊さず、証跡保存後に一時branchを削除します。
 
 rollbackはGUIのci-gate呼出しとdeployのneedsだけをrevertします。確認不能時に自動解除しません。既定OFFのアプリ機能と保存形式には影響しません。公開後E2E失敗時の既存切戻しは[Pages運用](github-pages.md)を参照してください。
+
+## 最新attemptの自動実検証
+
+共通側の `ci-gate-rerun-test.yml` を手動起動すると、同一SHA・同一CI runの3 attemptと4つの読み取り専用observerを自動で検査します。GUIの変更、通常CIの書換え、一時branchの作成/削除、PATの登録は不要です。
+
+```sh
+gh workflow run ci-gate-rerun-test.yml \
+  --repo kubohiroya/turbowarp-extension-data-editor --ref main
+```
+
+新規workflowはdefault branchへ取り込んでから利用します。実GitHubテストをpush/PR/cronから自動起動しません。通常CIは既存の `node --test test/ci/*.test.mjs` により、統括ロジック・fixture・誤run/attempt・権限境界・timeout等のローカルテストを実行します。
+
+### 確認する順序
+
+1. 専用fixtureの初回attemptを成功させ、baseline observerが通過することを確認。
+2. 同じfixture runを再実行。最新attempt 2実行中に、CI状態をobserver job取得の前後で照合し、ゲートが待機中で後続sentinelが未開始であることを確認。
+3. attempt 2を意図的に失敗させ、ゲートが最新failureを拒否し、後続がskipされることを確認。失敗後に新しく起動するobserverでも古いsuccessを採用しないことを確認。
+4. 同じrunをattempt 3へ再実行。実行中は待機し、最新successの後だけ通過することを確認。CI終了→ゲートの観測→ゲート完了→後続開始の時刻順序も検査。
+
+fixtureは `ci-gate-rerun-fixture.yml` の専用workflowで、通常CIとは別です。観測用の待機はattempt 2/3で各180秒、fixture jobは5分上限です。テスト全体の待機上限は25分、統括jobは35分上限。runner混雑により実行中の観測窓を逃した場合は成功扱いせず失敗させ、summary/evidenceを確認してsuiteを再実行します。
+
+統括のconcurrencyはrepository/ref単位で直列です。親run ID/attemptからsuite IDを作り、子runのworkflow ID・title・repo/head repo・SHA・branch・eventを照合します。子workflowの初回起動は新しいrun、fixture再実行だけは同じrunのattempt 2/3です。branchが途中で進んだ場合や、別fixture runが割り込んだ場合は拒否します。
+
+### 権限と証跡
+
+統括jobだけが `contents: read` / `actions: write` を持ちます。Actionsのwrite権限はrepo単位ですが、統括コードはこの共通repoと専用のfixture/observer workflowに限定し、自分で生成・照合したfixture runだけを再実行します。GUIを対象にできず、git/contentsへのwriteもありません。
+
+fixture、observer、呼び出す公開ゲートはread-onlyです。すべての経路にPages/OIDCのwrite権限・environment・deploy処理はありません。sentinelは依存関係を確かめるためのログ出力だけです。新たなCI起動と再実行は統括へ置き、公開ゲートAPI自身のread-onlyという責務を維持します。
+
+observerの `assert-probe` がゲートのJSON artifactを読み、fixture run ID・完全SHA・最新attempt・結論を再照合します。統括はassert-probeの成功と構造化proofを確認し、API snapshotと時刻順序も照合します。ログのダウンロード先へGitHub tokenを転送しません。
+
+- 親run: `ci-rerun-test-<run ID>-<attempt>` artifactに途中経過を含む `evidence.json`、summaryに結果とfixture runリンク。
+- 子observer: 既存の `normal-ci-gate-<run ID>-1` と `ci-rerun-proof-<run ID>-1` artifactに判断と照合結果。
+- artifactの保持は7日。意図した負の対照は子workflow全体がfailureになりますが、assert-probeがsuccessであることを親が検査し、suite全体はsuccessとなります。
+
+失敗時にも途中のrun ID・API観測・理由を保存します。自動のbranch削除や他workflowのcancel/retryは行いません。親が失敗しても子workflowはそれぞれのtimeout内で終了し、実公開には影響しません。実公開版のE2Eやdeploymentはこのsuiteで起動しません。
+
+[workflow_dispatchはGITHUB_TOKENからも子workflowを起動できる](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)仕組みを使います。公開後E2Eや通常CIへの呼出しは追加しません。
+
+この自動テストのrollbackは、手動の統括workflowを無効化するか追加分をrevertします。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。

@@ -1,0 +1,67 @@
+name: Observe a CI rerun without publishing
+run-name: CI rerun observer ${{ inputs.suite_id }} ${{ inputs.scenario }}
+on:
+  workflow_dispatch:
+    inputs:
+      suite_id:
+        type: string
+        required: true
+      expected_revision:
+        type: string
+        required: true
+      fixture_run_id:
+        type: string
+        required: true
+      scenario:
+        type: choice
+        options: [baseline, pending-failure, failed-fresh, success-after-wait]
+        required: true
+permissions:
+  contents: read
+  actions: read
+jobs:
+  gate:
+    uses: ./.github/workflows/require-successful-ci.yml
+    with:
+      runner_revision: ${{ github.sha }}
+      expected_revision: ${{ inputs.expected_revision }}
+      workflow_file: ci-gate-rerun-fixture.yml
+      branch: ${{ github.ref_name }}
+      event: workflow_dispatch
+  publish-sentinel:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Gate accepted; this sentinel has no publishing permissions or deployment steps.'
+  assert-probe:
+    if: always()
+    needs: [gate, publish-sentinel]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: normal-ci-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: gate-evidence
+      - name: Verify the exact fixture run and attempt
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+          FIXTURE_RUN_ID: ${{ inputs.fixture_run_id }}
+          SCENARIO: ${{ inputs.scenario }}
+          GATE_RESULT: ${{ needs.gate.result }}
+          SENTINEL_RESULT: ${{ needs.publish-sentinel.result }}
+        run: node scripts/ci/assert-rerun-probe.mjs
+      - name: Preserve probe verification
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-rerun-proof-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/ci-rerun-probe/
+          retention-days: 7
+          if-no-files-found: warn
