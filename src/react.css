@@ -1,0 +1,183 @@
+
+.modal-content {
+    width: min(600px, calc(100vw - 32px));
+    margin: 60px auto;
+}
+
+.hierarchy-modal {
+    width: min(900px, calc(100vw - 32px));
+}
+
+.tree {
+    min-width: 0;
+}
+
+.tree-node {
+    /* Reset these on every node so missing metadata never inherits a parent's colour. */
+    --block-editor-node-colour: var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    --block-editor-node-tint: transparent;
+    margin: 0.75rem 0;
+    padding: 0.5rem;
+    border: 2px solid var(--block-editor-node-colour);
+    border-radius: var(--block-editor-radius, 0.5rem);
+    min-width: 0;
+    /* Each tint is composited over the theme, not over its parent's tint. */
+    background: linear-gradient(var(--block-editor-node-tint), var(--block-editor-node-tint)), var(--block-editor-background, white);
+}
+
+.node-heading {
+    margin: 0.5rem 0;
+    font-size: 1rem;
+}
+
+.node-heading button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    text-align: start;
+    overflow-wrap: anywhere;
+    background: transparent;
+    color: var(--block-editor-text, #333);
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+    padding: 0.5rem;
+    cursor: pointer;
+    width: 100%;
+}
+
+.node-icon {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0.125rem;
+    object-fit: contain;
+    background: var(--block-editor-node-colour);
+    border-radius: var(--block-editor-radius, 0.5rem);
+}
+
+.node-caption {
+    min-width: 0;
+}
+
+.branch-name,
+.structural-node {
+    font-weight: normal;
+    font-size: 0.85rem;
+}
+
+.node-identity {
+    display: block;
+    font-size: 0.75rem;
+    font-weight: normal;
+    opacity: 0.75;
+}
+
+.node-error {
+    display: block;
+    color: var(--block-editor-text, #333);
+    background: var(--block-editor-background, white);
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    padding: 0.5rem;
+    text-align: start;
+    cursor: pointer;
+    margin-top: 0.25rem;
+}
+
+.body {
+    padding: 1.5rem;
+    background: var(--block-editor-background, white);
+    max-height: calc(100vh - 180px);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.editor-body {
+    min-height: 0;
+    overflow: auto;
+}
+
+.body label {
+    display: block;
+}
+
+.body input:not([type="checkbox"]):not([type="radio"]),
+.body select,
+.body textarea {
+    display: block;
+    width: 100%;
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    user-select: text;
+    background: var(--block-editor-input, white);
+    color: var(--block-editor-text, #333);
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+}
+
+.errors {
+    margin-top: 0.75rem;
+}
+
+.buttons {
+    flex-shrink: 0;
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.buttons button {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+    background: var(--block-editor-button, white);
+    color: var(--block-editor-text, #333);
+    cursor: pointer;
+}
+
+.buttons button:disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+
+.body fieldset {
+    min-width: 0;
+    padding: 0;
+    border: 0;
+}
+
+.body :global(.form-group) {
+    margin-bottom: 1rem;
+}
+
+/* The adapter marks only controls belonging to the field's own RJSF errors. */
+.body :global(.rjsf) input:global([data-block-editor-invalid="true"]),
+.body :global(.rjsf) select:global([data-block-editor-invalid="true"]),
+.body :global(.rjsf) textarea:global([data-block-editor-invalid="true"]) {
+    border-color: var(--block-editor-error-border, #c62828);
+    box-shadow: 0 0 0 1px var(--block-editor-error-border, #c62828);
+    background: linear-gradient(var(--block-editor-error-tint, rgba(198, 40, 40, 0.08)), var(--block-editor-error-tint, rgba(198, 40, 40, 0.08))), var(--block-editor-input, white);
+}
+
+.body :global(.rjsf) :global(.error-detail) {
+    margin-top: 0.5rem;
+    padding: 0.5rem 0.75rem 0.5rem 1.75rem;
+    color: var(--block-editor-error-text, #a61b1b);
+    background: var(--block-editor-error-tint, rgba(198, 40, 40, 0.08));
+    border-left: 3px solid var(--block-editor-error-border, #c62828);
+    border-radius: var(--block-editor-radius, 0.5rem);
+    overflow-wrap: anywhere;
+}
+
+.body textarea {
+    resize: vertical;
+}
+
+:global([data-block-editor-icon]):hover,
+:global([data-block-editor-icon]):focus {
+    filter: brightness(1.2) drop-shadow(0 0 2px currentColor);
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
