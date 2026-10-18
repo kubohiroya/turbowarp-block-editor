@@ -1,6 +1,7 @@
 import {captureReference, captureSnapshot, cloneJson, isLiteral, sameSnapshot} from './data.js';
 import {BlockEditorConflictError} from './types.js';
 import {EditorView} from './view.js';
+import {isPreparedEditor, capturePreparedSave} from './prepared-save.js';
 import type {
   BlockEditorHost, BlockReference, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
   LiteralArgumentChange, SaveResult, SessionState, SessionStatus, ValidationIssue
@@ -16,9 +17,11 @@ export class EditorSession implements EditorViewContext {
   readonly #definition: EditorDefinition;
   readonly #snapshot: BlockSnapshot;
   readonly #host: BlockEditorHost;
+  readonly #isRegistered: (() => boolean) | undefined;
 
   /** Use EditorRegistry.open() to construct sessions from a captured host snapshot. */
-  constructor(definition: EditorDefinition, snapshot: BlockSnapshot, host: BlockEditorHost) {
+  constructor(definition: EditorDefinition, snapshot: BlockSnapshot, host: BlockEditorHost, isRegistered?: () => boolean) {
+    this.#isRegistered = isRegistered;
     this.#definition = definition;
     this.#snapshot = captureSnapshot(snapshot, captureReference(snapshot));
     this.#host = host;
@@ -74,19 +77,26 @@ export class EditorSession implements EditorViewContext {
     this.#error = undefined;
     this.#notify();
     try {
-      const issues = await this.#definition.validate(cloneJson(this.#draft), this.#snapshot);
+      if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The source editor registration expired.');
+      const prepared = isPreparedEditor(this.#definition)
+        ? capturePreparedSave(this.#definition, cloneJson(this.#draft), this.#snapshot) : undefined;
+      const issues = prepared ? (prepared.kind === 'invalid' ? prepared.issues : [])
+        : await this.#definition.validate(cloneJson(this.#draft), this.#snapshot);
       if (!Array.isArray(issues)) throw new TypeError('validate() must return an issue array.');
       if (issues.length > 0) {
         this.#issues = this.#copyIssues(issues);
         return {status: 'invalid', issues: this.#issues};
       }
       const changes = this.#prepareChanges(
-        this.#definition.createPatch(cloneJson(this.#draft), this.#snapshot)
+        prepared?.kind === 'ready' ? prepared.changes
+          : this.#definition.createPatch(cloneJson(this.#draft), this.#snapshot)
       );
+      if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The source editor registration expired.');
       const current = this.#host.readBlock(this.#snapshot);
       if (!current || !sameSnapshot(this.#snapshot, captureSnapshot(current, this.#snapshot))) {
         throw new BlockEditorConflictError();
       }
+      if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The source editor registration expired.');
       if (changes.length > 0) {
         await this.#host.commit(Object.freeze({expected: this.#snapshot, changes}));
       }

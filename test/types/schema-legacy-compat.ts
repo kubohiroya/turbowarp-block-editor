@@ -95,3 +95,10 @@ export const invalidDefaultBundleOptions: SchemaBundleEditorOptions = {
   // @ts-expect-error The settings-free default only accepts null.
   validationContext: () => ({consumerId: 'story', nowMs: 0, settings: {delegate: true}})
 };
+
+// Existing bundle-capable host implementations do not acquire a new required method.
+export const bundleHost: import('@kubohiroya/turbowarp-extension-data-editor/rjsf').SchemaBundleBlockEditorRegistrationAPI = {
+  apiVersion: 1, register: () => () => {}, registerSchema: () => () => {}, registerSchemaBundle: () => () => {}
+};
+export const sourceHost: import('@kubohiroya/turbowarp-extension-data-editor/rjsf').SourceBlockEditorRegistrationAPI = createBlockEditorService().api;
+export const sourceCapability = sourceHost.registerSourceEditor;

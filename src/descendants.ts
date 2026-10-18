@@ -155,9 +155,14 @@ export class DescendantSession {
     this.#notify();
     try {
       this.#assertSaving();
+      const prepared = new Map<string, PreparedSave>();
       for (const record of this.#records.values()) {
         try {
-          const issues = await abortable(record.definition.validate(cloneJson(record.draft), record.snapshot), this.#abort.signal);
+          const result = isPreparedEditor(record.definition)
+            ? capturePreparedSave(record.definition, cloneJson(record.draft), record.snapshot) : undefined;
+          if (result) prepared.set(record.snapshot.blockId, result);
+          const issues = result ? (result.kind === 'invalid' ? result.issues : [])
+            : await abortable(record.definition.validate(cloneJson(record.draft), record.snapshot), this.#abort.signal);
           this.#assertSaving();
           record.issues = copyIssues(issues);
         } catch (cause) {
@@ -171,7 +176,9 @@ export class DescendantSession {
       const destinations = new Set<string>();
       for (const record of this.#records.values()) {
         try {
-          const patch = record.definition.createPatch(cloneJson(record.draft), record.snapshot);
+          const result = prepared.get(record.snapshot.blockId);
+          const patch = result?.kind === 'ready' ? result.changes
+            : record.definition.createPatch(cloneJson(record.draft), record.snapshot);
           this.#assertSaving();
           if (!Array.isArray(patch)) throw new TypeError('createPatch() must return an array.');
           for (const change of patch) {
@@ -324,3 +331,5 @@ export class DescendantSession {
     this.#listeners.clear();
   }
 }
+import {isPreparedEditor, capturePreparedSave} from './prepared-save.js';
+import type {PreparedSave} from './prepared-types.js';

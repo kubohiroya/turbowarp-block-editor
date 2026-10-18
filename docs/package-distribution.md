@@ -7,9 +7,9 @@
 リポジトリは `kubohiroya/turbowarp-extension-data-editor`、npm名は `@kubohiroya/turbowarp-extension-data-editor`。初回実験版は `0.1.0`。
 旧 `turbowarp-block-editor` からの改名であり、ブロック定義ではなく拡張が扱う構造化データの編集を提供する。
 
-公開入口はroot、`/rjsf`、`/react`、`/react/styles.css`、`/turbowarp`、`/webpack4`、`/build-info`。
+公開入口はroot、`/rjsf`、`/react`、`/react/styles.css`、`/turbowarp`、`/webpack4`、`/build-info`、`/schema`の8つ。`/schema`はDOM・React不要のpure入口です。
 既存の型・関数・`Scratch.gui.blockEditors`・起動時固定で既定OFFの機能フラグは維持する。
-importと依存のキーだけを新npm名へ移し、GUIの`file:`依存を公開versionの完全固定へ変更する。
+importと依存のキーだけを新npm名へ移し、GUIの`file:`依存を公開versionまたは検証済みGit完全SHAへ固定する。
 
 ## ソースの追跡
 

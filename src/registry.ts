@@ -6,6 +6,8 @@ import type {DescendantLimits} from './descendant-types.js';
 import {captureSubtree, descendantLimits} from './subtree.js';
 import {EDITOR_API_VERSION} from './types.js';
 import type {BlockEditorHost, BlockReference, EditorDefinition, EditorDescriptor} from './types.js';
+import type {PreparedEditorDefinition} from './prepared-types.js';
+import {isPreparedEditor} from './prepared-save.js';
 
 export class EditorRegistry {
   #editors = new Map<string, EditorDefinition>();
@@ -13,6 +15,18 @@ export class EditorRegistry {
   #changes = new Set<() => void>();
 
   register(definition: EditorDefinition): () => void {
+    if (isPreparedEditor(definition)) throw new TypeError('Prepared editors require registerPrepared().');
+    return this.#register(definition);
+  }
+
+  registerPrepared(definition: PreparedEditorDefinition): () => void {
+    if (!isPreparedEditor(definition) || typeof definition.prepareSave !== 'function') {
+      throw new TypeError('Expected a prepared source editor.');
+    }
+    return this.#register(definition);
+  }
+
+  #register(definition: EditorDefinition): () => void {
     if (definition.apiVersion !== EDITOR_API_VERSION) throw new TypeError('Unsupported editor API version.');
     if (!/^[a-z0-9]+$/i.test(definition.extensionId) ||
         !/^[a-z0-9][a-z0-9._-]*$/i.test(definition.editorId)) {
@@ -69,7 +83,8 @@ export class EditorRegistry {
     if (!live) return undefined;
     const snapshot = captureSnapshot(live, capturedReference);
     const entry = this.#opcodes.get(snapshot.opcode);
-    return entry ? new EditorSession(entry, snapshot, host) : undefined;
+    return entry ? new EditorSession(entry, snapshot, host, isPreparedEditor(entry)
+      ? () => this.#opcodes.get(snapshot.opcode) === entry : undefined) : undefined;
   }
 
   openDescendants(reference: BlockReference, host: BlockEditorHost, limits?: DescendantLimits): DescendantSession | undefined {

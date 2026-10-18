@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {createSourceEditor} from './source-editor.js';
+import type {SourceEditorOptions} from './source-types.js';
+export {createSourceEditor} from './source-editor.js';
+export type * from './source-types.js';
+export type * from './prepared-types.js';
 import * as ReactDOM from 'react-dom';
 import * as RjsfCore from '@rjsf/core';
 import * as RjsfUtils from '@rjsf/utils';
@@ -91,10 +96,15 @@ export interface BlockEditorRegistrationAPI {
   register(definition: EditorDefinition | SchemaEditorOptions): () => void;
   registerSchema(definition: SchemaEditorOptions): () => void;
   registerSchemaBundle?<C>(definition: SchemaBundleEditorOptions<C>): () => void;
+  registerSourceEditor?<C = null>(definition: SourceEditorOptions<C>): () => void;
 }
 /** Capability guaranteed by the service factory, optional on a legacy host-supplied API. */
 export interface SchemaBundleBlockEditorRegistrationAPI extends BlockEditorRegistrationAPI {
   registerSchemaBundle<C>(definition: SchemaBundleEditorOptions<C>): () => void;
+}
+/** New prepared-source capability; existing bundle-only host implementations remain compatible. */
+export interface SourceBlockEditorRegistrationAPI extends SchemaBundleBlockEditorRegistrationAPI {
+  registerSourceEditor<C = null>(definition: SourceEditorOptions<C>): () => void;
 }
 export interface BlockEditorService {
   readonly registry: EditorRegistry;
@@ -103,11 +113,11 @@ export interface BlockEditorService {
 }
 
 /** A host owns the service's lifetime; this module never stores VM or workspace instances. */
-export function createBlockEditorService(): BlockEditorService & {readonly api: SchemaBundleBlockEditorRegistrationAPI} {
+export function createBlockEditorService(): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI} {
   const registry = new EditorRegistry();
   const listeners = new Set<() => void>();
   const notify = () => { for (const listener of [...listeners]) listener(); };
-  const api: SchemaBundleBlockEditorRegistrationAPI = Object.freeze({
+  const api: SourceBlockEditorRegistrationAPI = Object.freeze({
     apiVersion: EDITOR_API_VERSION,
     register: (definition: EditorDefinition | SchemaEditorOptions) => {
       const custom = definition as EditorDefinition;
@@ -125,7 +135,13 @@ export function createBlockEditorService(): BlockEditorService & {readonly api: 
       };
     },
     registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition)),
-    registerSchemaBundle: <C,>(definition: SchemaBundleEditorOptions<C>) => api.register(createSchemaBundleEditor(definition))
+    registerSchemaBundle: <C,>(definition: SchemaBundleEditorOptions<C>) => api.register(createSchemaBundleEditor(definition)),
+    registerSourceEditor: <C,>(definition: SourceEditorOptions<C>) => {
+      const remove = registry.registerPrepared(createSourceEditor(definition));
+      notify();
+      let active = true;
+      return () => {if (active) {active = false;remove();notify();}};
+    }
   });
   return {registry, api, subscribe: listener => {
     listeners.add(listener);

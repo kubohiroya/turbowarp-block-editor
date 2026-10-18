@@ -133,3 +133,17 @@ export const undefinedTuple: SchemaValidationContext<Settings> = {consumerId: 'c
 // @ts-expect-error Generic inference must not admit functions into settings.
 validateSchemaInput(compiled, object, {context: {consumerId: 'c', nowMs: 0, settings: {f: () => 1}}});
 export const checkedBundle: SchemaCompileResult = compileSchemaBundle(bundle);
+
+// Source adapter contracts keep default contexts without introducing a DOM dependency.
+export type SourceOptions = import('@kubohiroya/turbowarp-extension-data-editor/schema').SourceEditorOptions;
+export type SourceBinding = import('@kubohiroya/turbowarp-extension-data-editor/schema').SourceBinding;
+export type SourceDocument = import('@kubohiroya/turbowarp-extension-data-editor/schema').SourceDocument;
+export const defaultSourceOptions: SourceOptions = {
+  apiVersion: 1, extensionId: 'owner', editorId: 'source', opcodes: ['owner_source'], bindings: [],
+  validationContext: () => ({consumerId: 'owner', nowMs: 0, settings: null})
+};
+export const invalidDefaultSourceOptions: SourceOptions = {
+  ...defaultSourceOptions,
+  // @ts-expect-error The default source context accepts only null settings.
+  validationContext: () => ({consumerId: 'owner', nowMs: 0, settings: {delegate: true}})
+};
