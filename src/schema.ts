@@ -76,3 +76,5 @@ export function toValidationIssues(diagnostics: readonly InputDiagnostic[]): rea
     throw new TypeError('Invalid input diagnostic.');
   }
 }
+export type * from './source-types.js';
+export {jsonValueSchema, jsonValueSchemaBundle} from './json-value.js';

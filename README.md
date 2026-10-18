@@ -148,3 +148,5 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 ## Optional editing examples
 
 Repository examples are opt-in teaching code, not template blocks or additional package exports. See [the JSON/YAML document example](examples/document-properties.mjs) and [its guide](examples/README.ja.md). Each extension owns its actual data contract.
+
+Prepared source editing is an optional host capability. See [the source/form contract](docs/source-forms.ja.md) for fixed-schema bindings, atomic saves, compatibility, and rollback.
