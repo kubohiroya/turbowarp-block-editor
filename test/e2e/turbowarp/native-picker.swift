@@ -18,6 +18,8 @@ func elements(_ element: AXUIElement, _ name: String) -> [AXUIElement] {
 
 func descendants(_ element: AXUIElement, depth: Int = 0) -> [AXUIElement] {
     guard depth < 12 else { return [] }
+    // Native dialogs are outside web content and file-list rows; avoid stale, expensive subtrees.
+    if ["AXWebArea", "AXTable", "AXOutline", "AXList", "AXBrowser"].contains(role(element)) { return [element] }
     return [element] + elements(element, kAXChildrenAttribute).flatMap { descendants($0, depth: depth + 1) }
 }
 
@@ -49,9 +51,23 @@ func main() throws {
     func sheets() -> [AXUIElement] {
         windows().flatMap { descendants($0) }.filter { role($0) == kAXSheetRole }
     }
+    func focusedWithin(_ ancestor: AXUIElement) -> Bool {
+        var element = attribute(application, kAXFocusedUIElementAttribute)
+        for _ in 0..<20 {
+            guard let current = element else { return false }
+            let node = current as! AXUIElement
+            if CFEqual(node, ancestor) { return true }
+            element = attribute(node, kAXParentAttribute)
+        }
+        return false
+    }
+    var guardedPanel: AXUIElement?
     func requireFocus() throws {
         guard NSWorkspace.shared.frontmostApplication?.processIdentifier == pid else {
             throw PickerError.message("The isolated Chrome process lost focus; no keystrokes sent")
+        }
+        if let guardedPanel, !focusedWithin(guardedPanel) {
+            throw PickerError.message("The owned native panel lost focus; no keystrokes sent")
         }
     }
     func sendScript(_ statement: String) throws {
@@ -81,17 +97,34 @@ func main() throws {
         panel = sheets().first
         return panel != nil
     }
-    guard panel != nil else { throw PickerError.message("Native panel unavailable") }
-    let initialSheetCount = sheets().count
+    guard let panel else { throw PickerError.message("Native panel unavailable") }
+    guardedPanel = panel
+    try waitFor("native-open-panel: focused") { focusedWithin(panel) }
     try key(5)
     var textField: AXUIElement?
+    var locationDialog: AXUIElement?
     try waitFor("go-to-folder: visible") {
-        let panels = sheets()
-        guard panels.count > initialSheetCount, let locationPanel = panels.last else { return false }
-        textField = descendants(locationPanel).first { role($0) == kAXTextFieldRole }
-        return textField != nil
+        guard let focused = attribute(application, kAXFocusedUIElementAttribute) else { return false }
+        let field = focused as! AXUIElement
+        guard role(field) == kAXTextFieldRole else { return false }
+        var element = attribute(field, kAXParentAttribute)
+        var nestedDialog: AXUIElement?
+        for _ in 0..<20 {
+            guard let current = element else { return false }
+            let node = current as! AXUIElement
+            if CFEqual(node, panel) {
+                // An initial Open-panel search field has no additional dialog ancestor.
+                guard let nestedDialog else { return false }
+                textField = field
+                locationDialog = nestedDialog
+                return true
+            }
+            if role(node) == kAXSheetRole || role(node) == "AXDialog" { nestedDialog = node }
+            element = attribute(node, kAXParentAttribute)
+        }
+        return false
     }
-    guard let textField else { throw PickerError.message("Path field unavailable") }
+    guard let textField, let locationDialog else { throw PickerError.message("Path field unavailable") }
     try requireFocus()
     // Set the native text control directly to preserve Japanese paths across input methods.
     guard AXUIElementSetAttributeValue(textField, kAXValueAttribute as CFString, file as CFString) == .success else {
@@ -101,9 +134,12 @@ func main() throws {
         (attribute(textField, kAXValueAttribute) as? String) == file
     }
     try key(36)
-    try waitFor("go-to-folder: accepted") { sheets().count <= initialSheetCount }
-    if !sheets().isEmpty { try key(36) }
-    try waitFor("native-open-panel: closed") { sheets().isEmpty }
+    func panelVisible() -> Bool { sheets().contains { CFEqual($0, panel) } }
+    try waitFor("go-to-folder: accepted") {
+        !panelVisible() || (focusedWithin(panel) && !descendants(panel).contains { CFEqual($0, locationDialog) })
+    }
+    if panelVisible() { try key(36) }
+    try waitFor("native-open-panel: closed") { !panelVisible() }
 }
 
 do { try main() } catch {
