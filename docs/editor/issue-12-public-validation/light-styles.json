@@ -1,0 +1,173 @@
+{
+  "theme": "light",
+  "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+  "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+  "observed": {
+    "repository": "https://github.com/kubohiroya/scratch-gui",
+    "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+    "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+    "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+  },
+  "browser": "156.0.8078.4",
+  "platform": "linux 6.17.0-1022-azure",
+  "url": "https://kubohiroya.github.io/scratch-gui/",
+  "before": {
+    "blocks": {
+      "root": {
+        "border": "rgb(8, 127, 140)",
+        "background": "linear-gradient(rgba(8, 127, 140, 0.08), rgba(8, 127, 140, 0.08)), none"
+      },
+      "grand": {
+        "border": "rgb(102, 51, 153)",
+        "background": "linear-gradient(rgba(102, 51, 153, 0.08), rgba(102, 51, 153, 0.08)), none"
+      },
+      "sibling": {
+        "border": "rgb(8, 127, 140)",
+        "background": "linear-gradient(rgba(8, 127, 140, 0.08), rgba(8, 127, 140, 0.08)), none"
+      }
+    },
+    "fields": {
+      "name": {
+        "id": "block-editor-2_name",
+        "value": "",
+        "border": "rgb(198, 40, 40)",
+        "background": "linear-gradient(rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.08)), none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": "true",
+        "descriptions": "block-editor-2_name__error block-editor-2_name__description block-editor-2_name__help",
+        "error": "must NOT have fewer than 1 characters"
+      },
+      "amount": {
+        "id": "block-editor-2_amount",
+        "value": "0",
+        "border": "rgb(198, 40, 40)",
+        "background": "linear-gradient(rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.08)), none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": "true",
+        "descriptions": "block-editor-2_amount__error block-editor-2_amount__description block-editor-2_amount__help",
+        "error": "must be >= 1"
+      },
+      "mode": {
+        "id": "block-editor-2_mode",
+        "value": "",
+        "border": "rgb(198, 40, 40)",
+        "background": "linear-gradient(rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.08)), none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": "true",
+        "descriptions": "block-editor-2_mode__error block-editor-2_mode__description block-editor-2_mode__help",
+        "error": "must be equal to one of the allowed values"
+      },
+      "notes": {
+        "id": "block-editor-2_notes",
+        "value": "bad",
+        "border": "rgb(198, 40, 40)",
+        "background": "linear-gradient(rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.08)), none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": "true",
+        "descriptions": "block-editor-2_notes__error block-editor-2_notes__description block-editor-2_notes__help",
+        "error": "must match pattern \"^OK\""
+      },
+      "nested_invalid": {
+        "id": "block-editor-2_nested_invalid",
+        "value": "bad",
+        "border": "rgb(198, 40, 40)",
+        "background": "linear-gradient(rgba(198, 40, 40, 0.08), rgba(198, 40, 40, 0.08)), none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": "true",
+        "descriptions": "block-editor-2_nested_invalid__error block-editor-2_nested_invalid__description block-editor-2_nested_invalid__help",
+        "error": "must match pattern \"^OK$\""
+      }
+    },
+    "validSibling": {
+      "id": "block-editor-2_nested_valid",
+      "value": "Keep this unchanged",
+      "border": "rgba(0, 0, 0, 0.15)",
+      "background": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "invalid": null,
+      "descriptions": "block-editor-2_nested_valid__error block-editor-2_nested_valid__description block-editor-2_nested_valid__help",
+      "error": ""
+    }
+  },
+  "after": {
+    "blocks": {
+      "root": {
+        "border": "rgb(8, 127, 140)",
+        "background": "linear-gradient(rgba(8, 127, 140, 0.08), rgba(8, 127, 140, 0.08)), none"
+      },
+      "grand": {
+        "border": "rgb(102, 51, 153)",
+        "background": "linear-gradient(rgba(102, 51, 153, 0.08), rgba(102, 51, 153, 0.08)), none"
+      },
+      "sibling": {
+        "border": "rgb(8, 127, 140)",
+        "background": "linear-gradient(rgba(8, 127, 140, 0.08), rgba(8, 127, 140, 0.08)), none"
+      }
+    },
+    "fields": {
+      "name": {
+        "id": "block-editor-2_name",
+        "value": "Corrected name",
+        "border": "rgba(0, 0, 0, 0.15)",
+        "background": "none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": null,
+        "descriptions": "block-editor-2_name__error block-editor-2_name__description block-editor-2_name__help",
+        "error": ""
+      },
+      "amount": {
+        "id": "block-editor-2_amount",
+        "value": "3",
+        "border": "rgba(0, 0, 0, 0.15)",
+        "background": "none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": null,
+        "descriptions": "block-editor-2_amount__error block-editor-2_amount__description block-editor-2_amount__help",
+        "error": ""
+      },
+      "mode": {
+        "id": "block-editor-2_mode",
+        "value": "1",
+        "border": "rgba(0, 0, 0, 0.15)",
+        "background": "none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": null,
+        "descriptions": "block-editor-2_mode__error block-editor-2_mode__description block-editor-2_mode__help",
+        "error": ""
+      },
+      "notes": {
+        "id": "block-editor-2_notes",
+        "value": "OK notes",
+        "border": "rgba(0, 0, 0, 0.15)",
+        "background": "none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": null,
+        "descriptions": "block-editor-2_notes__error block-editor-2_notes__description block-editor-2_notes__help",
+        "error": ""
+      },
+      "nested_invalid": {
+        "id": "block-editor-2_nested_invalid",
+        "value": "OK",
+        "border": "rgba(0, 0, 0, 0.15)",
+        "background": "none",
+        "backgroundColor": "rgb(255, 255, 255)",
+        "invalid": null,
+        "descriptions": "block-editor-2_nested_invalid__error block-editor-2_nested_invalid__description block-editor-2_nested_invalid__help",
+        "error": ""
+      }
+    },
+    "validSibling": {
+      "id": "block-editor-2_nested_valid",
+      "value": "Keep this unchanged",
+      "border": "rgba(0, 0, 0, 0.15)",
+      "background": "none",
+      "backgroundColor": "rgb(255, 255, 255)",
+      "invalid": null,
+      "descriptions": "block-editor-2_nested_valid__error block-editor-2_nested_valid__description block-editor-2_nested_valid__help",
+      "error": ""
+    }
+  },
+  "completed": true,
+  "stage": "completed",
+  "status": "passed"
+}

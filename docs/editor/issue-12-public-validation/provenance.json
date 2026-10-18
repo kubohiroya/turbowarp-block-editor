@@ -1,0 +1,88 @@
+{
+  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/12",
+  "run": {
+    "conclusion": "success",
+    "created_at": "2026-10-18T03:05:00Z",
+    "head_sha": "4222d70005a59540dc454cf689668b1a9daa351e",
+    "html_url": "https://github.com/kubohiroya/scratch-gui/actions/runs/39092358787",
+    "id": 39092358787,
+    "run_attempt": 1,
+    "status": "completed",
+    "updated_at": "2026-10-18T03:09:10Z"
+  },
+  "artifact": {
+    "id": 12123361906,
+    "name": "block-editor-public-39092358787-1",
+    "size_in_bytes": 1899363,
+    "digest": "sha256:54cddeeda3022c458eef5693108bfc70a1a6467cabb04162f8df81141c866975",
+    "created_at": "2026-10-18T03:09:07Z",
+    "expires_at": "2026-10-25T03:09:06Z"
+  },
+  "artifactURL": "https://github.com/kubohiroya/scratch-gui/actions/runs/39092358787/artifacts/12123361906",
+  "publicURL": "https://kubohiroya.github.io/scratch-gui/",
+  "guiRevision": "4222d70005a59540dc454cf689668b1a9daa351e",
+  "productCoreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a",
+  "runnerRevision": "e1b88b11ac1d21e06d7b7de0b00966d632ef73c9",
+  "files": [
+    {
+      "path": "dark-invalid.png",
+      "bytes": 124859,
+      "sha256": "b673cd956c2011f5bde66368d707b2c2f40013c516a3e8cbb850427fd74ae7da",
+      "source": "test-results/block-editor/invalid-theme-invalid表示と修正後の解除・ブロック色の保持-dark--chromium-project-url/dark-invalid.png"
+    },
+    {
+      "path": "dark-styles.json",
+      "bytes": 6803,
+      "sha256": "a346af60ebf45a05acc4c95529d69f596454c891869e87c0c40c3a51f6769f9e",
+      "source": "test-results/block-editor/results.json > attachment dark-styles.json (base64 decoded, original bytes)"
+    },
+    {
+      "path": "dark-valid.png",
+      "bytes": 113113,
+      "sha256": "690dfdb06ae74adf056ae62b03fb8956c807b11535c534c1fb83c358e1871079",
+      "source": "test-results/block-editor/invalid-theme-invalid表示と修正後の解除・ブロック色の保持-dark--chromium-project-url/dark-valid.png"
+    },
+    {
+      "path": "deployment-target.json",
+      "bytes": 186,
+      "sha256": "e617e91c7d466b6d58ef4b2308b9f1cafc7a08e68940cbb6ef48de4fe5837715",
+      "source": "test-results/block-editor-deployment/deployment-target.json"
+    },
+    {
+      "path": "deployment-wait.json",
+      "bytes": 174,
+      "sha256": "984560600883b83cc79e4af31499806bb1633e7c92b11a8453a86e0b5de132ae",
+      "source": "test-results/block-editor-deployment/deployment-wait.json"
+    },
+    {
+      "path": "light-invalid.png",
+      "bytes": 102954,
+      "sha256": "020cbcfa6620479475a4bafef816112680e048299a1d53e74a6070c0e3c216b1",
+      "source": "test-results/block-editor/invalid-theme-invalid表示と修正後の解除・ブロック色の保持-light--chromium-project-url/light-invalid.png"
+    },
+    {
+      "path": "light-styles.json",
+      "bytes": 6768,
+      "sha256": "e9071a53ccf9fa924db3ba753a17b5f1d9d6f7e1824584d78796e4ba7a4d56f5",
+      "source": "test-results/block-editor/results.json > attachment light-styles.json (base64 decoded, original bytes)"
+    },
+    {
+      "path": "light-valid.png",
+      "bytes": 91766,
+      "sha256": "9c62cd03fc9d49dfa8ded0ecee91d2368cd71038f91df989cb7d8726e11d5767",
+      "source": "test-results/block-editor/invalid-theme-invalid表示と修正後の解除・ブロック色の保持-light--chromium-project-url/light-valid.png"
+    },
+    {
+      "path": "results.json",
+      "bytes": 309443,
+      "sha256": "3129e4ccd0bbff512a45670c8c7e17a59054a20ca370d086d9079d9e544cc1be",
+      "source": "test-results/block-editor/results.json"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 8535,
+      "sha256": "7e9792cc2fc53182ab94839ccec854d064cdbd87caa038a517fd1b21da7cda16",
+      "source": "test-results/block-editor/summary.json"
+    }
+  ]
+}
