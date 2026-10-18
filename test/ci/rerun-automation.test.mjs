@@ -198,14 +198,10 @@ test('log redirect never receives the repository token; HTTP/network errors fail
 });
 
 const workflow = file => YAML.parse(readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), 'utf8'));
-test('only the driver is scheduled; child workflows stay manual and never gain deployment permissions', () => {
+test('rerun workflows stay manual and never gain deployment permissions', () => {
     for (const file of ['ci-gate-rerun-test.yml', fixtureFile, probeFile]) {
         const w = workflow(file);
-        assert.deepEqual(Object.keys(w.on), file === 'ci-gate-rerun-test.yml' ? ['workflow_dispatch', 'schedule'] : ['workflow_dispatch']);
-        if (file === 'ci-gate-rerun-test.yml') {
-            assert.deepEqual(w.on.schedule, [{cron: weeklyCron}]);
-            assert.equal(w.jobs.orchestrate.steps.find(step => step.run?.includes('test-latest-attempt.mjs')).env.CI_SCHEDULE, '${{ github.event.schedule }}');
-        }
+        assert.deepEqual(Object.keys(w.on), ['workflow_dispatch']);
         assert.equal(w.permissions.contents, 'read');
         for (const job of Object.values(w.jobs)) {
             assert.equal(job.environment, undefined);
@@ -215,6 +211,9 @@ test('only the driver is scheduled; child workflows stay manual and never gain d
             assert.equal(permissions.actions, file === 'ci-gate-rerun-test.yml' ? 'write' : file === probeFile ? 'read' : undefined);
             assert.doesNotMatch(JSON.stringify(job), /deploy-pages|npm publish|secrets: inherit/);
         }
+    }
+    for (const file of ['site-public.yml', 'ci-gate-rerun-report.yml']) {
+        assert.deepEqual(Object.keys(workflow(file).on), ['workflow_dispatch']);
     }
     const observer = workflow(probeFile);
     assert.equal(observer.jobs.gate.uses, './.github/workflows/require-successful-ci.yml');

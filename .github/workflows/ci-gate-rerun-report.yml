@@ -1,9 +1,5 @@
 name: Verify scheduled CI attempts
 on:
-  workflow_run:
-    workflows: [Test latest CI attempts without publishing]
-    types: [completed]
-    branches: [main]
   workflow_dispatch:
     inputs:
       run_id:
