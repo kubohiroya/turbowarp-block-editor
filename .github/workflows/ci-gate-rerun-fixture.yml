@@ -1,0 +1,37 @@
+name: CI rerun fixture
+run-name: CI rerun fixture ${{ inputs.suite_id }}
+on:
+  workflow_dispatch:
+    inputs:
+      suite_id:
+        type: string
+        required: true
+      expected_revision:
+        type: string
+        required: true
+permissions:
+  contents: read
+jobs:
+  fixture:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Exercise three attempts without deployment credentials
+        env:
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+          SUITE_ID: ${{ inputs.suite_id }}
+        run: |
+          node <<'JS'
+          const {GITHUB_SHA, GITHUB_REPOSITORY, GITHUB_RUN_ATTEMPT, EXPECTED_REVISION, SUITE_ID} = process.env;
+          if (GITHUB_REPOSITORY !== 'kubohiroya/turbowarp-extension-data-editor' ||
+              !/^[0-9a-f]{40}$/.test(EXPECTED_REVISION) || EXPECTED_REVISION !== GITHUB_SHA ||
+              !/^\d+-\d+$/.test(SUITE_ID)) throw new Error('Invalid fixture source or suite');
+          const attempt = Number(GITHUB_RUN_ATTEMPT);
+          if (![1, 2, 3].includes(attempt)) throw new Error('Only three planned attempts are allowed');
+          console.log(JSON.stringify({attempt, sha: GITHUB_SHA, startedAt: new Date().toISOString()}));
+          setTimeout(() => {
+            console.log(JSON.stringify({attempt, conclusion: attempt === 2 ? 'failure' : 'success',
+              finishedAt: new Date().toISOString()}));
+            process.exit(attempt === 2 ? 1 : 0);
+          }, attempt === 1 ? 0 : 180_000);
+          JS

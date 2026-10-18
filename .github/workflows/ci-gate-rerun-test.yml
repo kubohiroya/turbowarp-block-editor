@@ -1,0 +1,36 @@
+name: Test latest CI attempts without publishing
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ci-gate-rerun-test-${{ github.repository }}-${{ github.ref }}
+  cancel-in-progress: false
+jobs:
+  orchestrate:
+    if: github.repository == 'kubohiroya/turbowarp-extension-data-editor' && startsWith(github.ref, 'refs/heads/')
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify latest attempts using isolated fixture and read-only observers
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: node scripts/ci/test-latest-attempt.mjs
+      - name: Preserve rerun test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-rerun-test-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/ci-rerun-test/
+          retention-days: 7
+          if-no-files-found: warn
