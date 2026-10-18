@@ -14,6 +14,7 @@ const buildInfo = async (request, baseURL, onRead) => {
     expect(info.coreRevision).toMatch(/^[a-f0-9]{40}$/);
     if (process.env.E2E_EXPECT_GUI_REVISION) expect(info.revision).toBe(process.env.E2E_EXPECT_GUI_REVISION);
     if (process.env.E2E_EXPECT_CORE_REVISION) expect(info.coreRevision).toBe(process.env.E2E_EXPECT_CORE_REVISION);
+    if (process.env.E2E_EXPECT_SITE_REVISION) expect(info.siteRevision).toBe(process.env.E2E_EXPECT_SITE_REVISION);
     return info;
 };
 

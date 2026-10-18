@@ -17,7 +17,8 @@ const main = async () => {
                     revision: info.revision,
                     coreRevision: info.coreRevision});
                 if (info.revision === process.env.E2E_EXPECT_GUI_REVISION &&
-                    info.coreRevision === process.env.E2E_EXPECT_CORE_REVISION) return;
+                    info.coreRevision === process.env.E2E_EXPECT_CORE_REVISION &&
+                    (!process.env.E2E_EXPECT_SITE_REVISION || info.siteRevision === process.env.E2E_EXPECT_SITE_REVISION)) return;
             } catch (error) {
                 attempts.push({time: new Date().toISOString(), error: error.message});
             }

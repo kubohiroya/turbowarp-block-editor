@@ -5,7 +5,7 @@ const native = process.env.E2E_NATIVE === '1';
 if (native && process.platform !== 'darwin') throw new Error('Native picker tests require macOS.');
 
 const port = process.env.E2E_PORT || '8732';
-const baseURL = process.env.E2E_BASE_URL || `http://127.0.0.1:${port}/scratch-gui/`;
+const baseURL = process.env.E2E_BASE_URL || `http://127.0.0.1:${port}${process.env.E2E_PATH_PREFIX || '/scratch-gui/'}`;
 const parsed = new URL(baseURL);
 if (process.env.E2E_BASE_URL && !['127.0.0.1', 'localhost', '[::1]'].includes(parsed.hostname) &&
     (!/^[a-f0-9]{40}$/.test(process.env.E2E_EXPECT_GUI_REVISION || '') ||
@@ -58,6 +58,6 @@ module.exports = defineConfig({
         url: `${baseURL}build-info.json`,
         timeout: 15_000,
         reuseExistingServer: false,
-        env: {E2E_PORT: port}
+        env: {E2E_PORT: port, E2E_PATH_PREFIX: parsed.pathname}
     }})
 });

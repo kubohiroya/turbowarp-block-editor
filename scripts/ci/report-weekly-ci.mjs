@@ -1,13 +1,11 @@
 import assert from 'node:assert/strict';
-import {sign} from 'node:crypto';
-import {appendFileSync, mkdirSync, readFileSync, writeFileSync} from 'node:fs';
+import {appendFileSync, mkdirSync, writeFileSync} from 'node:fs';
 import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fixtureFile, probeFile, repository, scenarios, verifyDecision} from './assert-rerun-probe.mjs';
-import {compareGUI, guiRepository} from './gui-snapshot.mjs';
+import {compareGUI} from './gui-snapshot.mjs';
 
 export const driverFile = 'ci-gate-rerun-test.yml';
-export const issuePath = `/repos/${guiRepository}/issues/12/comments`;
 const positive = value => Number.isSafeInteger(value) && value > 0;
 const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 const stamp = value => {const n = Date.parse(value); assert.ok(Number.isFinite(n), 'Invalid timestamp'); return n;};
@@ -17,21 +15,21 @@ const same = (value, fields) => {
 const runURL = id => `https://github.com/${repository}/actions/runs/${id}`;
 
 export function requestAPI(token, fetchImpl = fetch) {
-    const request = async (path, method = 'GET', body) => {
-        assert.match(path, /^\/(repos|app|installation)\/[A-Za-z0-9_./?=&%-]+$/);
+    const request = async path => {
+        assert.ok(path.startsWith(`/repos/${repository}/`), 'Only common repository reads are allowed');
+        assert.match(path, /^\/repos\/[A-Za-z0-9_./?=&%-]+$/);
         let response;
         try {
             response = await fetchImpl(`https://api.github.com${path}`, {
-                method, redirect: 'manual', signal: AbortSignal.timeout(20_000),
+                method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(20_000),
                 headers: {Accept: 'application/vnd.github+json', Authorization: `Bearer ${token}`,
-                    'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28'},
-                body: body === undefined ? undefined : JSON.stringify(body)
+                    'X-GitHub-Api-Version': '2022-11-28'}
             });
         } catch {throw new Error('GitHub request failed');}
         return response;
     };
-    const api = async (path, method = 'GET', body) => {
-        const response = await request(path, method, body);
+    const api = async path => {
+        const response = await request(path);
         assert.ok(response.ok, `GitHub HTTP ${response.status}`);
         return response.status === 204 ? undefined : response.json();
     };
@@ -268,66 +266,8 @@ export function commentBody(report) {
             `- Pages deployment: ${report.gui.before.deployment.id} → ${report.gui.after.deployment.id}`);
     } else lines.push('- suite成功・GUI状態の完全な検証を完了したとは扱いません。runとreport artifactを確認してください。');
     lines.push('', '検証・報告は共通側のみで実施し、GUIのコード・CI・固定SHA・公開物を変更する処理はありません。',
-        'このコメントは専用GitHub Appによる定型自動報告です。');
+        'この文面は共通GitHub Actionsが生成した検証結果の草案です。');
     return lines.join('\n') + '\n';
-}
-
-export async function postOnce(report, api, botLogin) {
-    assert.match(botLogin || '', /^[A-Za-z0-9-]+\[bot\]$/);
-    const body = commentBody(report);
-    const marker = body.split('\n')[0];
-    const find = async () => (await pages(api, issuePath)).find(c =>
-        c.user?.login === botLogin && c.user?.type === 'Bot' && c.body?.includes(marker));
-    const existing = await find();
-    if (existing) return {status: 'already-posted', id: existing.id};
-    try {
-        const posted = await api(issuePath, 'POST', {body});
-        assert.ok(positive(posted.id)); assert.equal(posted.body, body);
-        assert.equal(posted.user?.login, botLogin); assert.equal(posted.user?.type, 'Bot');
-        return {status: 'posted', id: posted.id};
-    } catch {
-        const recovered = await find();
-        if (recovered) return {status: 'already-posted', id: recovered.id};
-        throw new Error('Issue posting failed or uncertain; no automatic second POST');
-    }
-}
-
-export async function appSession(appId, privateKey, {fetchImpl = fetch, now = Date.now} = {}) {
-    assert.match(appId || '', /^[1-9]\d*$/);
-    const seconds = Math.floor(now() / 1000);
-    const encode = v => Buffer.from(JSON.stringify(v)).toString('base64url');
-    const unsigned = `${encode({alg: 'RS256', typ: 'JWT'})}.${encode({iat: seconds - 60, exp: seconds + 540, iss: appId})}`;
-    const jwt = `${unsigned}.${sign('RSA-SHA256', Buffer.from(unsigned), privateKey).toString('base64url')}`;
-    const app = requestAPI(jwt, fetchImpl);
-    const installation = await app(`/repos/${guiRepository}/installation`);
-    assert.ok(positive(installation.id)); assert.equal(installation.repository_selection, 'selected');
-    assert.equal(installation.app_id, Number(appId));
-    assert.match(installation.app_slug || '', /^[A-Za-z0-9-]+$/);
-    assert.deepEqual(installation.permissions, {issues: 'write', metadata: 'read'}, 'App has excess permissions');
-    const issued = await app(`/app/installations/${installation.id}/access_tokens`, 'POST',
-        {repositories: ['scratch-gui'], permissions: {issues: 'write'}});
-    assert.ok(typeof issued.token === 'string' && issued.token.length > 0);
-    const api = requestAPI(issued.token, fetchImpl);
-    try {
-        assert.deepEqual(issued.permissions, {issues: 'write', metadata: 'read'}, 'Token has excess permissions');
-        assert.deepEqual(issued.repositories?.map(r => r.full_name), [guiRepository]);
-        assert.ok(stamp(issued.expires_at) > now() && stamp(issued.expires_at) <= now() + 3_660_000);
-        const accessible = await pages(api, '/installation/repositories', 'repositories');
-        assert.deepEqual(accessible.map(r => r.full_name), [guiRepository]);
-    } catch (error) {await api('/installation/token', 'DELETE'); throw error;}
-    return {api, botLogin: `${installation.app_slug}[bot]`, revoke: () => api('/installation/token', 'DELETE')};
-}
-
-export async function publishReport(report, {api, appId, privateKey, session = appSession} = {}) {
-    commentBody(report);
-    assert.ok(['verified-success', 'source-failed', 'unconfirmed'].includes(report.status));
-    const fresh = await api.get(`actions/runs/${report.source.id}`);
-    same(fresh, {run_attempt: report.source.attempt, status: 'completed', head_sha: report.source.sha,
-        event: 'schedule', head_branch: 'main', conclusion: report.source.conclusion});
-    assert.equal(fresh.repository?.full_name, repository);
-    const credentials = await session(appId, privateKey);
-    try {return await postOnce(report, credentials.api, credentials.botLogin);}
-    finally {await credentials.revoke();}
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -350,15 +290,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
             console.log(`Weekly verification: ${report.status}`);
             if (['source-failed', 'unconfirmed'].includes(report.status)) process.exitCode = 1;
         } else {
-            assert.equal(mode, 'publish');
-            assert.equal(env.CI_RERUN_REPORT_ENABLED, 'true');
-            assert.notEqual(env.REPORT_DRY_RUN, 'true');
-            const report = JSON.parse(readFileSync('verified-report/report.json', 'utf8'));
-            assert.equal(report.reporterSha, env.GITHUB_SHA);
-            const result = await publishReport(report, {api, appId: env.CI_REPORT_APP_ID,
-                privateKey: env.CI_REPORT_APP_PRIVATE_KEY});
-            writeFileSync(`${output}/publication.json`, JSON.stringify(result) + '\n');
-            console.log(`Issue report: ${result.status}`);
+            assert.equal(mode, 'verify', 'Only read-only verification is supported');
+
         }
     } catch {
         console.error('Weekly report could not be completed; inspect the verification artifact and configuration.');
