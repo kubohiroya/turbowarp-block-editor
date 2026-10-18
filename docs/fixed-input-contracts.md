@@ -1,6 +1,6 @@
-# 固定入力の契約（S3-1）
+# 固定入力の契約とnative host（S3-1/S3-2）
 
-この実装は固定入力の型・Schema検査・同期prepared境界を追加する。実Blockly/VMのfield transaction、固定フォーム、GUIフラグ、拡張側の登録は後続工程で実装する。既存SOURCE編集、`apiVersion: 1`、既存8 exportsとCSS buildは維持する。
+この実装は固定入力の型・Schema検査・同期prepared境界と、明示的に有効化する標準field transactionを追加する。固定フォーム、GUIフラグ、拡張側の登録は後続工程で実装する。既存SOURCE編集、`apiVersion: 1`、既存8 exportsとCSS buildは維持する。
 
 ## 有効化と互換性
 
@@ -32,6 +32,23 @@ owner設定型は既存`SchemaValidationContext<C>`のJSON設定制約に従い�
 
 新しいfactory/固定入力登録のoptions・definition・bindingも通常の宣言objectのown data propertyから一度だけ採取する。accessorや独自iteratorを実行して宣言を得ることはせず、検査済みのcallback・opcode配列をそのまま登録する。旧legacy登録の宣言仕様は変更しない。
 
-hostはcommitの実書込み直前にも全identity・読取依存・登録寿命を再確認し、readonly変更を全件拒否する責務を持つ。registry経由のsessionは、commit待機中に登録が解除されたらrequestの`signal`をabortする。hostは実書込み直前にもsignalを確認し、失効時には無変更で拒否する。購読はcommit完了/拒否時に解除する。全field適用・VMイベント・undo/dirtyを含むrollbackの実装はS3-2で行う。この工程のmock hostテストを実hostの原子性保証に代用しない。実GUI、23展開fixture、owner全境界・旧runtime比較、新artifact閉包も後続の受け入れ条件である。
+hostはcommitの実書込み直前にも全identity・読取依存・登録寿命を再確認し、readonly変更を全件拒否する責務を持つ。registry経由のsessionは、commit待機中に登録が解除されたらrequestの`signal`をabortする。hostは実書込み直前にもsignalを確認し、失効時には無変更で拒否する。購読はcommit完了/拒否時に解除する。S3-2の標準field hostは全field適用・同期VMイベント・undo/redo・dirty・event groupをまとめてcommit/rollbackする。mockに加えて、固定した実ScratchBlocksとVM adapterのfixtureで保存と途中例外を確認する。headless native fixtureの結果を、まだ未接続の製品GUIやnative pickerのE2Eに代用しない。実GUI、23展開fixture、owner全境界・旧runtime比較、新artifact閉包も後続の受け入れ条件である。
 
 切戻しはサービスのopt-inを外すことで新契約を公開しない状態に戻せる。旧host/旧登録の型・実行経路は維持する。今回のローカル差分は公開artifactでも依存pinでもなく、版を更新・公開しない。
+
+
+## S3-2の標準field host
+
+`/turbowarp`の`createTurboWarpBlockEditorHost({...options, enableFixedInputs: true})`でだけ`fixedInputs` portを作る。省略・falseでは旧TEXT hostを維持する。`attachTurboWarpBlockEditors`からの有効化・GUI起動時フラグはS3-3の範囲であり、サービスのopt-inとは別である。
+
+hostはregistryの`resolveFixed(opcode)`が返すcallbackを含まないimmutable宣言を正本とする。同じ内容で再登録しても宣言identityは変わり、以前のsnapshotで保存できない。呼出し側のdeclarationによるreadonly集合の省略・偽造は認めない。旧`resolve()`のdescriptorは変えない。
+
+標準allowlistは`text.TEXT`の`FieldTextInput`、`math_number.NUM`の`FieldNumber`、拡張namespace配下の静的menu shadowと親の直接`FieldDropdown`、`colour_picker.COLOUR`の`FieldColourSlider`である。実保存primitiveがstringで、VMとfield値が厳密に一致する場合だけ書込み候補にする。custom subclass・独自validator/field method・動的menu callback・reporterは実行せず書込み対象外とする。BOOLEAN socketを作ったりreporterをliteralへ置換したりしない。
+
+新候補はfieldごとに純粋に全件検査してから適用する。数値は有限JSON数値token、menuは保存valueの既存静的候補、色は受理する色字句に制限し、field setterの結果と候補が厳密に一致しなければrollbackする。ownerの範囲・sentinel・単位・clampはここへ追加しない。既存未知menu値、数値の空白/alias、色の表記等は変更しない限りrawを保持する。
+
+commit直前にproject/target、親・shadow・field・VM、読取依存、登録寿命、signalを再確認する。readonlyへのpatchや不正候補を一つ含む要求も全件拒否する。同期適用中のsetter・VM adapter・listener例外や中断では、この保存が変更したfield/VMと自己イベントのundo/redoを復旧し、この保存に由来するdirtyを増やさない。再入した外部操作の値・履歴・dirty通知と、外部のtarget/project切替後の履歴は保持し、古い状態へ巻き戻さない。成功時だけこの保存の一つのundo groupとdirty通知を作り、no-opではどちらも作らない。色fieldはrawだけでなくHSVとblockの表示色も復旧する。
+
+固定入力のChangeは同期配送中に`recordUndo: false`でVMとlistenerへ渡し、全検査成功後に同じeventを`recordUndo: true`としてundo履歴へ追加する。redoのclearも成功時まで保留する。これにより失敗・project切替時に旧履歴を復元するための書戻しを避け、外部操作が持つ現在の履歴を保持する。旧SOURCEのevent配送は変更しない。保存対象と同じfieldへの外部Changeが再入した場合は外部値を残し、最初の外部eventのundo起点をこの保存開始前のrawに対応させる。未commit値をundoで復活させない。外部の色変更ではそのrawと表示状態も保持する。
+
+branch groupの書込みとfixed descendants併用は、S3-3以降の対応が完了するまで拒否を維持する。独立したliteralは安定した読取文脈のもとで保存できる。23展開fixture・owner境界・依存pinの更新・C3配布完了をこの工程の成果として扱わない。
