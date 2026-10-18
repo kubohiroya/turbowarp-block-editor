@@ -1,7 +1,7 @@
 import type {ValidationIssue} from './schema-types.js';
 export type {ValidationIssue} from './schema-types.js';
 import type {DescendantEditorHost} from './descendant-types.js';
-import type {FixedInputEditorHost} from './fixed-input-types.js';
+import type {FixedInputEditorHost, FixedInputViewDescription} from './fixed-input-types.js';
 
 export const EDITOR_API_VERSION = 1 as const;
 
@@ -63,6 +63,8 @@ export interface SessionState {
 
 export interface EditorViewContext {
   getDraft(): JsonObject;
+  /** Fixed views obtain only safe presentation data, never live host objects. */
+  getFixedInputView?(): FixedInputViewDescription | undefined;
   /** Updates are rejected after this view unmounts, even when its session stays open. */
   setDraft(draft: JsonObject): void;
   /** Report live UI validation; save() always independently validates again. */

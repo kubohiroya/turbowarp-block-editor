@@ -1,27 +1,34 @@
 import createBlockEditorHost from './host.js';
 import bindBlockEditorIcon from './icon.js';
 import readBlockEditorAppearance from './appearance.js';
-import {supportsDescendantEditing} from '../index.js';
+import {supportsDescendantEditing, supportsFixedInputEditing} from '../index.js';
 import createBlockEditorErrorSession from './error-session.js';
 
-const openBlockEditorSession = ({registry, reference, host, descendants}) => (
-    descendants && supportsDescendantEditing(host) ?
-        registry.openDescendants(reference, host) : registry.open(reference, host)
-);
+const fixedDeclaration = (registry, snapshot) => snapshot && typeof registry.resolveFixed === 'function' &&
+    registry.resolveFixed(snapshot.opcode);
+const openBlockEditorSession = ({registry, reference, host, descendants}) => {
+    const snapshot = host.readBlock ? host.readBlock(reference) : null;
+    // A fixed registration owns only this block; legacy aggregate traversal stays fail-closed.
+    if (fixedDeclaration(registry, snapshot)) return supportsFixedInputEditing(host) ? registry.open(reference, host) : undefined;
+    return descendants && supportsDescendantEditing(host) ?
+        registry.openDescendants(reference, host) : registry.open(reference, host);
+};
 
 const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, canOpen, onOpen, onError,
-    descendants = false}) => {
+    descendants = false, fixedInputs = false}) => {
     const host = createBlockEditorHost({ScratchBlocks,
         workspace,
         vm,
         registry: service.registry,
         enableDescendants: descendants,
+        enableFixedInputs: fixedInputs,
         onError});
     const decorations = new Map();
     let disposed = false;
     let timer = null;
     let activeSession = null;
     let openingSnapshot = null;
+    let openingFixedDeclaration = null;
     let stopWaiting = null;
     const endSession = () => {
         const session = activeSession;
@@ -49,11 +56,19 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
             !['editing', 'saving'].includes(activeSession.getState().status)) return;
         const current = typeof activeSession.getNodes === 'function' ?
             host.descendants.readSubtree(activeSession.reference) : host.readBlock(activeSession.reference);
+        if (openingFixedDeclaration) {
+            // Same-target external edits conflict at save while the session retains its draft.
+            // Project/target/registration replacement ends the session and drops that draft.
+            if (!current || current.fixedContext?.generation !== openingSnapshot.fixedContext.generation ||
+                fixedDeclaration(service.registry, current) !== openingFixedDeclaration) endSession();
+            return;
+        }
         if (!current || JSON.stringify(current) !== JSON.stringify(openingSnapshot)) endSession();
     };
     const available = block => {
         if (disposed || !vm.editingTarget || !canOpen() || !service.registry.resolve(block.type)) return false;
         const snapshot = host.readBlock({targetId: vm.editingTarget.id, blockId: block.id});
+        if (fixedDeclaration(service.registry, snapshot)) return supportsFixedInputEditing(host);
         return snapshot && Object.values(snapshot.arguments).every(slot => slot.kind === 'literal');
     };
     const open = block => {
@@ -67,6 +82,7 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
                 activeSession = session;
                 openingSnapshot = typeof session.getNodes === 'function' ?
                     host.descendants.readSubtree(session.reference) : host.readBlock(session.reference);
+                openingFixedDeclaration = fixedDeclaration(service.registry, openingSnapshot) || null;
                 const labels = {};
                 const appearances = Object.create(null);
                 if (typeof session.getNodes === 'function') {
@@ -83,6 +99,7 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
             onError(error);
             activeSession = createBlockEditorErrorSession(reference, error);
             openingSnapshot = null;
+            openingFixedDeclaration = null;
             onOpen(activeSession);
         }
     };
@@ -127,7 +144,12 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
     };
     const unregister = service.subscribe(() => {
         // Aggregate sessions observe relevant registry changes themselves.
-        if (!activeSession || typeof activeSession.getNodes !== 'function') {
+        if (openingFixedDeclaration && activeSession) {
+            if (service.registry.resolveFixed(openingSnapshot.opcode) !== openingFixedDeclaration) {
+                host.invalidate();
+                endSession();
+            }
+        } else if (!activeSession || typeof activeSession.getNodes !== 'function') {
             host.invalidate();
             endSession();
         }

@@ -181,3 +181,45 @@
     outline: 2px solid currentColor;
     outline-offset: 2px;
 }
+
+.body :global(.block-editor-fixed-inputs) > fieldset {
+    margin: 0 0 1rem;
+    padding: 0.75rem;
+    border: 1px solid var(--block-editor-border, #ccc);
+    border-radius: var(--block-editor-radius, 0.5rem);
+}
+
+.body :global(.block-editor-fixed-inputs) output {
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.body :global(.block-editor-fixed-color) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.body :global(.block-editor-fixed-color) input[type="text"] {
+    flex: 1;
+    min-width: 0;
+}
+
+.body :global(.block-editor-fixed-color) input[type="color"] {
+    width: 3rem;
+    min-width: 3rem;
+    height: 2.75rem;
+    padding: 0.25rem;
+    box-sizing: border-box;
+}
+
+.body :global(.block-editor-fixed-readonly),
+.body :global(.block-editor-fixed-unverified) {
+    margin-bottom: 0;
+    font-size: 0.875em;
+}
+
+.body :global(.block-editor-fixed-error) {
+    color: var(--block-editor-error-text, #a61b1b);
+    margin-bottom: 0;
+}

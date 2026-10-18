@@ -1,4 +1,5 @@
 import {snapshotJson} from './schema-json.js';
+import {captureFixedBranchRules} from './fixed-input-branches.js';
 import type {FixedBlockSnapshot, FixedInputDeclaration, FixedInputDependency, FixedInputMetadata} from './fixed-input-types.js';
 import type {ArgumentSlot, BlockReference} from './types.js';
 
@@ -50,6 +51,8 @@ function dependencies(value: unknown, editable: ReadonlySet<string>): readonly F
 }
 
 export function captureFixedInputDeclaration(value: FixedInputDeclaration): FixedInputDeclaration {
+  const policy = Object.getOwnPropertyDescriptor(value, 'branchRules');
+  if (policy && !('value' in policy)) return fail();
   const captured = record(snapshotJson({
     contractId: own(value, 'contractId'), contractRevision: own(value, 'contractRevision'),
     editableArguments: own(value, 'editableArguments'), readOnlyArguments: own(value, 'readOnlyArguments'),
@@ -59,9 +62,12 @@ export function captureFixedInputDeclaration(value: FixedInputDeclaration): Fixe
   const readOnlyArguments = names(captured.readOnlyArguments);
   const editable = new Set(editableArguments);
   if (editable.size === 0 || readOnlyArguments.some(name => editable.has(name))) return fail();
+  const groups = dependencies(captured.dependencies, editable);
+  const branchRules = captureFixedBranchRules(policy?.value, groups, readOnlyArguments);
   return Object.freeze({
     contractId: text(captured.contractId), contractRevision: text(captured.contractRevision),
-    editableArguments, readOnlyArguments, dependencies: dependencies(captured.dependencies, editable)
+    editableArguments, readOnlyArguments, dependencies: groups,
+    ...(policy?.value === undefined ? {} : {branchRules})
   });
 }
 

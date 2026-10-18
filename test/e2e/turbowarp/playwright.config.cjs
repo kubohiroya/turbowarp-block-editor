@@ -2,6 +2,7 @@ const path = require('node:path');
 const {defineConfig, devices} = require('@playwright/test');
 const root = path.resolve(__dirname, '../../..');
 const native = process.env.E2E_NATIVE === '1';
+const fixedInputs = process.env.E2E_FIXED_INPUTS === '1';
 if (native && process.platform !== 'darwin') throw new Error('Native picker tests require macOS.');
 
 const port = process.env.E2E_PORT || '8732';
@@ -50,7 +51,9 @@ module.exports = defineConfig({
             use: {
                 browserName: 'chromium', userAgent: devices['Pixel 7'].userAgent
             }},
-        {name: 'chromium-project-url', use: {browserName: 'chromium'}}
+        {name: 'chromium-project-url',
+            testMatch: fixedInputs ? '*.spec.cjs' : ['editor.spec.cjs', 'invalid-theme.spec.cjs'],
+            use: {browserName: 'chromium'}}
     ],
     ...(process.env.E2E_BASE_URL ? {} : {webServer: {
         command: 'node test/e2e/turbowarp/serve.cjs',

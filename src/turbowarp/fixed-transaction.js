@@ -2,6 +2,7 @@ import {BlockEditorConflictError, FIXED_INPUTS_CAPABILITY} from '../index.js';
 import {captureFixedInputDeclaration, captureFixedSnapshot, sameFixedSnapshot} from '../fixed-input-snapshot.js';
 import {initializeFixedFields, inspectFixedArgument, prepareFixedChange, restoreFixedField, captureFixedFieldState} from './fixed-fields.js';
 import {snapshotJson} from '../schema-json.js';
+import {validateFixedBranchChanges} from '../fixed-input-branches.js';
 
 const own = (object, name) => {
     const descriptor = object && Object.getOwnPropertyDescriptor(object, name);
@@ -104,7 +105,7 @@ const sameDeclaration = (left, right) => JSON.stringify(captureFixedInputDeclara
 
 // Fixed inputs deliberately use a separate transaction from the legacy TEXT adapter.
 export default function createFixedInputPort({ScratchBlocks, workspace, vm, registry, identify, getState,
-    begin, markEvent, finish, onError}) {
+    begin, markEvent, finish, onError, subscribeScope}) {
     initializeFixedFields(ScratchBlocks);
     const inspect = (reference, suppliedDeclaration) => {
         const state = getState();
@@ -171,7 +172,6 @@ export default function createFixedInputPort({ScratchBlocks, workspace, vm, regi
         const prepared = [];
         const seenNames = new Set();
         const seenFields = new Set();
-        const grouped = new Set(declaration.dependencies.flatMap(item => [item.selector, ...item.dependents]));
         for (let i = 0; i < changesInput.length; i++) {
             const change = own(changesInput, String(i));
             const name = own(change, 'argument');
@@ -185,8 +185,11 @@ export default function createFixedInputPort({ScratchBlocks, workspace, vm, regi
             if (seenFields.has(binding.field)) throw new TypeError('Duplicate field write.');
             seenFields.add(binding.field);
             if (Object.is(value, binding.value)) continue;
-            if (grouped.has(name)) throw new TypeError('Fixed branch changes require branch support.');
             prepared.push({...prepareFixedChange(binding, value), argument: name});
+        }
+        if (validateFixedBranchChanges(declaration, expected,
+            prepared.map(item => ({argument: item.argument, value: item.next}))).length) {
+            throw new TypeError('Fixed branch changes require a valid canonical branch policy.');
         }
         const guard = () => {
             const state = getState();
@@ -355,5 +358,25 @@ export default function createFixedInputPort({ScratchBlocks, workspace, vm, regi
         if (!succeeded) throw failure;
     };
     return Object.freeze({capability: FIXED_INPUTS_CAPABILITY,
-        readBlock: (reference, declaration) => inspect(reference, declaration)?.snapshot || null, commit});
+        readBlock: (reference, declaration) => inspect(reference, declaration)?.snapshot || null, commit,
+        subscribeInvalidation: (reference, declaration, listener) => {
+            const captured = inspect(reference, declaration);
+            if (!captured || typeof subscribeScope !== 'function') {
+                listener(new BlockEditorConflictError());
+                return () => {};
+            }
+            let active = true;
+            const check = () => {
+                const state = getState();
+                if (!active || (!state.disposed && state.generation === captured.state.generation &&
+                    vm.editingTarget === captured.target && vm.runtime === captured.runtime &&
+                    workspace.getBlockById(reference.blockId) === captured.block &&
+                    captured.target.blocks.getBlock(reference.blockId) === captured.vmBlock &&
+                    registry.resolveFixed(captured.snapshot.opcode) === captured.declaration)) return;
+                active = false;
+                listener(new BlockEditorConflictError());
+            };
+            const unsubscribe = subscribeScope(check);
+            return () => {active = false;unsubscribe();};
+        }});
 }

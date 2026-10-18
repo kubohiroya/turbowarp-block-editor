@@ -1,9 +1,12 @@
 import * as React from 'react';
 import {createSourceEditor} from './source-editor.js';
 import {createFixedInputEditor} from './fixed-input-editor.js';
+import {captureFixedInputMessages, resolveFixedInputMessages, mountFixedInputView} from './fixed-input-view.js';
+import type {FixedInputMessageSource} from './fixed-input-view.js';
+export type {FixedInputViewMessages, FixedInputMessageSource} from './fixed-input-view.js';
 import type {FixedInputEditorOptions} from './fixed-input-editor.js';
 export {createFixedInputEditor} from './fixed-input-editor.js';
-export type {FixedInputEditorOptions, FixedInputBinding} from './fixed-input-editor.js';
+export type {FixedInputEditorOptions, FixedInputBinding, FixedInputBranchPolicy} from './fixed-input-editor.js';
 export type * from './fixed-input-types.js';
 import type {SourceEditorOptions} from './source-types.js';
 export {createSourceEditor} from './source-editor.js';
@@ -122,17 +125,20 @@ export interface BlockEditorService {
 }
 
 /** A host owns the service's lifetime; this module never stores VM or workspace instances. */
-export function createBlockEditorService(options: {readonly fixedInputs: true}): BlockEditorService & {readonly api: FixedBlockEditorRegistrationAPI};
-export function createBlockEditorService(options?: {readonly fixedInputs?: false}): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI};
-export function createBlockEditorService(options: {readonly fixedInputs?: boolean}): BlockEditorService;
-export function createBlockEditorService(options?: {readonly fixedInputs?: boolean}): BlockEditorService {
+export function createBlockEditorService(options: {readonly fixedInputs: true; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: FixedBlockEditorRegistrationAPI};
+export function createBlockEditorService(options?: {readonly fixedInputs?: false; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI};
+export function createBlockEditorService(options: {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService;
+export function createBlockEditorService(options?: {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService {
   if (options?.fixedInputs !== undefined && typeof options.fixedInputs !== 'boolean') throw new TypeError('Invalid fixed input capability option.');
+  const messageSource = options?.fixedInputMessages;
+  const fixedMessages = typeof messageSource === 'function' ? messageSource : captureFixedInputMessages(messageSource);
   const registry = new EditorRegistry();
   const listeners = new Set<() => void>();
   const notify = () => { for (const listener of [...listeners]) listener(); };
   const fixed = options?.fixedInputs === true ? {
     registerFixedInputEditor: <C,>(definition: FixedInputEditorOptions<C>) => {
-      const remove = registry.registerFixed(createFixedInputEditor(definition));
+      const fixedDefinition = createFixedInputEditor(definition);
+      const remove = registry.registerFixed({...fixedDefinition, mount: (container, context) => mountFixedInputView(container, context, resolveFixedInputMessages(fixedMessages))});
       notify();
       let active = true;
       return () => {if (active) {active = false;remove();notify();}};

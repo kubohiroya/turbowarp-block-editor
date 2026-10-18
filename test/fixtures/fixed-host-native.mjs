@@ -19,7 +19,7 @@ function schemaBundle(type) {
     resources: [], provenance: {canonicalSources: [source], generatedFiles: [], referenceSchemas: [], generationSources: []}};
 }
 
-export function nativeFixture({enableFixedInputs = true, dependencies = []} = {}) {
+export function nativeFixture({enableFixedInputs = true, dependencies = [], branchPolicies} = {}) {
   if (!nativeAvailable) throw new Error('BLOCK_EDITOR_GUI_ROOT must supply actual ScratchBlocks and Scratch VM.');
   const root = join(guiRoot, 'node_modules');
   const {JSDOM} = require(join(root, 'jsdom'));
@@ -60,6 +60,7 @@ export function nativeFixture({enableFixedInputs = true, dependencies = []} = {}
   const registry = new EditorRegistry();
   const options = {apiVersion: 1, extensionId: 'native', editorId: 'fixed', opcodes: ['native_fixed'],
     contractId: 'native.fixed', contractRevision: '1', readOnlyArguments: ['CONDITION'], dependencies,
+    ...(branchPolicies === undefined ? {} : {branchPolicies}),
     bindings: ['TEXT', 'NUMBER', 'MENU', 'DIRECT', 'COLOR'].map(argument => ({argument,
       schemaBundle: schemaBundle(argument === 'NUMBER' ? 'number' : 'string'),
       read: value => argument === 'NUMBER' ? Number(value) : String(value), encode: value => String(value), validateCandidate: () => []})),

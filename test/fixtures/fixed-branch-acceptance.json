@@ -1,0 +1,1405 @@
+{
+  "scope": "Common editor fixtures only; real owner registration and runtime equivalence remain S3-4.",
+  "source": {
+    "document": "branch-fixture-specifications.json",
+    "sha256": "9138997166979f069df602a8527b1814137ec888d751b26f989c61bb1a17a6cd"
+  },
+  "counts": {
+    "templateCount": 16,
+    "expandedBindingCount": 23,
+    "byPolicy": {
+      "CP-asset-cache": 6,
+      "CP-asset-manager": 6,
+      "CP-bubble-close": 10
+    },
+    "commonOnlyCount": 1,
+    "interpretation": "Executable common-only bindings; individual steps are not separate bindings. Real owner registration acceptance remains S3-4."
+  },
+  "draftLifecyclePolicy": {
+    "id": "DP-bubble-timeout",
+    "argument": "TIMEOUT",
+    "policy": "CP-bubble-close",
+    "sameDialogRetention": "required",
+    "retainInvalidInputBuffer": true,
+    "reactivation": "restore-exact-buffer-and-revalidate",
+    "inactiveValidation": "skip",
+    "inactivePatch": "exclude",
+    "inactiveSave": "preserve-opening-snapshot-raw",
+    "successfulSave": "close-session-and-discard-unsaved-buffers",
+    "cancel": "discard-buffer-without-patch",
+    "disposeOrInvalidation": "discard-buffer-no-cross-context-restore",
+    "reopen": "read-current-project-raw-only",
+    "failedSaveWhileSessionOpen": "retain-buffer-unless-invalidated"
+  },
+  "fixtures": [
+    {
+      "id": "BC01@CP-asset-cache",
+      "templateId": "BC01",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC01",
+        "given": "PROPERTYがreporter、VALUEがliteral",
+        "expected": "PROPERTY/VALUEはreadonly。評価・groupへのpatchなし",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "selector-reporter",
+        "fixtureIds": [
+          "BC01@CP-asset-cache",
+          "BC01@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        },
+        "VALUE": {
+          "literal": "abc"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog"
+        },
+        {
+          "assert": "selector/dependent readonly; no group patch, evaluation or reporter replacement"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC01@CP-asset-manager",
+      "templateId": "BC01",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC01",
+        "given": "PROPERTYがreporter、VALUEがliteral",
+        "expected": "PROPERTY/VALUEはreadonly。評価・groupへのpatchなし",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "selector-reporter",
+        "fixtureIds": [
+          "BC01@CP-asset-cache",
+          "BC01@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        },
+        "VALUE": {
+          "literal": "abc"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog"
+        },
+        {
+          "assert": "selector/dependent readonly; no group patch, evaluation or reporter replacement"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC02@CP-asset-cache",
+      "templateId": "BC02",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC02",
+        "given": "PROPERTYが未知literal、VALUE=\"20\"。PROPERTYをwidthへ修復",
+        "expected": "初期VALUEはreadonly。変更なしなら未知rawを保持。修復後にVALUEを検査しPROPERTYだけを保存可",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "unknown-selector-repair",
+        "fixtureIds": [
+          "BC02@CP-asset-cache",
+          "BC02@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "unknown-property"
+        },
+        "VALUE": {
+          "literal": "20"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog"
+        },
+        {
+          "assert": "dependent readonly while selector unknown"
+        },
+        {
+          "action": "save-unchanged",
+          "expect": "unknown raw retained; no-op"
+        },
+        {
+          "action": "new-session-same-seed"
+        },
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "PROPERTY-only patch after VALUE=20 validation"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC02@CP-asset-manager",
+      "templateId": "BC02",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC02",
+        "given": "PROPERTYが未知literal、VALUE=\"20\"。PROPERTYをwidthへ修復",
+        "expected": "初期VALUEはreadonly。変更なしなら未知rawを保持。修復後にVALUEを検査しPROPERTYだけを保存可",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "unknown-selector-repair",
+        "fixtureIds": [
+          "BC02@CP-asset-cache",
+          "BC02@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "unknown-property"
+        },
+        "VALUE": {
+          "literal": "20"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog"
+        },
+        {
+          "assert": "dependent readonly while selector unknown"
+        },
+        {
+          "action": "save-unchanged",
+          "expect": "unknown raw retained; no-op"
+        },
+        {
+          "action": "new-session-same-seed"
+        },
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "PROPERTY-only patch after VALUE=20 validation"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC03@CP-asset-cache",
+      "templateId": "BC03",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC03",
+        "given": "PROPERTY=\" COLOR \"、VALUE=\"#AbC\"、変更なし",
+        "expected": "既知aliasとして色branchを表示し、両方のrawを完全保持",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "alias-noop",
+        "fixtureIds": [
+          "BC03@CP-asset-cache",
+          "BC03@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": " COLOR "
+        },
+        "VALUE": {
+          "literal": "#AbC"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog",
+          "expect": "color branch via owner alias normalizer"
+        },
+        {
+          "action": "save-unchanged",
+          "expect": "exact PROPERTY and VALUE raw, undo and dirty preserved"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC03@CP-asset-manager",
+      "templateId": "BC03",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC03",
+        "given": "PROPERTY=\" COLOR \"、VALUE=\"#AbC\"、変更なし",
+        "expected": "既知aliasとして色branchを表示し、両方のrawを完全保持",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "alias-noop",
+        "fixtureIds": [
+          "BC03@CP-asset-cache",
+          "BC03@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": " COLOR "
+        },
+        "VALUE": {
+          "literal": "#AbC"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog",
+          "expect": "color branch via owner alias normalizer"
+        },
+        {
+          "action": "save-unchanged",
+          "expect": "exact PROPERTY and VALUE raw, undo and dirty preserved"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC04@CP-asset-cache",
+      "templateId": "BC04",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC04",
+        "given": "PROPERTYをfontからwidthへ変更、VALUE=\"abc\"",
+        "expected": "VALUEを有効値へ修正または空文字resetするまで保存不可。黙示的な一部保存なし",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "dependent-invalid",
+        "fixtureIds": [
+          "BC04@CP-asset-cache",
+          "BC04@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "font"
+        },
+        "VALUE": {
+          "literal": "abc"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "reject-invalid-dependent; no partial write"
+        },
+        {
+          "action": "repeat-from-seed-for-each-repair",
+          "repairs": [
+            {
+              "VALUE": "20"
+            },
+            {
+              "VALUE": ""
+            }
+          ],
+          "expect": "valid width or owner empty reset permits atomic save"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC04@CP-asset-manager",
+      "templateId": "BC04",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC04",
+        "given": "PROPERTYをfontからwidthへ変更、VALUE=\"abc\"",
+        "expected": "VALUEを有効値へ修正または空文字resetするまで保存不可。黙示的な一部保存なし",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "dependent-invalid",
+        "fixtureIds": [
+          "BC04@CP-asset-cache",
+          "BC04@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "font"
+        },
+        "VALUE": {
+          "literal": "abc"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "reject-invalid-dependent; no partial write"
+        },
+        {
+          "action": "repeat-from-seed-for-each-repair",
+          "repairs": [
+            {
+              "VALUE": "20"
+            },
+            {
+              "VALUE": ""
+            }
+          ],
+          "expect": "valid width or owner empty reset permits atomic save"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC05@CP-asset-cache",
+      "templateId": "BC05",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC05",
+        "given": "PROPERTYを変更、VALUEがreporter",
+        "expected": "dependency-unverifiableとしてselector変更を拒否。reporterは置換しない",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "dependent-reporter",
+        "fixtureIds": [
+          "BC05@CP-asset-cache",
+          "BC05@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "font"
+        },
+        "VALUE": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "dependency-unverifiable; reporter unchanged; zero writes"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC05@CP-asset-manager",
+      "templateId": "BC05",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC05",
+        "given": "PROPERTYを変更、VALUEがreporter",
+        "expected": "dependency-unverifiableとしてselector変更を拒否。reporterは置換しない",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager"
+        ],
+        "scenarioTag": "dependent-reporter",
+        "fixtureIds": [
+          "BC05@CP-asset-cache",
+          "BC05@CP-asset-manager"
+        ]
+      },
+      "seed": {
+        "NAME": {
+          "literal": "stage3-style"
+        },
+        "PROPERTY": {
+          "literal": "font"
+        },
+        "VALUE": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "PROPERTY",
+          "value": "width"
+        },
+        {
+          "action": "save",
+          "expect": "dependency-unverifiable; reporter unchanged; zero writes"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC06@CP-bubble-close",
+      "templateId": "BC06",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC06",
+        "given": "TRIGGERがreporter、TIMEOUTがliteral",
+        "expected": "TIMEOUTはreadonly。既定branch推測・評価・reporter置換なし",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc06",
+        "fixtureIds": [
+          "BC06@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "literal": "ready",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-dialog",
+          "expect": "TIMEOUT readonly; no default branch, reporter evaluation or replacement"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC07@CP-bubble-close",
+      "templateId": "BC07",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC07",
+        "given": "TRIGGERをtimeoutからconditionへ変更、CONDITION=\"  \"",
+        "expected": "無効として保存拒否。読取専用CONDITIONは不変",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc07",
+        "fixtureIds": [
+          "BC07@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "literal": "  ",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "condition"
+        },
+        {
+          "action": "save",
+          "expect": "reject empty trimmed CONDITION; readonly raw unchanged"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC08@CP-bubble-close",
+      "templateId": "BC08",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC08",
+        "given": "TRIGGERをtimeoutからconditionへ変更、CONDITIONがreporter",
+        "expected": "CONDITIONを評価せずdependency-unverifiableとしてTRIGGER変更を拒否",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc08",
+        "fixtureIds": [
+          "BC08@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false,
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "condition"
+        },
+        {
+          "action": "save",
+          "expect": "dependency-unverifiable; no CONDITION evaluation or write"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC09@CP-bubble-close",
+      "templateId": "BC09",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC09",
+        "given": "TRIGGERはcondition-or-timeoutのまま、TIMEOUTを10から20へ変更、CONDITIONがreporter",
+        "expected": "正の有限値ならTIMEOUTだけ保存可。CONDITIONは保持し式の実行時有効性は未検証と表示",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc09",
+        "fixtureIds": [
+          "BC09@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "condition-or-timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "reporter": {
+            "opcode": "operator_join",
+            "identity": "source-reporter-1",
+            "evaluate": false
+          },
+          "replace": false,
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-buffer",
+          "argument": "TIMEOUT",
+          "buffer": "20"
+        },
+        {
+          "action": "save",
+          "expect": "TIMEOUT-only patch; CONDITION reporter retained; runtime-expression-validity-unverified notice"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC10@CP-bubble-close",
+      "templateId": "BC10",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC10",
+        "given": "snapshot採取後からcommit前にCONDITIONのrawまたは接続identityが変化",
+        "expected": "競合として全patchを拒否。undo/dirtyも不変",
+        "verification": [
+          "V9",
+          "V5",
+          "V8"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc10",
+        "fixtureIds": [
+          "BC10@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "literal": "ready",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "capture-opening-snapshot"
+        },
+        {
+          "action": "repeat-from-seed-for-each-context-change",
+          "variants": [
+            "CONDITION literal raw changed",
+            "CONDITION reporter connection identity changed"
+          ]
+        },
+        {
+          "action": "attempt-save-with-legal-TIMEOUT-change",
+          "value": "20",
+          "expect": "whole patch conflict; no editor writes/undo/dirty events, external change retained"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC11@common-only",
+      "templateId": "BC11",
+      "policyId": null,
+      "repository": null,
+      "specification": {
+        "id": "BC11",
+        "given": "selector不明groupは未変更、独立literalだけ変更、読取依存は安定",
+        "expected": "独立fieldだけ保存可。common examples/tests用fixtureでありowner対象/Templateを増やさない",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "common-only",
+        "appliesToPolicies": [],
+        "scenarioTag": "bc11",
+        "fixtureIds": [
+          "BC11@common-only"
+        ]
+      },
+      "seed": {
+        "SELECTOR": {
+          "literal": "unknown"
+        },
+        "DEPENDENT": {
+          "literal": "keep"
+        },
+        "INDEPENDENT": {
+          "literal": "before"
+        }
+      },
+      "steps": [
+        {
+          "action": "open-common-example-fixture"
+        },
+        {
+          "action": "set-literal",
+          "argument": "INDEPENDENT",
+          "value": "after"
+        },
+        {
+          "action": "save",
+          "expect": "INDEPENDENT-only patch; unknown group unchanged with stable declared context"
+        }
+      ]
+    },
+    {
+      "id": "BC12@CP-bubble-close",
+      "templateId": "BC12",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC12",
+        "given": "偽造patchがCONDITIONと合法なTIMEOUT変更を同時に指定",
+        "expected": "session/hostの両方で全patch拒否。readonly書込・一部commitなし",
+        "verification": [
+          "V9",
+          "V5",
+          "V8"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc12",
+        "fixtureIds": [
+          "BC12@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "literal": "ready",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "inject-forged-patch",
+          "patch": {
+            "CONDITION": "forged",
+            "TIMEOUT": "20"
+          }
+        },
+        {
+          "assert": "session rejects whole patch; zero writes"
+        },
+        {
+          "action": "repeat-by-direct-host-patch-boundary"
+        },
+        {
+          "assert": "host independently rejects whole patch; zero writes"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC13@CP-bubble-close",
+      "templateId": "BC13",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC13",
+        "given": "同一dialogでTIMEOUT draft20（保存値10）を入力し、TRIGGERをtimeoutからconditionへ切替",
+        "expected": "非表示中は20を必ず保持し保存値10は不変。再有効化で20を復元し再検査（無効bufferも保持）。非表示での保存成功・取消・dispose/失効で未保存bufferを破棄し、再openは現project rawから開始。開いたままの保存失敗ではbufferを保持",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc13",
+        "draftLifecyclePolicyId": "DP-bubble-timeout",
+        "lifecycleAssertions": {
+          "sameDialogRetention": "required",
+          "retainInvalidInputBuffer": true,
+          "reactivation": "restore-exact-buffer-and-revalidate",
+          "inactiveValidation": "skip",
+          "inactivePatch": "exclude",
+          "inactiveSave": "preserve-opening-snapshot-raw",
+          "successfulSave": "close-session-and-discard-unsaved-buffers",
+          "cancel": "discard-buffer-without-patch",
+          "disposeOrInvalidation": "discard-buffer-no-cross-context-restore",
+          "reopen": "read-current-project-raw-only",
+          "failedSaveWhileSessionOpen": "retain-buffer-unless-invalidated"
+        },
+        "fixtureIds": [
+          "BC13@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "timeout"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "literal": "ready",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-buffer",
+          "argument": "TIMEOUT",
+          "buffer": "20"
+        },
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "condition"
+        },
+        {
+          "assert": "TIMEOUT hidden, buffer=20 retained, project raw=10, no hidden required/validation/patch"
+        },
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "timeout"
+        },
+        {
+          "assert": "buffer=20 restored exactly and revalidated"
+        },
+        {
+          "action": "set-buffer",
+          "argument": "TIMEOUT",
+          "buffer": "1e"
+        },
+        {
+          "action": "toggle-TRIGGER-condition-then-timeout"
+        },
+        {
+          "assert": "invalid buffer=1e retained exactly; validation error; active invalid value cannot be silently omitted"
+        },
+        {
+          "action": "save-invalid-while-session-open"
+        },
+        {
+          "assert": "save rejected before commit; invalid buffer retained"
+        },
+        {
+          "action": "repeat-from-seed-set-buffer20-hide-for-each-exit",
+          "variants": [
+            "hidden save success",
+            "cancel",
+            "dispose",
+            "project invalidation",
+            "target invalidation"
+          ]
+        },
+        {
+          "assert": "all terminal exits discard unsaved buffer; cancel/dispose create no editor writes; hidden save success preserves TIMEOUT=10 and commits only eligible selector"
+        },
+        {
+          "action": "reopen-fresh-session-current-project-raw",
+          "variants": [
+            {
+              "TIMEOUT": "10"
+            },
+            {
+              "TIMEOUT": "30",
+              "reason": "new context"
+            }
+          ]
+        },
+        {
+          "assert": "read current project raw only; never resurrect 20 or 1e from ended/invalidated session"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC14@CP-asset-cache",
+      "templateId": "BC14",
+      "policyId": "CP-asset-cache",
+      "repository": "turbowarp-asset-cache",
+      "specification": {
+        "id": "BC14",
+        "given": "selectorが非対応fieldまたは欠落、依存literalは存在",
+        "expected": "依存入力はreadonly。既定値補完なし。独立入力は読取文脈安定時だけ保存可",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager",
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "unsupported-selector",
+        "fixtureIds": [
+          "BC14@CP-asset-cache",
+          "BC14@CP-asset-manager",
+          "BC14@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "selectorStateVariants": [
+          "unsupported-standard-field",
+          "missing"
+        ],
+        "dependentLiteral": "preserve-opening-raw"
+      },
+      "steps": [
+        {
+          "action": "repeat-for-selectorStateVariants"
+        },
+        {
+          "action": "open-dialog",
+          "expect": "dependent readonly; no default-value supplementation"
+        },
+        {
+          "assert": "independent inputs, if present in the fixture contract, can save only with stable declared context; no owner input is added to editable set"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC14@CP-asset-manager",
+      "templateId": "BC14",
+      "policyId": "CP-asset-manager",
+      "repository": "turbowarp-asset-manager",
+      "specification": {
+        "id": "BC14",
+        "given": "selectorが非対応fieldまたは欠落、依存literalは存在",
+        "expected": "依存入力はreadonly。既定値補完なし。独立入力は読取文脈安定時だけ保存可",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager",
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "unsupported-selector",
+        "fixtureIds": [
+          "BC14@CP-asset-cache",
+          "BC14@CP-asset-manager",
+          "BC14@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "selectorStateVariants": [
+          "unsupported-standard-field",
+          "missing"
+        ],
+        "dependentLiteral": "preserve-opening-raw"
+      },
+      "steps": [
+        {
+          "action": "repeat-for-selectorStateVariants"
+        },
+        {
+          "action": "open-dialog",
+          "expect": "dependent readonly; no default-value supplementation"
+        },
+        {
+          "assert": "independent inputs, if present in the fixture contract, can save only with stable declared context; no owner input is added to editable set"
+        }
+      ],
+      "writeArguments": [
+        "PROPERTY",
+        "VALUE"
+      ],
+      "readOnlyArguments": []
+    },
+    {
+      "id": "BC14@CP-bubble-close",
+      "templateId": "BC14",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC14",
+        "given": "selectorが非対応fieldまたは欠落、依存literalは存在",
+        "expected": "依存入力はreadonly。既定値補完なし。独立入力は読取文脈安定時だけ保存可",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-asset-cache",
+          "CP-asset-manager",
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "unsupported-selector",
+        "fixtureIds": [
+          "BC14@CP-asset-cache",
+          "BC14@CP-asset-manager",
+          "BC14@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "selectorStateVariants": [
+          "unsupported-standard-field",
+          "missing"
+        ],
+        "dependentLiteral": "preserve-opening-raw"
+      },
+      "steps": [
+        {
+          "action": "repeat-for-selectorStateVariants"
+        },
+        {
+          "action": "open-dialog",
+          "expect": "dependent readonly; no default-value supplementation"
+        },
+        {
+          "assert": "independent inputs, if present in the fixture contract, can save only with stable declared context; no owner input is added to editable set"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC15@CP-bubble-close",
+      "templateId": "BC15",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC15",
+        "given": "TRIGGERをconditionからtimeoutへ変更、TIMEOUTがreporter",
+        "expected": "新branchで必要な依存値が不明なのでselector変更を拒否。数値shadowを挿入しない",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc15",
+        "fixtureIds": [
+          "BC15@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "condition"
+        },
+        "TIMEOUT": {
+          "reporter": {
+            "opcode": "operator_add",
+            "identity": "number-reporter-1",
+            "evaluate": false
+          },
+          "replace": false
+        },
+        "CONDITION": {
+          "literal": "ready",
+          "role": "read-only"
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "timeout"
+        },
+        {
+          "action": "save",
+          "expect": "dependency-unverifiable; no numeric shadow insertion or reporter replacement"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    },
+    {
+      "id": "BC16@CP-bubble-close",
+      "templateId": "BC16",
+      "policyId": "CP-bubble-close",
+      "repository": "turbowarp-bubble",
+      "specification": {
+        "id": "BC16",
+        "given": "TRIGGERを未知literalからtimeoutへ修復、TIMEOUTは正のliteral、CONDITIONは読取不能",
+        "expected": "修復して保存可。timeoutではCONDITIONを必須文脈にせず評価・変更しない",
+        "verification": [
+          "V9"
+        ],
+        "fixtureScope": "owner",
+        "appliesToPolicies": [
+          "CP-bubble-close"
+        ],
+        "scenarioTag": "bc16",
+        "fixtureIds": [
+          "BC16@CP-bubble-close"
+        ]
+      },
+      "seed": {
+        "POLICY": {
+          "literal": "stage3-close"
+        },
+        "TRIGGER": {
+          "literal": "unknown-trigger"
+        },
+        "TIMEOUT": {
+          "literal": "10"
+        },
+        "CONDITION": {
+          "state": "unsupported-field",
+          "role": "read-only",
+          "evaluate": false
+        }
+      },
+      "steps": [
+        {
+          "action": "set-literal",
+          "argument": "TRIGGER",
+          "value": "timeout"
+        },
+        {
+          "action": "save",
+          "expect": "valid TIMEOUT allows repair; unreadable CONDITION not required, evaluated or patched; stable snapshot metadata still required"
+        }
+      ],
+      "writeArguments": [
+        "TRIGGER",
+        "TIMEOUT"
+      ],
+      "readOnlyArguments": [
+        "CONDITION"
+      ]
+    }
+  ],
+  "ownerProductTestsRun": false
+}

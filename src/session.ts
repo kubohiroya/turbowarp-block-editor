@@ -5,8 +5,9 @@ import {isPreparedEditor, capturePreparedSave} from './prepared-save.js';
 import {isFixedInputEditor, captureFixedPreparedSave} from './fixed-input-editor.js';
 import {captureFixedSnapshot, sameFixedSnapshot} from './fixed-input-snapshot.js';
 import {supportsFixedInputEditing} from './fixed-input-types.js';
-import {snapshotJson} from './schema-json.js';
-import type {FixedBlockSnapshot, FixedHostCommitRequest, FixedInputEditorHost} from './fixed-input-types.js';
+import {snapshotJson, isJsonRecord} from './schema-json.js';
+import {validateFixedBranchChanges} from './fixed-input-branches.js';
+import type {FixedBlockSnapshot, FixedHostCommitRequest, FixedInputEditorHost, FixedInputViewDescription} from './fixed-input-types.js';
 import type {
   BlockEditorHost, BlockReference, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
   LiteralArgumentChange, SaveResult, SessionState, SessionStatus, ValidationIssue
@@ -25,6 +26,9 @@ export class EditorSession implements EditorViewContext {
   readonly #fixedPort: FixedInputEditorHost | undefined;
   readonly #isRegistered: (() => boolean) | undefined;
   readonly #subscribeRegistrationChanges: ((listener: () => void) => () => void) | undefined;
+  #unsubscribeFixedScope: (() => void) | undefined;
+  #unsubscribeFixedRegistration: (() => void) | undefined;
+  #fixedSavingController: AbortController | undefined;
 
   /** Use EditorRegistry.open() to construct sessions from a captured host snapshot. */
   constructor(definition: EditorDefinition, snapshot: BlockSnapshot, host: BlockEditorHost, isRegistered?: () => boolean, subscribeRegistrationChanges?: (listener: () => void) => () => void) {
@@ -39,6 +43,40 @@ export class EditorSession implements EditorViewContext {
     if (isFixedInputEditor(definition) && !supportsFixedInputEditing(host)) throw new TypeError('Fixed input editors require a compatible host.');
     this.#draft = this.#copyDraft(isFixedInputEditor(definition)
       ? definition.readFixed(this.#snapshot as FixedBlockSnapshot) : definition.read(this.#snapshot));
+    if (isFixedInputEditor(definition) && this.#subscribeRegistrationChanges) {
+      const unsubscribe = this.#subscribeRegistrationChanges(() => {
+        if (this.#isRegistered && !this.#isRegistered() && (this.#status === 'editing' || this.#status === 'saving')) {
+          this.#fixedSavingController?.abort(new BlockEditorConflictError());
+          this.#finish('disposed');
+        }
+      });
+      if (this.#status === 'editing') this.#unsubscribeFixedRegistration = unsubscribe;
+      else unsubscribe();
+    }
+    try {
+      if (isFixedInputEditor(definition) && this.#fixedPort) {
+        let subscribe: unknown;
+        for (let item: object | null = this.#fixedPort, depth = 0; item && depth < 64; item = Object.getPrototypeOf(item), depth++) {
+          const property = Object.getOwnPropertyDescriptor(item, 'subscribeInvalidation');
+          if (property) {subscribe = 'value' in property ? property.value : undefined;break;}
+        }
+        if (typeof subscribe === 'function') {
+          const unsubscribe = (subscribe as NonNullable<FixedInputEditorHost['subscribeInvalidation']>).call(
+            this.#fixedPort, this.reference, definition, () => {
+              if (this.#status !== 'editing' && this.#status !== 'saving') return;
+              this.#fixedSavingController?.abort(new BlockEditorConflictError());
+              this.#finish('disposed');
+            }
+          );
+          if (typeof unsubscribe !== 'function') throw new TypeError('Invalid fixed scope subscription.');
+          if (this.#status === 'editing') this.#unsubscribeFixedScope = unsubscribe;
+          else unsubscribe();
+        }
+      }
+    } catch (error) {
+      this.#finish('disposed');
+      throw error;
+    }
   }
 
   /** Stable instance identity remains available after the session closes. */
@@ -49,6 +87,31 @@ export class EditorSession implements EditorViewContext {
   getDraft(): JsonObject {
     this.#assertOpen();
     return cloneJson(this.#draft);
+  }
+
+  getFixedInputView(): FixedInputViewDescription | undefined {
+    this.#assertOpen();
+    const definition = this.#definition;
+    if (!isFixedInputEditor(definition) || !definition.describeFixed) return undefined;
+    let description: unknown;
+    try {
+      description = definition.describeFixed(this.#copyDraft(this.#draft), this.#snapshot as FixedBlockSnapshot);
+      const captured = snapshotJson(description);
+      if (!isJsonRecord(captured) || !isJsonRecord(captured.inputs) ||
+          !Array.isArray(captured.issues) || !Array.isArray(captured.branches)) {
+        throw new TypeError('Invalid fixed input presentation.');
+      }
+      const freeze = (value: unknown): void => {
+        if (value && typeof value === 'object') {
+          Object.values(value).forEach(freeze);Object.freeze(value);
+        }
+      };
+      freeze(captured);
+      return captured as unknown as FixedInputViewDescription;
+    } catch {
+      try {void Promise.prototype.then.call(description as Promise<unknown>, () => undefined, () => undefined);} catch { /* Never inspect arbitrary thenables. */ }
+      throw new TypeError('Invalid fixed input presentation.');
+    }
   }
 
   setDraft(draft: JsonObject): void {
@@ -131,9 +194,13 @@ export class EditorSession implements EditorViewContext {
   async #saveFixed(): Promise<SaveResult> {
     const definition = this.#definition;
     if (!isFixedInputEditor(definition)) throw new TypeError('Fixed input capability is unavailable.');
-    if (!supportsFixedInputEditing(this.#host) || this.#host.fixedInputs !== this.#fixedPort) throw new BlockEditorConflictError('The fixed input capability changed.');
+    if (!supportsFixedInputEditing(this.#host) || this.#host.fixedInputs !== this.#fixedPort) {
+      this.#finish('disposed');
+      throw new BlockEditorConflictError('The fixed input capability changed.');
+    }
     const snapshot = this.#snapshot as FixedBlockSnapshot;
     const prepared = captureFixedPreparedSave(definition, this.#copyDraft(this.#draft), snapshot);
+    if (this.#status !== 'saving') throw new BlockEditorConflictError();
     if (prepared.kind === 'invalid') {
       this.#issues = this.#copyIssues(prepared.issues);
       return {status: 'invalid', issues: this.#issues};
@@ -144,12 +211,18 @@ export class EditorSession implements EditorViewContext {
     const current = port.readBlock(snapshot, definition);
     if (!current) throw new BlockEditorConflictError();
     try {
-      if (!sameFixedSnapshot(snapshot, captureFixedSnapshot(current, snapshot, definition))) throw new BlockEditorConflictError();
+      const captured = captureFixedSnapshot(current, snapshot, definition);
+      if (captured.fixedContext.generation !== snapshot.fixedContext.generation) {
+        this.#finish('disposed');
+        throw new BlockEditorConflictError();
+      }
+      if (!sameFixedSnapshot(snapshot, captured)) throw new BlockEditorConflictError();
     } catch {throw new BlockEditorConflictError();}
     if (!supportsFixedInputEditing(this.#host) || this.#host.fixedInputs !== port ||
         (this.#isRegistered && !this.#isRegistered())) throw new BlockEditorConflictError('The fixed editor registration expired.');
     if (changes.length > 0) {
       const controller = new AbortController();
+      this.#fixedSavingController = controller;
       const context = prepared.context as unknown as FixedHostCommitRequest['context'];
       const unsubscribe = this.#subscribeRegistrationChanges?.(() => {
         if (this.#isRegistered && !this.#isRegistered()) controller.abort(new BlockEditorConflictError('The fixed editor registration expired.'));
@@ -161,7 +234,7 @@ export class EditorSession implements EditorViewContext {
       } catch (error) {
         if (controller.signal.aborted) throw new BlockEditorConflictError('The fixed editor registration expired.');
         throw error;
-      } finally {unsubscribe?.();}
+      } finally {unsubscribe?.();this.#fixedSavingController = undefined;}
     }
     this.#finish('saved');
     return {status: 'saved', changed: changes.length > 0};
@@ -199,11 +272,13 @@ export class EditorSession implements EditorViewContext {
         const metadata = (this.#snapshot as FixedBlockSnapshot).fixedContext.inputs[change.argument];
         if (!metadata || metadata.role !== 'editable' || (metadata.source !== 'field' && metadata.source !== 'shadow')) throw new TypeError('Fixed patches require editable literal fields.');
         if (!Object.is(slot.value, change.value)) {
-          if (this.#definition.dependencies.some(group => group.selector === change.argument || group.dependents.includes(change.argument))) throw new TypeError('Fixed dependency validation is unavailable.');
           changes.push(Object.freeze({argument: change.argument, value: change.value}));
         }
       } else if (slot.value !== change.value) changes.push(Object.freeze({...change}));
     }
+    if (isFixedInputEditor(this.#definition) && validateFixedBranchChanges(
+      this.#definition, this.#snapshot as FixedBlockSnapshot, changes
+    ).length) throw new TypeError('Fixed dependency validation is unavailable.');
     return Object.freeze(changes);
   }
 
@@ -241,6 +316,12 @@ export class EditorSession implements EditorViewContext {
   #finish(status: 'saved' | 'cancelled' | 'disposed'): void {
     this.#status = status;
     this.#draft = {};
+    const unsubscribe = this.#unsubscribeFixedScope;
+    this.#unsubscribeFixedScope = undefined;
+    try {unsubscribe?.();} catch (error) {this.#reportObserverError(error);}
+    const unsubscribeRegistration = this.#unsubscribeFixedRegistration;
+    this.#unsubscribeFixedRegistration = undefined;
+    try {unsubscribeRegistration?.();} catch (error) {this.#reportObserverError(error);}
     this.#notify();
     try { this.#view.unmount(); } catch (error) { this.#reportObserverError(error); }
     this.#listeners.clear();

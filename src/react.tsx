@@ -17,6 +17,7 @@ export interface DialogSessionState {
 }
 export interface DialogSession {
   getState(): DialogSessionState;
+  getFixedInputView?(): unknown;
   subscribe(listener: () => void): () => void;
   mount?(container: HTMLElement): () => void;
   getNodes?(): readonly DescendantNodeDescriptor[];
@@ -35,6 +36,8 @@ export interface EditorDialogMessages {
   readonly conflict: string;
   readonly failed: string;
   readonly structuralNode: string;
+  /** Fixed forms retain technical diagnostics in the API while showing a localized summary. */
+  readonly invalidInput?: string;
 }
 export interface EditorNodeAppearance {
   readonly name?: string;
@@ -237,6 +240,10 @@ export class BlockEditorDialog extends React.Component<BlockEditorDialogProps, D
     const {styles, messages, ModalComponent, session} = this.props;
     const saving = this.state.status === 'saving';
     const hierarchy = typeof session.getNodes === 'function';
+    let fixed = false;
+    if (session.getFixedInputView && (this.state.status === 'editing' || saving)) {
+      try {fixed = Boolean(session.getFixedInputView());} catch {fixed = true;}
+    }
     return <ModalComponent className={`${styles.modalContent || ''} ${hierarchy ? styles.hierarchyModal : ''} ${
       this.props.className || ''}`} contentLabel={messages.title} id="blockEditorModal" onRequestClose={this.handleClose}>
       <div aria-busy={saving} className={styles.body}
@@ -252,7 +259,7 @@ export class BlockEditorDialog extends React.Component<BlockEditorDialogProps, D
           </div>
           <div aria-live="polite" className={styles.errors} role="status">
             {saving ? messages.saving : null}
-            {this.state.issues.map((issue, index) => hierarchy && 'reference' in issue ?
+            {fixed && this.state.issues.length ? <p>{messages.invalidInput || messages.failed}</p> : this.state.issues.map((issue, index) => hierarchy && 'reference' in issue ?
               <button className={styles.nodeError} data-block-editor-issue={index} disabled={saving} key={index}
                 type="button" onClick={() => this.tree?.reveal(issue)}>
                 {this.props.nodeLabels?.[issue.reference.blockId] || issue.reference.blockId}{': '}{issue.message}

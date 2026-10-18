@@ -151,6 +151,6 @@ Repository examples are opt-in teaching code, not template blocks or additional 
 
 Prepared source editing is an optional host capability. See [the source/form contract](docs/source-forms.ja.md) for fixed-schema bindings, atomic saves, compatibility, and rollback.
 
-## 固定入力の契約とnative host（S3-1/S3-2）
+## 固定入力とGUI接続（S3-1〜S3-3）
 
-固定入力の型・Schema検査・同期prepared契約を追加しています。`createBlockEditorService({fixedInputs: true})`の明示時だけ新しい登録APIを提供し、対応hostがない場合は開けません。lower-level hostの`enableFixedInputs: true`で標準fieldの読取・原子的保存を利用できます。固定フォーム・GUIフラグ・各拡張への登録は後続工程です。[固定入力の契約と後続工程](docs/fixed-input-contracts.md)を参照してください。公開済み0.2.0の機能と、今回の未公開差分は区別してください。
+固定入力の型・Schema検査・同期prepared契約を追加しています。`createBlockEditorService({fixedInputs: true})`の明示時だけ新しい登録APIを提供し、対応hostがない場合は開けません。lower-level hostの`enableFixedInputs: true`で標準fieldの読取・原子的保存を利用できます。固定フォームとGUIの既定OFFフラグ接続をローカルで追加しています。各拡張への登録は後続工程です。[固定入力の契約と後続工程](docs/fixed-input-contracts.md)を参照してください。公開済み0.2.0の機能と、今回の未公開差分は区別してください。
