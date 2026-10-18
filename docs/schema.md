@@ -29,3 +29,7 @@ RJSF v5用には正本を変えないprivateな表示Schemaを作る。閉じた
 2020-12 prefixItems、dynamic/recursive ref、RJSFが展開を終了できないobject再帰は、フォーム登録時に明示的に拒否する。配列items経由の再帰と両方言の同梱refは合成フォームで確認する。これらの表示制限はheadless engineの受理範囲を狭めない。owner16契約の実フォームは段階2で個別に検証する。
 
 この工程は拡張へのeditor登録、GUI依存更新、binding、候補UIを追加しない。新APIを呼ばない既存利用者の挙動は維持する。
+
+## S1-4pの配布
+
+段階1中はnpmへ未公開のAPIを既存の0.1.0公開版と取り違えないよう、ownerの追加pure型依存を検証済みGit commitへ固定する。Git依存のprepareで既存buildを実行し、dist/JS/型/CSS/webpack4/build-infoを生成する。ローカルfile:/tmp依存は公開manifestへ残さない。npm publishや既存GUI依存の変更はこの作業に含めない。
