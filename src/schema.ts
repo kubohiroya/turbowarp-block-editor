@@ -78,3 +78,5 @@ export function toValidationIssues(diagnostics: readonly InputDiagnostic[]): rea
 }
 export type * from './source-types.js';
 export {jsonValueSchema, jsonValueSchemaBundle} from './json-value.js';
+export {parseFixedNumberInput} from './fixed-input-schema.js';
+export type {FixedNumberInputResult} from './fixed-input-schema.js';

@@ -38,11 +38,11 @@ test('built JavaScript and declarations match source emission hashes', () => {
 });
 
 test('exports the pure engine, synchronous composition and diagnostic bridge', () => {
-  assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'jsonValueSchema', 'jsonValueSchemaBundle', 'toValidationIssues', 'validateSchemaInput']);
+  assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'jsonValueSchema', 'jsonValueSchemaBundle', 'parseFixedNumberInput', 'toValidationIssues', 'validateSchemaInput']);
   assert.deepEqual(schema.toValidationIssues([]), []);
 });
 
-test('preserves the seven existing exports, CSS side effects and the copy build', async () => {
+test('preserves the eight existing exports, CSS side effects and the copy build', async () => {
   const expected = {
     '.': {types: './dist/index.d.ts', import: './dist/index.js'},
     './rjsf': {types: './dist/rjsf.d.ts', import: './dist/rjsf.js'},
@@ -106,7 +106,7 @@ test('the schema JS and declarations work in an isolated package with no peers o
       Object.defineProperty(globalThis, name, {configurable: true, get() {throw new Error('DOM accessed');}});
     }
     const schema = await import('${packageName}/schema');
-    assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'jsonValueSchema', 'jsonValueSchemaBundle', 'toValidationIssues', 'validateSchemaInput']);
+    assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'jsonValueSchema', 'jsonValueSchemaBundle', 'parseFixedNumberInput', 'toValidationIssues', 'validateSchemaInput']);
     assert.deepEqual(schema.toValidationIssues([]), []);
   `);
   const env = {...process.env};

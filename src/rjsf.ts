@@ -1,5 +1,10 @@
 import * as React from 'react';
 import {createSourceEditor} from './source-editor.js';
+import {createFixedInputEditor} from './fixed-input-editor.js';
+import type {FixedInputEditorOptions} from './fixed-input-editor.js';
+export {createFixedInputEditor} from './fixed-input-editor.js';
+export type {FixedInputEditorOptions, FixedInputBinding} from './fixed-input-editor.js';
+export type * from './fixed-input-types.js';
 import type {SourceEditorOptions} from './source-types.js';
 export {createSourceEditor} from './source-editor.js';
 export type * from './source-types.js';
@@ -97,6 +102,7 @@ export interface BlockEditorRegistrationAPI {
   registerSchema(definition: SchemaEditorOptions): () => void;
   registerSchemaBundle?<C>(definition: SchemaBundleEditorOptions<C>): () => void;
   registerSourceEditor?<C = null>(definition: SourceEditorOptions<C>): () => void;
+  registerFixedInputEditor?<C = null>(definition: FixedInputEditorOptions<C>): () => void;
 }
 /** Capability guaranteed by the service factory, optional on a legacy host-supplied API. */
 export interface SchemaBundleBlockEditorRegistrationAPI extends BlockEditorRegistrationAPI {
@@ -106,6 +112,9 @@ export interface SchemaBundleBlockEditorRegistrationAPI extends BlockEditorRegis
 export interface SourceBlockEditorRegistrationAPI extends SchemaBundleBlockEditorRegistrationAPI {
   registerSourceEditor<C = null>(definition: SourceEditorOptions<C>): () => void;
 }
+export interface FixedBlockEditorRegistrationAPI extends SourceBlockEditorRegistrationAPI {
+  registerFixedInputEditor<C = null>(definition: FixedInputEditorOptions<C>): () => void;
+}
 export interface BlockEditorService {
   readonly registry: EditorRegistry;
   readonly api: BlockEditorRegistrationAPI;
@@ -113,11 +122,24 @@ export interface BlockEditorService {
 }
 
 /** A host owns the service's lifetime; this module never stores VM or workspace instances. */
-export function createBlockEditorService(): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI} {
+export function createBlockEditorService(options: {readonly fixedInputs: true}): BlockEditorService & {readonly api: FixedBlockEditorRegistrationAPI};
+export function createBlockEditorService(options?: {readonly fixedInputs?: false}): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI};
+export function createBlockEditorService(options: {readonly fixedInputs?: boolean}): BlockEditorService;
+export function createBlockEditorService(options?: {readonly fixedInputs?: boolean}): BlockEditorService {
+  if (options?.fixedInputs !== undefined && typeof options.fixedInputs !== 'boolean') throw new TypeError('Invalid fixed input capability option.');
   const registry = new EditorRegistry();
   const listeners = new Set<() => void>();
   const notify = () => { for (const listener of [...listeners]) listener(); };
+  const fixed = options?.fixedInputs === true ? {
+    registerFixedInputEditor: <C,>(definition: FixedInputEditorOptions<C>) => {
+      const remove = registry.registerFixed(createFixedInputEditor(definition));
+      notify();
+      let active = true;
+      return () => {if (active) {active = false;remove();notify();}};
+    }
+  } : {};
   const api: SourceBlockEditorRegistrationAPI = Object.freeze({
+    ...fixed,
     apiVersion: EDITOR_API_VERSION,
     register: (definition: EditorDefinition | SchemaEditorOptions) => {
       const custom = definition as EditorDefinition;

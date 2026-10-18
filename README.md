@@ -150,3 +150,7 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 Repository examples are opt-in teaching code, not template blocks or additional package exports. See [the JSON/YAML document example](examples/document-properties.mjs) and [its guide](examples/README.ja.md). Each extension owns its actual data contract.
 
 Prepared source editing is an optional host capability. See [the source/form contract](docs/source-forms.ja.md) for fixed-schema bindings, atomic saves, compatibility, and rollback.
+
+## 固定入力の契約（S3-1）
+
+固定入力の型・Schema検査・同期prepared契約を追加しています。`createBlockEditorService({fixedInputs: true})`の明示時だけ新しい登録APIを提供し、対応hostがない場合は開けません。実field保存・固定フォーム・GUIフラグ・各拡張への登録は未接続です。[固定入力の契約と後続工程](docs/fixed-input-contracts.md)を参照してください。公開済み0.2.0の機能と、今回の未公開差分は区別してください。
