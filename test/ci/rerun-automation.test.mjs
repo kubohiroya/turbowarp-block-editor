@@ -6,7 +6,7 @@ import {join} from 'node:path';
 import {spawnSync} from 'node:child_process';
 import vm from 'node:vm';
 import YAML from 'yaml';
-import {configuration, exerciseReruns, githubAPI} from '../../scripts/ci/test-latest-attempt.mjs';
+import {configuration, exerciseReruns, githubAPI, weeklyCron} from '../../scripts/ci/test-latest-attempt.mjs';
 import {fixtureFile, marker, probeFile, repository, scenarios, verifyDecision} from '../../scripts/ci/assert-rerun-probe.mjs';
 
 const env = {GITHUB_REPOSITORY: repository, GITHUB_EVENT_NAME: 'workflow_dispatch', GITHUB_SHA: 'a'.repeat(40),
@@ -18,7 +18,7 @@ const decision = (attempt = 1) => ({repository, workflowFile: fixtureFile, expec
     conclusion: attempt === 2 ? 'failure' : 'success', decision: attempt === 2 ? 'rejected' : 'accepted',
     reason: attempt === 2 ? 'Normal CI concluded failure' : 'Latest matching normal CI workflow succeeded', observedAt: iso(100)});
 
-function server(options = {}) {
+function server(options = {}, driverConfig = config) {
     let clock = 0, id = 100, fixture, history = {}, lag = false;
     const runs = [], mutations = [], records = [];
     const base = (workflow, title) => ({id: id++, workflow_id: workflow, run_number: id, run_attempt: 1,
@@ -106,7 +106,7 @@ function server(options = {}) {
         const run = runs.find(run => run.id * 10 + 2 === jobId); assert.ok(run);
         return options.missingProof ? 'No proof\n' : `timestamp ${marker}${JSON.stringify(run.proof)}\n`;
     };
-    return {mutations, records, execute: () => exerciseReruns(config, {api, now: () => clock, intervalMs: 10,
+    return {mutations, records, execute: () => exerciseReruns(driverConfig, {api, now: () => clock, intervalMs: 10,
         timeoutMs: 200, pause: async ms => {
             clock += ms;
             if (!options.neverComplete && fixture?.status === 'in_progress' && runs.some(run => run !== fixture && run.status === 'in_progress')) finishFixture();
@@ -116,6 +116,8 @@ function server(options = {}) {
 test('the full suite preserves one SHA/run across three attempts and four observers', async () => {
     const h = server({registrationLag: true}); const result = await h.execute();
     assert.equal(result.status, 'success');
+    assert.equal(result.trigger, 'workflow_dispatch');
+    assert.equal(result.schedule, undefined);
     assert.deepEqual(Object.keys(result.probes), Object.keys(scenarios));
     assert.equal(result.fixture.id, 100);
     assert.deepEqual(Object.values(result.probes).map(p => p.proof.attempt), [1, 2, 2, 3]);
@@ -139,6 +141,25 @@ for (const [option, pattern] of [['premature', /Downstream started/], ['wrongPro
     });
 }
 
+
+test('weekly schedule uses the full unchanged suite and records the actual trigger', async () => {
+    const scheduled = configuration({...env, GITHUB_EVENT_NAME: 'schedule', CI_SCHEDULE: weeklyCron});
+    const result = await server({}, scheduled).execute();
+    assert.equal(result.status, 'success');
+    assert.equal(result.trigger, 'schedule');
+    assert.equal(result.schedule, '37 2 * * 1');
+    assert.deepEqual(Object.keys(result.probes), Object.keys(scenarios));
+    assert.equal(result.mutations.length, 7);
+    assert.ok(Object.values(result.probes).every(probe => probe.ci.event === 'workflow_dispatch'));
+});
+
+test('schedule refuses non-main refs and missing or unexpected cron', () => {
+    for (const patch of [{GITHUB_REF: 'refs/heads/feature'}, {GITHUB_REF: 'refs/tags/v1'},
+        {CI_SCHEDULE: ''}, {CI_SCHEDULE: '17 2 * * 1'}]) {
+        assert.throws(() => configuration({...env, GITHUB_EVENT_NAME: 'schedule', CI_SCHEDULE: weeklyCron, ...patch}));
+    }
+});
+
 test('observer verifies full decision identity, latest attempt and expected failure reason', () => {
     const expected = {sha: config.sha, branch: 'main', runId: 100, scenario: 'failed-fresh', gate: 'failure', sentinel: 'skipped'};
     assert.equal(verifyDecision(decision(2), expected).attempt, 2);
@@ -149,7 +170,7 @@ test('observer verifies full decision identity, latest attempt and expected fail
     }
 });
 
-test('driver configuration cannot target GUI, arbitrary repos, tags or automatic events', () => {
+test('driver configuration cannot target GUI, arbitrary repos, tags or unsupported events', () => {
     for (const [key, value] of [['GITHUB_REPOSITORY', 'kubohiroya/scratch-gui'], ['GITHUB_REF', 'refs/tags/v1'],
         ['GITHUB_EVENT_NAME', 'push'], ['GITHUB_SHA', 'main'], ['GITHUB_RUN_ID', '0'],
         ['GITHUB_RUN_ATTEMPT', 'bad'], ['GH_TOKEN', ''], ['GITHUB_API_URL', 'https://other.example']]) {
@@ -177,10 +198,14 @@ test('log redirect never receives the repository token; HTTP/network errors fail
 });
 
 const workflow = file => YAML.parse(readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), 'utf8'));
-test('manual-only workflows isolate action writes to the driver and never gain deployment permissions', () => {
+test('only the driver is scheduled; child workflows stay manual and never gain deployment permissions', () => {
     for (const file of ['ci-gate-rerun-test.yml', fixtureFile, probeFile]) {
         const w = workflow(file);
-        assert.deepEqual(Object.keys(w.on), ['workflow_dispatch']);
+        assert.deepEqual(Object.keys(w.on), file === 'ci-gate-rerun-test.yml' ? ['workflow_dispatch', 'schedule'] : ['workflow_dispatch']);
+        if (file === 'ci-gate-rerun-test.yml') {
+            assert.deepEqual(w.on.schedule, [{cron: weeklyCron}]);
+            assert.equal(w.jobs.orchestrate.steps.find(step => step.run?.includes('test-latest-attempt.mjs')).env.CI_SCHEDULE, '${{ github.event.schedule }}');
+        }
         assert.equal(w.permissions.contents, 'read');
         for (const job of Object.values(w.jobs)) {
             assert.equal(job.environment, undefined);

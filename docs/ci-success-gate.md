@@ -54,14 +54,16 @@ rollbackはGUIのci-gate呼出しとdeployのneedsだけをrevertします。確
 
 ## 最新attemptの自動実検証
 
-共通側の `ci-gate-rerun-test.yml` を手動起動すると、同一SHA・同一CI runの3 attemptと4つの読み取り専用observerを自動で検査します。GUIの変更、通常CIの書換え、一時branchの作成/削除、PATの登録は不要です。
+共通側の `ci-gate-rerun-test.yml` は毎週月曜11:37 JST（UTC `37 2 * * 1`）にdefault branchのmainで起動し、手動でも同じsuiteを実行できます。同一SHA・同一CI runの3 attemptと4つの読み取り専用observerを自動で検査します。GUIの変更、通常CIの書換え、一時branchの作成/削除、PATの登録は不要です。
 
 ```sh
 gh workflow run ci-gate-rerun-test.yml \
   --repo kubohiroya/turbowarp-extension-data-editor --ref main
 ```
 
-新規workflowはdefault branchへ取り込んでから利用します。実GitHubテストをpush/PR/cronから自動起動しません。通常CIは既存の `node --test test/ci/*.test.mjs` により、統括ロジック・fixture・誤run/attempt・権限境界・timeout等のローカルテストを実行します。
+統括だけが週次scheduleを持ち、fixture/observerは手動dispatchのみです。定期入口はmainと指定cronだけを許可し、証跡とsummaryに実際のtriggerを残します。既存の公開版E2E（月曜11:17 JST）から20分ずらしています。実GitHubテストをpush/PRから自動起動しません。通常CIは既存の `node --test test/ci/*.test.mjs` により、統括ロジック・fixture・誤run/attempt・権限境界・timeout等のローカルテストを実行します。
+
+GitHubのscheduleはdefault branchの最新commitを対象とし、起動が遅れる場合があります。手動起動は同じ統括本体の実行確認であり、真正scheduleイベントを手動生成したものではありません。定期起動は `event=schedule` とartifactの `trigger` / `schedule`、suiteのsuccessを確認します。[GitHub公式のschedule仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)を参照してください。
 
 ### 確認する順序
 
@@ -90,4 +92,4 @@ observerの `assert-probe` がゲートのJSON artifactを読み、fixture run I
 
 [workflow_dispatchはGITHUB_TOKENからも子workflowを起動できる](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)仕組みを使います。公開後E2Eや通常CIへの呼出しは追加しません。
 
-この自動テストのrollbackは、手動の統括workflowを無効化するか追加分をrevertします。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
+週次設定のrollbackはcronとschedule許可の追加分をrevertし、手動のみへ戻します。自動テスト全体を止める場合は統括workflowを無効化します。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
