@@ -1,6 +1,6 @@
 # Issue #1 初版の受け入れ確認
 
-2026-10-18（日本時間）。対象は[GUI #1](https://github.com/kubohiroya/scratch-gui/issues/1)と[共通基盤 #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1)。
+2026-10-18（日本時間）。対象は[GUI #1](https://github.com/kubohiroya/scratch-gui/issues/1)と[共通基盤 #1](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/1)。
 
 GUI作業ブランチは`fix/editor/issue-1-acceptance`、基点は`feat/site/github-pages`の`be1183a907ddc6834f32f457a5b5ee54e91b4e48`。
 共通APIはmainの`21c7cf54df2f2f8768219252a2bc6e5b5ad5434f`（PR #5）をビルドして使用した。通常CI・Pagesの固定参照もこのSHAにそろえた。
@@ -22,7 +22,7 @@ GUI作業ブランチは`fix/editor/issue-1-acceptance`、基点は`feat/site/gi
 その前の`NODE_ENV=production NODE_OPTIONS=--openssl-legacy-provider npm run build`も成功しているが、ビルド開始後に追加したtransactionの区別は最終webpackビルドで確認した。
 検証中に隣接する共通APIの作業コピーへ別作業の未コミット変更が増えたため、その差分は保持し、固定コミットを`git archive`で`/tmp/issue1-pinned-api`へ取り出してビルドした。Nodeの一時loaderとwebpackの一時aliasでこの生成物だけを参照し、23限定テスト、全終了操作、通常操作、6表示条件、長い本文/エラー、非同期無効化、実行中保存、コンパイラ比較、プレイヤーとJSON/YAML再編集を再確認した。隔離した固定版のproductionビルドも成功した。これらの一時設定は製品設定へ追加していない。
 
-共通API自体は本作業でコード未変更のため、[マージ後CI](https://github.com/kubohiroya/turbowarp-block-editor/actions/runs/39048712596)と既存45件の検証結果を利用し、公開操作のみを理由とする再実行は行っていない。
+共通API自体は本作業でコード未変更のため、[マージ後CI](https://github.com/kubohiroya/turbowarp-extension-data-editor/actions/runs/39048712596)と既存45件の検証結果を利用し、公開操作のみを理由とする再実行は行っていない。
 
 ## 実ブラウザの確認
 

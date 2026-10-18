@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const sha = value => typeof value === 'string' && value.length === 40 && /^[a-f0-9]{40}$/.test(value);
 const coreRevision = workflow => {
     const match = workflow.match(
-        /repository:\s*kubohiroya\/turbowarp-block-editor\s+ref:\s*['"]?([a-f0-9]{40})(?=['"\s]|$)/
+        /repository:\s*kubohiroya\/turbowarp-extension-data-editor\s+ref:\s*['"]?([a-f0-9]{40})(?=['"\s]|$)/
     );
     if (!match) throw new Error('The deployed Pages workflow must pin the editor package to a full SHA.');
     return match[1];

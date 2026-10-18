@@ -32,7 +32,7 @@ test('webpack helper preserves host aliases and loaders without mutating single 
   assert.equal(first.resolve.alias['upstream$'], '/host/upstream');
   assert.equal(first.resolve.alias['react$'], require.resolve('react'));
   assert.equal(first.resolve.alias['react-dom$'], require.resolve('react-dom'));
-  assert.match(first.resolve.alias['@kubohiroya/turbowarp-block-editor$'], /dist\/webpack4\/index.js$/);
+  assert.match(first.resolve.alias['@kubohiroya/turbowarp-extension-data-editor$'], /dist\/webpack4\/index.js$/);
   assert.deepEqual(first, second);
   assert.deepEqual(withBlockEditorWebpack4(first, {hostRoot: root}), first);
   assert.throws(() => withBlockEditorWebpack4(config, {hostRoot: 'relative'}), /absolute/);

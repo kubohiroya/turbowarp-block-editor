@@ -1,7 +1,7 @@
-# turbowarp-block-editor
+# turbowarp-extension-data-editor
 
-TurboWarp の機能拡張ブロックに専用編集 UI を関連づける実験的な共通 API v1 です。
-[共通基盤 #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1) と
+TurboWarp拡張が扱う構造化データを、フォームや独自UIで編集するための実験的な共通API v1です。
+[共通基盤 #1](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/1) と
 [GUI 接続 #1](https://github.com/kubohiroya/scratch-gui/issues/1) に対応します。
 
 日本語の利用手順・API・GUI接続・公開・検証記録は[ドキュメント一覧](docs/README.md)へ集約しています。
@@ -53,7 +53,7 @@ GUIのwebpack 4接続では[互換配布物と設定API](docs/webpack4.md)を使
 ## API とトランザクション
 
 ルートの `EditorRegistry` / `EditorSession` は React / Blockly に依存しません。
-`@kubohiroya/turbowarp-block-editor/rjsf` の `createSchemaEditor()` が標準フォームを提供します。
+`@kubohiroya/turbowarp-extension-data-editor/rjsf` の `createSchemaEditor()` が標準フォームを提供します。
 通常 DOM や独自 React UI の `mount()` を持つ定義も登録できます。
 `/rjsf` の `createBlockEditorService()` がSchema検出・登録/解除・通知を提供します。
 `/react` の `BlockEditorDialog` は保存/キャンセル・エラー・階層UIを提供し、ホストのModal・翻訳・テーマを注入します。
@@ -76,7 +76,7 @@ GUIには起動時フラグ・ライフサイクル・Modal/翻訳/テーマの�
 
 ## 子孫をまとめる階層セッション
 
-[共通基盤 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2) の追加 API として、
+[共通基盤 #2](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/2) の追加 API として、
 `EditorRegistry.openDescendants()` と `DescendantSession` を提供します。
 ホストが `descendant-editing-v1` capability と完全な subtree snapshot / 一括 commit を提供する場合だけ使用します。
 既存の API v1 の本文を再利用し、親子孫・複数枝の下書きと検証結果を保持して、全変更を1回でホストへ渡します。
@@ -100,11 +100,17 @@ pnpm test
 `pnpm test` は型宣言を含むビルド後、コアと標準フォームのテストを実行します。
 パッケージは ESM です。ブラウザには ES2022 の組み込み API が必要です。
 標準フォームの React / ReactDOM peer は 16.14 / 17 / 18。GUI は既存の 16.14 を共有します。
-未公開の初期実装として `private: true` にしています。
+初回の実験版は `@kubohiroya/turbowarp-extension-data-editor@0.1.0` です。
+
+```sh
+npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.1.0
+```
+
+配布物・改名時の互換性・公開手順は[パッケージ配布](docs/package-distribution.md)を参照してください。
 
 ## GUI で試す
 
-隣接する `../scratch-gui` が本パッケージを `file:../turbowarp-block-editor` で参照します。
+`scratch-gui` はnpmに公開した本パッケージを固定versionで参照します。通常のGUIビルドに共通リポジトリの隣接配置は不要です。
 [GUIの起動・制約・検証手順](docs/block-editor.md) に従ってください。
 既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
 

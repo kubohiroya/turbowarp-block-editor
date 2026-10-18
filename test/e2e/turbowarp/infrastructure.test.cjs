@@ -32,12 +32,12 @@ test('new branches and missing history never skip regression checks', () => {
 test('public checks require full immutable revisions and resolve the deployed core pin', () => {
     assert.equal(sha('a'.repeat(40)), true);
     for (const value of ['develop', 'abc123', `${'a'.repeat(40)}\n`, null]) assert.equal(sha(value), false);
-    const workflow = 'repository: kubohiroya/turbowarp-block-editor\n' +
+    const workflow = 'repository: kubohiroya/turbowarp-extension-data-editor\n' +
         '          ref: ec338023ca8123b1db50787601ca8c78ab06917d\n';
     assert.equal(coreRevision(workflow),
         'ec338023ca8123b1db50787601ca8c78ab06917d');
     assert.throws(() => coreRevision('repository: another/package\nref: main'), /pin/);
-    assert.throws(() => coreRevision('repository: kubohiroya/turbowarp-block-editor\nref: main'), /pin/);
+    assert.throws(() => coreRevision('repository: kubohiroya/turbowarp-extension-data-editor\nref: main'), /pin/);
 });
 
 

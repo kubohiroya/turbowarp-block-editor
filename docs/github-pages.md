@@ -26,9 +26,8 @@ URL の直接読込は上流が未信頼URLに sandbox を強制するため、�
 ## ビルドと依存
 
 共通APIの固定SHAはscratch-guiの `.github/workflows/pages.yml` のcheckout設定で管理します。通常CIと公開版E2Eも同じ完全SHAへ揃えます。[webpack設定API](webpack4.md)と[共通E2E・CI手順](block-editor-e2e.md)を参照してください。
-`build:pages` はインストールされた共通 API のリンク先にある Git checkout の HEAD を取得し、`build-info.json` と日英クレジットのソースリンクに同じ SHA を使います。
-ローカルビルドも Git checkout をリンクして利用します。Git checkout が見つからない場合は公開ビルドを失敗させ、GUI の SHA や古い固定値を代用しません。
-Actions は両リポジトリを隣接配置し、共通 API を pnpm 11.18.0 と Node 22 で install / typecheck / test / build します。
+`build:pages` はインストールされた共通APIの `/build-info` から公開元の完全SHAを取得し、`build-info.json` と日英クレジットのソースリンクに使います。依存先にGit checkoutは不要です。metadataが欠落・不正な場合は失敗させ、GUIのSHAを代用しません。
+Actionsは検証手順を所有する共通リポジトリを別途checkoutし、pnpm 11.18.0とNode 22で検証します。GUIはnpm配布物を利用し、そのmetadataのSHAとworkflowの固定SHAが一致することを確認します。
 GUI は npm ci、既存のアセット生成、限定テストの後に `npm run build:pages` を実行します。
 
 ```sh
