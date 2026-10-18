@@ -107,6 +107,31 @@ check(
   calibration.validateCalibrationInput,
 );
 const cal = JSON.parse(await text('motion-calibration.json'));
+const legacyWithRosKeys = { ...cal, image_width: 800, camera_matrix: { raw: true } };
+const legacySource = ' \n' + JSON.stringify(legacyWithRosKeys) + '\n';
+const legacyResult = calibration.validateCalibrationSource(legacySource, context);
+assert.equal(legacyResult.result.kind, 'valid');
+assert.equal(legacyResult.variantId, 'legacy');
+assert.equal(legacyResult.source, legacySource);
+assert.deepEqual(legacyResult.data, legacyWithRosKeys);
+const calibrationVariants = [];
+for (const [variant, source] of [
+  ['camerasource', '{"schema":"camerasource/camera-intrinsics"}'],
+  ['legacy', '{"schema":"twrmc/camera-calibration"}'],
+  ['twcs', '{"schema":"twcs/camera-intrinsics"}'],
+  ['ros', 'image_width: 0\n'],
+]) {
+  const validated = calibration.validateCalibrationSource(source, context);
+  assert.equal(validated.result.kind, 'invalid');
+  for (const diagnostic of validated.result.diagnostics) {
+    assert.deepEqual(diagnostic.scope, {
+      identity: {ownerId: 'turbowarp-camera-calibration', contractId: 'calibration-profile',
+        revision: 'parser-v0.14.0', variantId: variant},
+      consumerId: context.consumerId,
+    });
+  }
+  calibrationVariants.push(variant);
+}
 const pose2d = {
   schema: 'twrmc/pose-frame-2d',
   version: 1,
@@ -196,16 +221,40 @@ for (const [validate, source, args] of [
   [aframe.validateTemplateSource, '{private malformed', []],
   [camera.validateCameraProfileSource, '{private malformed', []],
   [calibration.validateCalibrationSource, '{private malformed', []],
-  [placement.validatePlacementSource, '{private malformed', ['reference']]
+  [placement.validatePlacementSource, '{private malformed', ['reference']],
+  [runtime.validateSceneSource, '{private malformed', []],
+  [examples.validateExampleSource, '{private malformed', ['scene']],
+  [examples.validateExampleSource, '{private malformed', ['note']],
 ]) {
   const result = validate(source, ...args, context);
   assert.equal(result.source, source);assert.equal(result.result.kind, 'invalid');
   assert.equal(JSON.stringify(result.result).includes('private'), false);
 }
 
+let contextReads = 0;
+const unsafeContext = Object.defineProperty({...context}, 'consumerId', {enumerable: true,
+  get() {contextReads++;throw Error('private-context');}});
+for (const [validate, args] of [
+  [runtime.validateSceneSource, []],
+  [examples.validateExampleSource, ['scene']],
+  [examples.validateExampleSource, ['note']],
+]) for (const invalidContext of [unsafeContext, null, undefined]) {
+  const source = '{private malformed', result = validate(source, ...args, invalidContext);
+  assert.equal(result.source, source);
+  assert.equal(result.result.kind, 'invalid');
+  assert.equal(result.result.diagnostics[0].code, 'input-format-invalid');
+  assert.equal(Object.hasOwn(result.result.diagnostics[0].scope, 'consumerId'), false);
+  assert.equal(JSON.stringify(result.result).includes('private'), false);
+}
+assert.equal(contextReads, 0);
+assert.equal(runtime.validateSceneSource(' \n', unsafeContext).result.kind, 'valid');
+assert.equal(contextReads, 0);
+
 console.log(
   JSON.stringify(
-    { contracts: rows.length, packageCount: 9, sourceImports: false, results: rows },
+    { contracts: rows.length, packageCount: 9, sourceImports: false, results: rows,
+      reviewRegressions: {legacyRosKeyCompatibility: true, calibrationDiagnosticVariants: calibrationVariants,
+        malformedSourceContextGetterReads: contextReads, emptySceneContextFree: true} },
     null,
     2,
   ),

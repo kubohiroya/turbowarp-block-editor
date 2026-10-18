@@ -102,6 +102,33 @@ execFileSync(
   [join(root, 'node_modules/typescript/bin/tsc'), '--project', join(temp, 'tsconfig.json')],
   { stdio: 'inherit' },
 );
+if (entry === '/schema') {
+  // This checks our public UI options against packed declarations, without importing React.
+  // Legacy RJSF declarations retain the separately documented skipLibCheck limitation.
+  await writeFile(join(temp, 'legacy-options.ts'), `
+import {createSchemaBundleEditor} from '${manifest.name}/rjsf';
+import type {SchemaBundleEditorOptions} from '${manifest.name}/rjsf';
+import type {SchemaBundle} from '${manifest.name}/schema';
+declare const schemaBundle: SchemaBundle;
+const shared = {apiVersion:1 as const,extensionId:'owner',editorId:'default',opcodes:['owner_data'],argument:'JSON',schemaBundle};
+export const options: SchemaBundleEditorOptions = {...shared,
+  validationContext:()=>({consumerId:'owner',nowMs:0,settings:null})};
+export const editor = createSchemaBundleEditor(options);
+export const inline = createSchemaBundleEditor({...options,validationContext:()=>({consumerId:'owner',nowMs:0,settings:null})});
+export const explicit: SchemaBundleEditorOptions<{delegate:boolean}> = {...shared,validationContext:()=>({consumerId:'owner',nowMs:0,settings:{delegate:true}})};
+export const invalid: SchemaBundleEditorOptions = {...options,
+  // @ts-expect-error Settings-free options only accept null.
+  validationContext:()=>({consumerId:'owner',nowMs:0,settings:{delegate:true}})};
+`);
+  await writeFile(join(temp, 'tsconfig.legacy-options.json'), JSON.stringify({
+    extends: './tsconfig.json',
+    compilerOptions: {lib: ['ES2022', 'DOM'], skipLibCheck: true},
+    include: ['legacy-options.ts'],
+  }));
+  execFileSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '--project',
+    join(temp, 'tsconfig.legacy-options.json')], {stdio: 'inherit'});
+  console.log(JSON.stringify({packedRjsfOptionsDefault: 'null', legacyOptionsTypecheck: true, legacySkipLibCheck: true}));
+}
 console.log('artifact:', packed.filename, 'unpackedBytes:', packed.unpackedSize, 'isolated:', temp);
 
 const config = entry === '/schema' ? 'tsconfig.json' : 'tsconfig.editor.json';

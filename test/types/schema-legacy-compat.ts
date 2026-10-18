@@ -78,3 +78,20 @@ export const oldRegistrationAPI: BlockEditorRegistrationAPI = {
   apiVersion: 1, register: () => () => {}, registerSchema: () => () => {}
 };
 export const oldService: BlockEditorService = {registry: new EditorRegistry(), api: oldRegistrationAPI, subscribe: () => () => {}};
+
+// Settings-free options work with omitted type arguments, inline inference and service registration.
+export const defaultBundleOptions: SchemaBundleEditorOptions = {
+  apiVersion: version, extensionId: 'story', editorId: 'no-settings', opcodes: ['story_scene'], argument: 'PROPERTIES',
+  schemaBundle: bundle, validationContext: () => ({consumerId: 'story', nowMs: 0, settings: null})
+};
+export const defaultBundleEditor = createSchemaBundleEditor(defaultBundleOptions);
+export const inlineBundleEditor = createSchemaBundleEditor({
+  apiVersion: version, extensionId: 'story', editorId: 'inline', opcodes: ['story_scene'], argument: 'PROPERTIES',
+  schemaBundle: bundle, validationContext: () => ({consumerId: 'story', nowMs: 0, settings: null})
+});
+createBlockEditorService().api.registerSchemaBundle(defaultBundleOptions);
+export const invalidDefaultBundleOptions: SchemaBundleEditorOptions = {
+  ...defaultBundleOptions,
+  // @ts-expect-error The settings-free default only accepts null.
+  validationContext: () => ({consumerId: 'story', nowMs: 0, settings: {delegate: true}})
+};

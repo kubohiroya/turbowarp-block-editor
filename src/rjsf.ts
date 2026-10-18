@@ -48,7 +48,7 @@ export interface SchemaEditorOptions {
 }
 
 /** Explicit bundle opt-in; the provider supplies fresh immutable validation inputs per call. */
-export interface SchemaBundleEditorOptions<C = unknown> extends Omit<SchemaEditorOptions, 'schema'> {
+export interface SchemaBundleEditorOptions<C = null> extends Omit<SchemaEditorOptions, 'schema'> {
   readonly schemaBundle: SchemaBundle;
   readonly validationContext: () => SchemaValidationContext<C>;
   readonly ownerValidate?: SyncOwnerValidator<C>;

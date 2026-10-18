@@ -1,8 +1,8 @@
 {
   "stage": "S1-5",
   "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/18",
-  "observed_at_utc": "2026-10-18T05:45:15.426323+00:00",
-  "verification_parent_commit": "a1ab4f4f5b384eef08ef26e544186ee9d8ad4543",
+  "observed_at_utc": "2026-10-18T06:12:49.765581+00:00",
+  "verification_parent_commit": "e389e707449313423b0645a8daa4d4097467617f",
   "base_main": "ef703b2bbe4dcb6b74c0fee9f799db09240c266b",
   "node": "26.7.0",
   "common_typescript": "6.0.3",
@@ -10,7 +10,7 @@
   "validation": {
     "method": "Targeted and incremental runs; unchanged prerequisites reused.",
     "common_unique_cases": 120,
-    "owner_unique_cases": 302,
+    "owner_unique_cases": 307,
     "headless_contracts": 16,
     "packages": 9,
     "source_emitted_sha256_matches": 135,
@@ -41,7 +41,20 @@
       }
     ],
     "bundle_form_cases": 8,
-    "late_provider_and_bundle_snapshot_cases": 32
+    "late_provider_and_bundle_snapshot_cases": 32,
+    "review_fix_runs": {
+      "common_related_cases": 65,
+      "camera_calibration_related_cases": 12,
+      "runtime_related_cases": 13,
+      "template_related_cases": 16,
+      "total_related_cases": 106,
+      "new_owner_runtime_cases": 5,
+      "all_previous_120_302_reexecuted": false,
+      "packed_RJSF_options_default": "null",
+      "packed_RJSF_type_skipLibCheck": true,
+      "owner_no_DOM_type_skipLibCheck": false,
+      "history_result_reuse": "Unchanged prerequisites retained, not new full-suite runs"
+    }
   },
   "packages": [
     {
@@ -50,7 +63,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-v2BAPP"
+      "isolated_consumer": "/tmp/schema-owner-consumer-18xF4j",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-scene-graph",
@@ -58,7 +72,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-6UESD8"
+      "isolated_consumer": "/tmp/schema-owner-consumer-5bJWwM",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-3d-scene-runtime",
@@ -66,7 +81,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-L8af74"
+      "isolated_consumer": "/tmp/schema-owner-consumer-69ePiu",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-camera-source",
@@ -74,7 +90,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-IgnwrJ"
+      "isolated_consumer": "/tmp/schema-owner-consumer-A7JaRH",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-camera-calibration",
@@ -82,7 +99,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-DzDLHW"
+      "isolated_consumer": "/tmp/schema-owner-consumer-cq2aK6",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-realtime-motion-capture",
@@ -90,7 +108,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-CnWuS6"
+      "isolated_consumer": "/tmp/schema-owner-consumer-Q1cyWb",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-time-space-sync",
@@ -98,7 +117,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-OQsIaY"
+      "isolated_consumer": "/tmp/schema-owner-consumer-x1qlyP",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-extension-template",
@@ -106,7 +126,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-Ww0i1K"
+      "isolated_consumer": "/tmp/schema-owner-consumer-m0rAMC",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     },
     {
       "repository": "turbowarp-extension-data-editor",
@@ -114,7 +135,8 @@
       "import_global_accesses": 0,
       "React_present": false,
       "consumer_skipLibCheck": false,
-      "isolated_consumer": "/tmp/schema-owner-consumer-XDkK36"
+      "isolated_consumer": "/tmp/schema-owner-consumer-Kj3oeV",
+      "package_documentation_snapshot": "Before current verification metadata refresh; implementation emit hashes match current source"
     }
   ],
   "owner_heads": [
@@ -124,7 +146,9 @@
       "branch": "feat/schema/stage1-aframe",
       "issue": "https://github.com/kubohiroya/turbowarp-aframe/issues/19",
       "targeted_cases": 36,
-      "emitted_matches": 5
+      "emitted_matches": 5,
+      "working_tree_modified": false,
+      "local_source_snapshot_sha256": "bff5547614f6b892aab22c1875da0f9761548d1ffcd69a94d2b70113d1be185c"
     },
     {
       "repo": "scene-graph",
@@ -132,15 +156,19 @@
       "branch": "feat/schema/stage1-scene-graph",
       "issue": "https://github.com/kubohiroya/turbowarp-scene-graph/issues/5",
       "targeted_cases": 56,
-      "emitted_matches": 9
+      "emitted_matches": 9,
+      "working_tree_modified": false,
+      "local_source_snapshot_sha256": "0c3ecf8910a52f425f6bd1a3f7d553149577021b88cd6bacefa6c172b8c71925"
     },
     {
       "repo": "3d-scene-runtime",
       "head": "6bc05826956c3ab7885b71f591dcf381f97d7d49",
       "branch": "feat/schema/stage1-3d-scene-runtime",
       "issue": "https://github.com/kubohiroya/turbowarp-3d-scene-runtime/issues/1",
-      "targeted_cases": 11,
-      "emitted_matches": 4
+      "targeted_cases": 13,
+      "emitted_matches": 4,
+      "working_tree_modified": true,
+      "local_source_snapshot_sha256": "7fadbdaf0aedf7fc914f02366543aaacf7ac91af46af782702826379668e4e25"
     },
     {
       "repo": "camera-source",
@@ -148,15 +176,19 @@
       "branch": "feat/schema/stage1-camera-source",
       "issue": "https://github.com/kubohiroya/turbowarp-camera-source/issues/47",
       "targeted_cases": 102,
-      "emitted_matches": 13
+      "emitted_matches": 13,
+      "working_tree_modified": false,
+      "local_source_snapshot_sha256": "c108294e84b14cfa2cbd48af13aa847136fcb9d4a3a7fd290e93e97b89b1682f"
     },
     {
       "repo": "camera-calibration",
       "head": "4db5abe5df203d663fbe979de80ddc4517545a93",
       "branch": "feat/schema/stage1-camera-calibration",
       "issue": "https://github.com/kubohiroya/turbowarp-camera-calibration/issues/38",
-      "targeted_cases": 10,
-      "emitted_matches": 8
+      "targeted_cases": 12,
+      "emitted_matches": 8,
+      "working_tree_modified": true,
+      "local_source_snapshot_sha256": "fb8ca9a2547c5e824d03d1f3ae04aadc2ba8b99a3b9a6fe0f27936f3833b1672"
     },
     {
       "repo": "realtime-motion-capture",
@@ -164,7 +196,9 @@
       "branch": "feat/schema/stage1-realtime-motion-capture",
       "issue": "https://github.com/kubohiroya/turbowarp-realtime-motion-capture/issues/32",
       "targeted_cases": 63,
-      "emitted_matches": 30
+      "emitted_matches": 30,
+      "working_tree_modified": false,
+      "local_source_snapshot_sha256": "ea314d51af5effdc3cfe344242e0c64c19a493c6a2e0140df0d07d3e895a0773"
     },
     {
       "repo": "time-space-sync",
@@ -172,15 +206,19 @@
       "branch": "feat/schema/stage1-time-space-sync",
       "issue": "https://github.com/kubohiroya/turbowarp-time-space-sync/issues/20",
       "targeted_cases": 9,
-      "emitted_matches": 10
+      "emitted_matches": 10,
+      "working_tree_modified": false,
+      "local_source_snapshot_sha256": "fb82717f16eb12cfe9cc8f67cfa02a4989e7f0252ea444ba2869618a87a1441c"
     },
     {
       "repo": "extension-template",
       "head": "1604bb18da1eeb5cbe47e520ca455140d83ad517",
       "branch": "feat/schema/stage1-extension-template",
       "issue": "https://github.com/kubohiroya/turbowarp-extension-template/issues/29",
-      "targeted_cases": 15,
-      "emitted_matches": 4
+      "targeted_cases": 16,
+      "emitted_matches": 4,
+      "working_tree_modified": true,
+      "local_source_snapshot_sha256": "6cb6c1b46ce82714cc3c775f55b7b8c7707588c7051f85d4f4351b54066059cc"
     }
   ],
   "dependency_pins": {
@@ -197,7 +235,8 @@
     "installed_version": "0.1.0",
     "installed_schema_entry_present": false,
     "dependency_updated": false,
-    "default_flag": "off; startup URL flag blockEditorDialogs=1 only"
+    "default_flag": "off; startup URL flag blockEditorDialogs=1 only",
+    "rechecked_at_utc": "2026-10-18T06:12:49.765581+00:00"
   },
   "scope": {
     "existing_entries_preserved": [
@@ -235,7 +274,7 @@
     "src/react.css": "b3d9bb9f19b6602af2e01ecbff9ac8f8e93d4292f57a0708b5b8f9c8e69a0b51",
     "src/react.tsx": "bb4facadd4b7eceb65e26b7db19bacf95256463c8b02801a1b6d7d42fa328970",
     "src/registry.ts": "afb100420000b5df2d1503adfebf0f2266abd603a0cb3bb27f5f1e88ef8cbb90",
-    "src/rjsf.ts": "84f6e8c0df45ead7402a0f5ac3418041e24e642d30323868f380e67aca48f567",
+    "src/rjsf.ts": "2e1c83fd062709861f118aa71f825342bacc1e24a491578edd55721a387e4001",
     "src/schema-compose.ts": "103d84ed0960b0ed17dfb7493437bb10a8e76022e79bd52c302b3016bada70f7",
     "src/schema-engine.ts": "1dbcf2e3e1d3c5ce73a779a3b0d98f3f07c278dfb2d823bc383b50049d3ddd55",
     "src/schema-json.ts": "f39a31decdabef84df00adc0599916a3706cd94c555f63fbe5887804f46cb566",
@@ -271,7 +310,7 @@
     "react.js": "8a031ea4bea0eb31b009b8ea88e4319cfa041009145c82e2c4a1421126d4afcd",
     "registry.d.ts": "7dbec50cc623a46d9cfc2bc94eef06ef504742154a91b675a1fb5222217ad456",
     "registry.js": "109bcd8b3b3c09c57030990d3bf87a3522766fade2d4c1dbd2f4841c0e21531d",
-    "rjsf.d.ts": "03ec8d9cbb8d54ab5c6c1eb7734336a407500e54fb1acaa83bdb642b5b40b3da",
+    "rjsf.d.ts": "6b68cfc2a04c7b730234968bdd6fac380747e2de6631e1752caf07fd8b9b0c90",
     "rjsf.js": "1d2d25c9bdac854b6a044e74c4fde6be82886c7788a8359407f8e6d35ddb8d42",
     "schema-compose.d.ts": "e9bb269fcb3be82661b692e7fdf5c55ac433a31d699ac591a86bf5358046b83e",
     "schema-compose.js": "04b32c71920f1ad99425582c3ef57b69b3725f87191efc808ef94e28b8d7bdd2",
@@ -307,5 +346,196 @@
     "types.js": "9b080e0b709fed592fb450a66ace9b6844abcdde0fdc19e22e5571f16319066f",
     "view.d.ts": "a0335016930092223435704c243fe1bd649f370229b75a1ca273846b5b85dafa",
     "view.js": "7f3392d59fa9ba8c252cd080b77b154f56be38685684fac986d900ca3bddd915"
+  },
+  "working_tree_modified": true,
+  "review_fix_base_head": "e389e707449313423b0645a8daa4d4097467617f",
+  "local_source_snapshot_sha256": "0268d64a6f5484aa07c5c39b91891b79b8a168a7393d76fd0e0f7b57a0d213e0",
+  "review_fixes": [
+    "R4",
+    "integration-R1-R2-R3"
+  ],
+  "changed_emitted_files_since_review": [
+    "rjsf.d.ts"
+  ],
+  "review_input_sha256": {
+    "package.json": "3e86db1bf667088a7a87ada19fc11573082918335dd281073464ca4fcebf74da",
+    "pnpm-lock.yaml": "aa34123018bc79fd5c55bceee0a2190303c34ed32cdedbef79fde350bc3bea43",
+    "tsconfig.json": "8eb1034bc3bde26570bb70b5059479c1391fcfb1bc1ca57279c9b5936cafffda",
+    "scripts/verify-schema-stage1.mjs": "fe74430c537084383b6aa9f5164895010e2defa3b3bd5a42a9fb950d4d9d5fb2",
+    "scripts/verify-schema-package.mjs": "762b2ddac686c1ebae061c4e136d36e478a1636b0d121636da304e04de3fa3f7",
+    "test/types/schema-legacy-compat.ts": "1752ca2c70bc0e986cf78a5f2c387d1e8654a972cb9485f78f365054aafe1f0f",
+    "test/types/tsconfig.schema-pure.json": "8cb207932bc51d0563cc129c19026943f297054bc41792e40886a1d9d68f2c6f",
+    "test/types/tsconfig.schema-compat.json": "8f4917bf831343acb8da548907692ad270fcb10dd7d1c900d7bd5991ddf2d057"
+  },
+  "review_package_test": {
+    "isolated_consumer": "/tmp/schema-owner-consumer-Kj3oeV",
+    "src_absent": true,
+    "react_absent": true,
+    "global_accesses": 0,
+    "strict_no_DOM_skipLibCheck": false,
+    "emit_count": 52
+  },
+  "verification_parent_commit_role": "Base HEAD only; source hashes identify uncommitted corrections",
+  "review_working_tree_repositories": [
+    "editor",
+    "camera-calibration",
+    "3d-scene-runtime",
+    "extension-template"
+  ],
+  "history_before_review_fixes": "/Users/hiroya/Dev/turbowarp-extension-template/docs/block-editor-inventory/implementation-history/stage-1-before-review-fixes-20261018/editor/docs/schema-stage1-verification.json",
+  "all_current_emit_sha256": {
+    "3d-scene-runtime": {
+      "lib-editor/src/editor-schema.d.ts": "f53a978c16ff36e085c857263d6ecf5e8fd83e5577d5cf784df298b27e793d7d",
+      "lib-editor/src/editor-schema.js": "c80948a3aa530a8881c759add6e78b8549603ce6f74575615d94c21c032ee58d",
+      "lib-editor/src/scene-input.d.ts": "35121ce85b366beec93a8e350ec188ffc2372c8ec4ae4f775c5f8750669f1473",
+      "lib-editor/src/scene-input.js": "cd9145ee5c24928632561fcc9c0a012c1e4150e0e64edd3ae56b4047616d6d22"
+    },
+    "aframe": {
+      "lib-editor/schemas/block-editor-template-compat.schema.json": "10d385bedffe4133c374059278ed7393023055af23d2a26d49099d5ffaac0e75",
+      "lib-editor/src/editor-schema.d.ts": "cbe86a73ec3f2673da0c4d6bc48ff4d9152faaebd0bb4b5807b48b8d6ad09bd7",
+      "lib-editor/src/editor-schema.js": "c04b24e30465589b35b53ff4d3e682b40b429452885011e58b16ed828838c935",
+      "lib-editor/src/template-validation.d.ts": "dec81b820da071d823a9909dd65a0a6b36d08391ddce5a0bd7c50f7b686ee021",
+      "lib-editor/src/template-validation.js": "9726e75a5f5d2f8d9e75627b2a131245a8bc9fc84da0d23b4b3035eca7a0e2b1"
+    },
+    "camera-calibration": {
+      "lib-editor/schemas/camera-intrinsics-v1.schema.json": "7a53175d12a7ad1c7f4dec694e4dee83bb496c0213fcb699b0ee7eb1cd7132fb",
+      "lib-editor/schemas/editor-legacy-input.json": "70f3a1daf665fb995559e7494dacf8cfe70ab157cf93dc245e44a519d32f191c",
+      "lib-editor/src/calibration/distortion.d.ts": "03a7368fab61d628958d25a99180c990fa506257601678b07e275fcfddf5cf6e",
+      "lib-editor/src/calibration/distortion.js": "d3e36384ad0b6889610daedaf37cb19cc461ca9a3d76b8b7825135fd479fe655",
+      "lib-editor/src/calibration/profile.d.ts": "fe6952f815fa28c44d8b4d882107c1301d94bfa86013139bb3ad47ee83bf23a4",
+      "lib-editor/src/calibration/profile.js": "4cfa77336be336bd3efd974d67aa8a943328383cbaa5b3b313c1655d7a047bca",
+      "lib-editor/src/editor-schema.d.ts": "1126160511db80eaa8fb6ffc37ed511e3b56b233b18762a456dd8a4c8851eead",
+      "lib-editor/src/editor-schema.js": "4821232491a811b8486ee4eb1276156f7d496b8dcef9ea444b514623e0d9bed5"
+    },
+    "camera-source": {
+      "lib-editor/schemas/camera-intrinsics-v1.json": "db7e43097fe3091fcbdaf218c4174fb5324a85433b20b7155da5199012a7258f",
+      "lib-editor/schemas/editor-legacy-calibration.json": "7c147b707b403fc6c37acce09388ad29bff8215fac5723ad9731e7c62af4eb79",
+      "lib-editor/schemas/editor-ros-camera-info.json": "008a718df73bc696da5e7c2a4abf4937ac6b95bb2ac3051b657546b06743c1a9",
+      "lib-editor/src/calibration/camera-info.d.ts": "8cdf9d544fed4a0dfe6d14c834b8d47778f339edf8e31607a4ff21cf0917a3a5",
+      "lib-editor/src/calibration/camera-info.js": "9aa954cab4376557d158c391f34ed0a07a247a97df64662dab9c1dc6ba6fae6f",
+      "lib-editor/src/calibration/profile.d.ts": "b185ae42a274323ee8bb435cac13626118470a0e2dd3d025f86b6b03177e87db",
+      "lib-editor/src/calibration/profile.js": "dd7a6e205e2651fc279c4981b3bec6adb2a616bb8d2592d99e30af8d526e7377",
+      "lib-editor/src/calibration/types.d.ts": "bb2aa9ada5302da446c7e4e7645b0a5399533b8c29c0461a7d8075542aa9a847",
+      "lib-editor/src/calibration/types.js": "721b4ef1eeb9146db146a26eeed9c4e420d657cd9b44004275dd45967e61eea4",
+      "lib-editor/src/calibration/yaml.d.ts": "ebae6119eec3715485a9afb883dd1e17545eaacba3b5aa0c3eba5b49ba11a8bb",
+      "lib-editor/src/calibration/yaml.js": "a8e1a21352246d54084dbf38c49a37f7e17f3991df83dad9d727b32c00ef2563",
+      "lib-editor/src/editor-schema.d.ts": "c59a95b4c8e8527facec744ef98bc011947e3489ac9211cbe33d73ec8fe72311",
+      "lib-editor/src/editor-schema.js": "4d37eab495c4dd3401ffb5568cad81b0227ec079fb5e2313145dab8e14d5acf8"
+    },
+    "editor": {
+      "codec.d.ts": "e0487e5d86b8c83d175fcc9201f92c1016f78d35b7d803e2a235a26accce8c2a",
+      "codec.js": "8333f2a833020f6bc7e736e50edde015ee5119e654e217f5cdfa132905a90caf",
+      "data.d.ts": "aebedeb0c065b6c2b26bc899df2835b19cd66c6dbead7b64db1051c0fcdd2b7b",
+      "data.js": "eff140903b933f24a8d59e6e19de3a33f0006a21b1dcad9d9228d5892dd560bc",
+      "descendant-types.d.ts": "8d4948d0c716c4a3fbd70c9d3ea924738bced945ed04d396ec87a9962484b793",
+      "descendant-types.js": "b6b365f5c9522aac5cea5b870547a7e5d539cbd632d554ac14b091bcec5cab85",
+      "descendants.d.ts": "669420aa5bd2dddfbbc3e4cf24953d12f6a942938636bb951d3ae7f479f0fe36",
+      "descendants.js": "8440f22be59cb308a49773d3936e9d62c58f020144122a5ed7087f6cf82584af",
+      "field-errors.d.ts": "26204ea15fd29e1b480dfbf573a0b8ff7bd85f4b5091d38f57b51935056c8b56",
+      "field-errors.js": "54967190d3327c66a3165450766acd2b6004370d447ac9e496db6b70aef2129e",
+      "index.d.ts": "fa2b46480932010f311339bd13d76f5e713a0ea22436ebb0890ff4fc8be2240a",
+      "index.js": "fa2b46480932010f311339bd13d76f5e713a0ea22436ebb0890ff4fc8be2240a",
+      "react.d.ts": "c5c4560fb47e9588dc989c8a81379e88b71e568a235099b8328ba01b39dfc0cc",
+      "react.js": "8a031ea4bea0eb31b009b8ea88e4319cfa041009145c82e2c4a1421126d4afcd",
+      "registry.d.ts": "7dbec50cc623a46d9cfc2bc94eef06ef504742154a91b675a1fb5222217ad456",
+      "registry.js": "109bcd8b3b3c09c57030990d3bf87a3522766fade2d4c1dbd2f4841c0e21531d",
+      "rjsf.d.ts": "6b68cfc2a04c7b730234968bdd6fac380747e2de6631e1752caf07fd8b9b0c90",
+      "rjsf.js": "1d2d25c9bdac854b6a044e74c4fde6be82886c7788a8359407f8e6d35ddb8d42",
+      "schema-compose.d.ts": "e9bb269fcb3be82661b692e7fdf5c55ac433a31d699ac591a86bf5358046b83e",
+      "schema-compose.js": "04b32c71920f1ad99425582c3ef57b69b3725f87191efc808ef94e28b8d7bdd2",
+      "schema-engine.d.ts": "36049b8206969175b2e9628b3cf0cb670cb6b10836e28963e5aa32c797882681",
+      "schema-engine.js": "80f203c8c8035ea3e0becd02087dfe3cd5a77ffbcf1a183cbd7976e79294efff",
+      "schema-json.d.ts": "dc0a7644776117235b33129292ec0936bce37f769adb497387a7071508ce4540",
+      "schema-json.js": "367f4deb589286fad3d2c05456cfd8b6859d5e1e2efa22dcd84e629f6d9efddc",
+      "schema-types.d.ts": "4c56872a799cb4e5e59c5ebcd3b889493e082e08c5ad6629b6b1a1c5ae24a3b0",
+      "schema-types.js": "7d29a0d2cb0e10d9c98b299939c91c64fd791f09e1284b5022d8782fa54dad9a",
+      "schema-view.d.ts": "77c66c91b30d4ce06a33f1b8fac153202f64ad68936dda467eae251117132702",
+      "schema-view.js": "7efbcdd76d653b7fb8ce6dcbbe303cc282f6d640793918501717e5dc04bf0a32",
+      "schema.d.ts": "2ad7f9350c391c59d6c641c18120c84926210d7905d0d27e51e58097ced5f7be",
+      "schema.js": "c0acab4248f09489a99ae7f931302a4cf83ad0221027e06a9c6d5b32d6d094b2",
+      "session.d.ts": "a85e13d490a75bd2c95a43cad1909b63f8dc851a6a449797c6523a03f5ee94d7",
+      "session.js": "e0789d9c31c5bbc91e8d3315b026e01363e541513cb5f759aec66a7c9fe0f089",
+      "subtree.d.ts": "996119dcc90c24a695bc650461a891512c25c25c802f2b854a4997085de6c4d7",
+      "subtree.js": "403c38f67d5211fb7dde8caed72155b3dc7919d4e02f1e973cdbca667c0a58f2",
+      "turbowarp/appearance.d.ts": "5690fe20678de61bbed3277b3c204d39754795ef7147b3c639e3af37ead4a5b5",
+      "turbowarp/appearance.js": "ee8e0ff990ef1aa01f71978ff238ec59154c29585c5a1560c5d8d69262c1544d",
+      "turbowarp/bridge.d.ts": "d8bd7375925d7a35a110fbfbf87f901cb6ce7d6b3d2895f01b5242b11f2079f2",
+      "turbowarp/bridge.js": "15f3c05becad3ccf9699ef81f3a174342a8009e9dccb4f42c37a9e274d1d8c75",
+      "turbowarp/error-session.d.ts": "667b71a4577a94f0629087f17f5251b8d70a23673b42b9e4b392a71f6481c05a",
+      "turbowarp/error-session.js": "7a1f483065c6f2b88b5f29f3dd06531e662de95b2d06fabd5b82f9d538d69675",
+      "turbowarp/host.d.ts": "99042018205feb96975dd63b5a319306d70ae6b2aabbdff2a6918d7a5887d1d7",
+      "turbowarp/host.js": "07e47fd6c3902120205b7046cfccf6830636bc037de19614654f3364c43f2db4",
+      "turbowarp/icon.d.ts": "9742439bea703258593ce8faf7937f95375625da07fb62acefb5737249d73b46",
+      "turbowarp/icon.js": "fc840b821b5ca670d418ce4ac2957a6c984062a81fd665c760d2e6f033f510ad",
+      "turbowarp/subtree.d.ts": "e39fcac9fb675e6855bc30c67681560b45c9d1a9566a2e27ccd88bbf34e1441f",
+      "turbowarp/subtree.js": "b54840263288a3819f34ede0880d5e990bf1cbbbb7714eb22508a1ee012f41a5",
+      "turbowarp.d.ts": "8477789da9988e8247666827d27681a8c79e6f0d7c649f5ac28aa4be3af0f212",
+      "turbowarp.js": "1b949ca43de0f68dbc2f67fda27b08d4d12aa0245b9ad9ced177fc830f1b5353",
+      "types.d.ts": "40f5001be3ec9db4473b522980c7ab5d319d1809a5f002b67a9c4f9e220e0091",
+      "types.js": "9b080e0b709fed592fb450a66ace9b6844abcdde0fdc19e22e5571f16319066f",
+      "view.d.ts": "a0335016930092223435704c243fe1bd649f370229b75a1ca273846b5b85dafa",
+      "view.js": "7f3392d59fa9ba8c252cd080b77b154f56be38685684fac986d900ca3bddd915"
+    },
+    "extension-template": {
+      "lib-editor/schemas/note-properties.schema.json": "99c262f212c94a24100649d6362ae6b8090a52a0637d88c157269aef7d24a767",
+      "lib-editor/schemas/scene-properties.schema.json": "e8431f5a601b483f56a04b524a2ec5bf45867af72ac6b630593b7ed8c3d3ac7c",
+      "lib-editor/src/editor-schema.d.ts": "91adb6fa7ee17c66bb48a71582523072399419543eb02d1ad075bdaa6b2e006c",
+      "lib-editor/src/editor-schema.js": "e28836a96b144f0631042423d3bdcdaaaf3ab45cee9407b2f7a44ef13ab67298"
+    },
+    "realtime-motion-capture": {
+      "lib-editor/schemas/camera-calibration-v1.json": "a0d2bf55b95f0f30992fdb7adb71842997fc44c2675fcbd51615f7003dfbf9a8",
+      "lib-editor/schemas/performance-dsl-v1.json": "c088729f5ea7e3c4f921f930ece9acfb75f2142b3324c2d70f236560f90e1664",
+      "lib-editor/schemas/pose-frame-2d-v1.json": "e2208a19a238026882b8cc57f092dab08c4ac982cf268e804b41b0d4764706d3",
+      "lib-editor/schemas/pose-frame-2d-v2.json": "0e024db7cd214a93425a3d0bd4a8ba8e56e8a3373ddf3b20f3e457413e2d6437",
+      "lib-editor/schemas/pose-frame-3d-v1.json": "342feecaa0cc038359ace4eb5859ba69d166c3b43a296a191a3f1b12e9b6c245",
+      "lib-editor/schemas/session-policy-v1.json": "4ffd287e470f1064c775a2b71884040c59aae42f955367b46f2897ac090e37f2",
+      "lib-editor/src/avatar/types.d.ts": "b02bf5f939567ffff172125f751b519e949d5d395683b80538aeb58ba63eb296",
+      "lib-editor/src/avatar/types.js": "15c4cdfe056d2bd09772406150107015e4a220403be6aebc1ce005ba0c012275",
+      "lib-editor/src/calibration/profile-types.d.ts": "2d45580c16cc932d1730b22b8221a18dd63b3765a7dfdf058a3e039f6ae689cb",
+      "lib-editor/src/calibration/profile-types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "lib-editor/src/editor-schema.d.ts": "8e0a101b030d005bb0db5b563ef06108a1f66959997e2652f2995d0967ec67ed",
+      "lib-editor/src/editor-schema.js": "06cbadc7cffac257c35a1302bfe3f9749c271cfd1cfaddc4a3573e86036e2475",
+      "lib-editor/src/fusion/geometry.d.ts": "f6c2a550a8c07d1864f920dc0e0b45ecb55b403c510009876011cb61e970a664",
+      "lib-editor/src/fusion/geometry.js": "fcedf81b2f9a7ace16c07af55f5dec2addecefc4e59a120fc3c34d8b6ed0a8e1",
+      "lib-editor/src/fusion/palette-input.d.ts": "3010cc1d1791ba61a38c6e48b52f385ba233c51757f8f375c7af42a94eec4d5d",
+      "lib-editor/src/fusion/palette-input.js": "b044f14afc12e7755f5b3b423f133087170ace7dc69611948ecd8ea0ffbf65c5",
+      "lib-editor/src/fusion/types.d.ts": "d66727c7f698e3bce900c6855fa328b9870ccc2ca47ae4db36ce818cc7349452",
+      "lib-editor/src/fusion/types.js": "8e609bb71c20b858c77f0e9f90bb1319db8477b13f9f965f1a1e18524bf50881",
+      "lib-editor/src/input-validation.d.ts": "ba793185e8a4d09f88e87a073cceed1fff42efcdecc98949b1124812cdb2b5ce",
+      "lib-editor/src/input-validation.js": "6bda23087a462001be433807db2125141224edd8fe5d792e0eb7e947b689f136",
+      "lib-editor/src/markers/color.d.ts": "1c7cf624205a294a9fc883cc6b1957a5f30786e00d64184e2d3265b8d800a2fc",
+      "lib-editor/src/markers/color.js": "cadd164c68dbe27f1065dc44e331d12c540a66fbc05abb9a9cb2960405a4c0a6",
+      "lib-editor/src/pose/data-types.d.ts": "8a002a0b37e74f47c11d892001f4097be0944dedfe4702430a216037a89ee78b",
+      "lib-editor/src/pose/data-types.js": "ca369d31e722b0fa2652c74f10d4dd439720a26db19e75b9e26032aed329086c",
+      "lib-editor/src/protocol/codec.d.ts": "004d8d5a5db8c2011401beda5b8fd428cd0aa4e8d10462d402dfd3b6eee9650b",
+      "lib-editor/src/protocol/codec.js": "b6df4ab86fe38fedac1bfbcea57702e343b3b78033076fe4c948155465620b21",
+      "lib-editor/src/protocol/schemas.d.ts": "80223aeaa770cc611c9b2cdcda3744a53528de8c4f078f073faf701ab281fbd9",
+      "lib-editor/src/protocol/schemas.js": "4b11fb1f9f6cc7229ba7df6229fd31f91cab5a9e8b4c19805588a393f2228d00",
+      "lib-editor/src/protocol/utf8.d.ts": "baf08f4165b621eabfa2900ddb72a0c0ea3e884c503dbd41096ba95c69513cb9",
+      "lib-editor/src/protocol/utf8.js": "476e72e7e2e7b658f3cfa0535c9eee4ee111472155e37a3d335ca5fe315a21e4"
+    },
+    "scene-graph": {
+      "lib-editor/schemas/editor-compatible-kamishibai-3d-scene-extension.schema.json": "53bee236b3475b16d5ce5b6a7f44aaa302135aee139a9c508e4b3543c98d515d",
+      "lib-editor/schemas/editor-compatible-scene-document.schema.json": "c5ef315e4e58e2e248296dd653f9036e9c6bf9f25379b4304ef73f44f4e1d5eb",
+      "lib-editor/schemas/editor-compatible-scene-node.schema.json": "345d3faf5249b3f19409e771bcc873f369821ce54e5fcffe637b368d4b65a29f",
+      "lib-editor/src/editor-schema.d.ts": "1864411426e48d1e26df9e0d2d7d18af0d93a8c048357ffb92dc9ba809b94eb3",
+      "lib-editor/src/editor-schema.js": "42eb3296562e1e7f150c96f9ff04a2e4074e5cf1554e5f09fc9655de4212091e",
+      "lib-editor/src/kamishibai-extension.d.ts": "9c6862d3af2800d74416d8e1dacb668b60e395a0daebb3b69cb0fb44e041b058",
+      "lib-editor/src/kamishibai-extension.js": "e3b40ece7232ab8be762018ed933d87e4f4f9f12d9d6ac9c847e0e61b7d532bf",
+      "lib-editor/src/scene-graph.d.ts": "dc77663df429f9687ee1fa26f19cd7dea405956ce1a5fd6fcfc648712a713138",
+      "lib-editor/src/scene-graph.js": "224179a5fe143cee8f1ed60862022af03236254e63ebc30a3d0249b8f0611d2b"
+    },
+    "time-space-sync": {
+      "lib-editor/schemas/placement-observation-v1.schema.json": "b2c629bbeb7cc5e0fa005eeafcc005f6bf67274a122cd0b379564dd72e08bc93",
+      "lib-editor/schemas/placement-reference-v1.schema.json": "246eca7737f259e660639dcb58589f765b1282d81c2724b97271fa82949df8b9",
+      "lib-editor/src/contracts/placement.d.ts": "84538e278dc050f50d38e52e8175d348ae45c54fb94fbeeda6d2092199355ee9",
+      "lib-editor/src/contracts/placement.js": "7bec42a80ab10a35377b4d14e6fa059945a0e8fa6946c6a556ba19acaf324feb",
+      "lib-editor/src/contracts/rigid-transform.d.ts": "5e583e55d407c781ce54b46d713a54c75ef0b0f16799bb256141d8066522fd24",
+      "lib-editor/src/contracts/rigid-transform.js": "132eabfa84c8a63fea0f2c49790c2f1e6dfa8d0c1dd65d1294ce28cdddb333da",
+      "lib-editor/src/contracts/spec.d.ts": "2dcce1208977e6c6393d252371541c44dec6aa6c7fe3224c0f731c2fbeca4960",
+      "lib-editor/src/contracts/spec.js": "7b046e14438f8c251d47e1701d048a5c521662a69b702556bc76f72b72850d33",
+      "lib-editor/src/editor-schema.d.ts": "7c7d5784ccbd0c96d724c81b1649df51a7394499acdae8689046f7b52c612c65",
+      "lib-editor/src/editor-schema.js": "bc44b998ccbfa426e29bf1fc62f0d9226ae973f80767e259d6a3fa48358e3ac4"
+    }
   }
 }

@@ -227,5 +227,16 @@
       "invalidRejected": true,
       "inputUnchanged": true
     }
-  ]
+  ],
+  "reviewRegressions": {
+    "legacyRosKeyCompatibility": true,
+    "calibrationDiagnosticVariants": [
+      "camerasource",
+      "legacy",
+      "twcs",
+      "ros"
+    ],
+    "malformedSourceContextGetterReads": 0,
+    "emptySceneContextFree": true
+  }
 }

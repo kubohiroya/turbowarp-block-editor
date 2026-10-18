@@ -1,5 +1,7 @@
 # 段階1の実装・検証と段階2への引継ぎ
 
+> 2026-10-18のレビュー4件を修正した。[修正・再検証記録](schema-stage1-review-fixes-20261018.ja.md)はcommit前の履歴、[Git artifactへの固定方針](schema-stage1-git-artifact-20261018.ja.md)は公開時の条件を示す。以下の旧commit/pinの記述も当時の履歴として保持する。
+
 追跡の正本は https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/18 。原因調査を除外し、段階1の残りを対象に実装した。既存API v1・7公開入口・CSS/webpack4/build-infoを維持し、pureな`./schema`を追加した。各repoの作業ブランチへcommit/pushし、merge・npm publishは別工程として残す。
 
 ## 完了した対象
