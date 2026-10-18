@@ -31,16 +31,14 @@ rollbackは公開workflow停止、または前の検証済みサイト設定へr
 
 ## 最新attemptの自動実検証
 
-共通側の `ci-gate-rerun-test.yml` は毎週月曜11:37 JST（UTC `37 2 * * 1`）にdefault branchのmainで起動し、手動でも同じsuiteを実行できます。同一SHA・同一CI runの3 attemptと4つの読み取り専用observerを自動で検査します。GUIの変更、通常CIの書換え、一時branchの作成/削除、PATの登録は不要です。
+共通側の `ci-gate-rerun-test.yml` は必要なときに手動で起動します。定期起動は設定しません。同一SHA・同一CI runの3 attemptと4つの読み取り専用observerを自動で検査します。GUIの変更、通常CIの書換え、一時branchの作成/削除、PATの登録は不要です。
 
 ```sh
 gh workflow run ci-gate-rerun-test.yml \
   --repo kubohiroya/turbowarp-extension-data-editor --ref main
 ```
 
-統括だけが週次scheduleを持ち、fixture/observerは手動dispatchのみです。定期入口はmainと指定cronだけを許可し、証跡とsummaryに実際のtriggerを残します。既存の公開版E2E（月曜11:17 JST）から20分ずらしています。実GitHubテストをpush/PRから自動起動しません。通常CIは既存の `node --test test/ci/*.test.mjs` により、統括ロジック・fixture・誤run/attempt・権限境界・timeout等のローカルテストを実行します。
-
-GitHubのscheduleはdefault branchの最新commitを対象とし、起動が遅れる場合があります。手動起動は同じ統括本体の実行確認であり、真正scheduleイベントを手動生成したものではありません。定期起動は `event=schedule` とartifactの `trigger` / `schedule`、suiteのsuccessを確認します。[GitHub公式のschedule仕様](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#schedule)を参照してください。
+統括・fixture・observerは手動dispatchのみです。実GitHubテストをpush/PRから自動起動しません。通常CIは既存の `node --test test/ci/*.test.mjs` により、統括ロジック・fixture・誤run/attempt・権限境界・timeout等のローカルテストを実行します。変更時の通常CI・公開前後E2Eと、必要時の手動検証で運用します。
 
 ### 確認する順序
 
@@ -69,30 +67,18 @@ observerの `assert-probe` がゲートのJSON artifactを読み、fixture run I
 
 [workflow_dispatchはGITHUB_TOKENからも子workflowを起動できる](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)仕組みを使います。公開後E2Eや通常CIへの呼出しは追加しません。
 
-週次設定のrollbackはcronとschedule許可の追加分をrevertし、手動のみへ戻します。自動テスト全体を止める場合は統括workflowを無効化します。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
+手動suite全体を止める場合は統括workflowを無効化します。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
 
-## 真正scheduleの独立検証と運用記録
+## 過去のschedule証跡の検証
 
-`ci-gate-rerun-report.yml` は統括の完了をworkflow_runで受け、元runのevent=schedule、
-親/子artifact、最新attempt、実権限、GUI/サイトの前後観測を独立に検証します。
-手動runはineligibleとし、真正schedule成功に置き換えません。
-verifyはcontents:read/actions:readのみ。結果はsummary/report.jsonに7日間保存します。
-失敗と証跡不足を区別し、API障害を成功へ変換しません。
+`ci-gate-rerun-report.yml` は過去のschedule run IDを手動指定して証跡を照合するために保持します。workflow_runによる自動起動は行いません。現在の運用ではscheduleの初回確認や自動Issue報告は不要です。
 
-運用記録先を同repoのIssue #26へ移したため、専用GitHub App・PAT・秘密鍵は不要です。
-別jobの標準GITHUB_TOKENにIssues:writeを付け、固定された同repo Issueへ定型記録します。
-投稿jobにPages/OIDCやコードwriteを付けず、GUIのIssueへは書き込みません。
-CI_RERUN_REPORT_ENABLED未設定はOFF。導入検証後に共通Actions variableをtrueにします。
-元run/attemptとreporter SHAを照合して投稿直前に最新attemptを再確認し、
-マーカー・全ページ検索・直列実行で重複を抑止します。POST応答が失われたら再読し、再POSTしません。
+記録jobは `CI_RERUN_REPORT_ENABLED` 未設定またはfalseで停止します。通常はOFFとし、将来明示的に利用する場合も標準GITHUB_TOKENで同repoの固定Issue #26へ記録する範囲に限定します。App/PAT/秘密鍵は使いません。検証jobはcontents:read/actions:read、記録jobのみIssues:writeで、Pages/OIDCやコードwriteはありません。
 
 ```sh
 gh workflow run ci-gate-rerun-report.yml \
   --repo kubohiroya/turbowarp-extension-data-editor --ref main \
-  -f run_id=<actual-scheduled-run-id>
+  -f run_id=<historical-scheduled-run-id>
 ```
 
-完了イベントだけでは未起動／永久待機は検出しません。未起動監視は別段階です。
-GUI前後観測は2時点だけで、途中の変更・復元を検出したとは主張しません。
-App案は撤回し、Appの作成・インストール・秘密鍵の登録は行いません。
-rollbackは投稿変数OFF、必要ならreport workflow停止。週次suite・GUI・Pagesは維持します。
+定期実行を再導入する場合は別途判断します。今回の公開移行・通常CI・公開ゲートにscheduleの稼働は必要ありません。

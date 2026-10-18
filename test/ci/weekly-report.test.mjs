@@ -67,7 +67,13 @@ function fixture() {
         async jobs(id, attempt) {return structuredClone(jobSets.get(`${id}-${attempt}`));},
         async log(id) {return logs.get(id);},
         async artifact(id, name) {assert.ok(artifacts.has(`${id}/${name}`)); return structuredClone(artifacts.get(`${id}/${name}`));},
-        async source(_sha, file) {assert.equal(_sha, revision); return readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), 'utf8');}
+        async source(_sha, file) {
+            assert.equal(_sha, revision);
+            const source = YAML.parse(readFileSync(new URL(`../../.github/workflows/${file}`, import.meta.url), 'utf8'));
+            // Preserve the historical scheduled source independently of today's manual-only entry.
+            if (file === driverFile) source.on.schedule = [{cron: '37 2 * * 1'}];
+            return YAML.stringify(source);
+        }
     };
     return {root, ci, runs, e, api, logs, jobSets, execute: () => verifyWeekly(10, {api, reporterSha}), freshReads: () => freshReads};
 }
@@ -195,9 +201,9 @@ test('artifact downloads require one exact unexpired source artifact and read JS
     }
 });
 
-test('workflow retains read-only verification without App or Issue publication', () => {
+test('historical reporting stays manual with read-only verification and no publishing credentials', () => {
     const w = YAML.parse(readFileSync(new URL('../../.github/workflows/ci-gate-rerun-report.yml', import.meta.url), 'utf8'));
-    assert.deepEqual(w.on.workflow_run, {workflows: ['Test latest CI attempts without publishing'], types: ['completed'], branches: ['main']});
+    assert.deepEqual(Object.keys(w.on), ['workflow_dispatch']);
     assert.deepEqual(Object.keys(w.jobs), ['verify', 'record']);
     assert.deepEqual(w.jobs.record.permissions, {contents: 'read', actions: 'read', issues: 'write'});
     assert.deepEqual(Object.keys(w.on.workflow_dispatch.inputs), ['run_id']);
