@@ -13,3 +13,18 @@ test('distribution exposes source metadata without requiring a consumer Git chec
   assert.equal(info.repository, 'https://github.com/kubohiroya/turbowarp-extension-data-editor');
   assert.match(info.revision, /^[a-f0-9]{40}$/);
 });
+
+test('source archives retain a full revision without relying on a Git checkout', async () => {
+  const {mkdtemp, mkdir, copyFile, writeFile, rm} = await import('node:fs/promises');
+  const {tmpdir} = await import('node:os');const {join} = await import('node:path');const {execFileSync} = await import('node:child_process');
+  const directory = await mkdtemp(join(tmpdir(), 'editor-archive-'));
+  try {
+    await mkdir(join(directory, 'scripts'));await mkdir(join(directory, 'dist'));
+    await copyFile(new URL('../scripts/write-build-info.mjs', import.meta.url), join(directory, 'scripts/write-build-info.mjs'));
+    await copyFile(new URL('../package.json', import.meta.url), join(directory, 'package.json'));
+    const revision = '0123456789abcdef0123456789abcdef01234567';
+    await writeFile(join(directory, 'source-revision.txt'), revision+'\n');
+    execFileSync(process.execPath, ['scripts/write-build-info.mjs'], {cwd: directory});
+    assert.equal(JSON.parse(await readFile(join(directory, 'dist/build-info.json'), 'utf8')).revision, revision);
+  } finally {await rm(directory, {recursive: true, force: true});}
+});
