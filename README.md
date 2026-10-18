@@ -140,4 +140,8 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 
 同期owner検証には`/schema`の`validateSchemaInput`を利用できます。明示bundleフォームは`/rjsf`の`createSchemaBundleEditor` / `registerSchemaBundle`で登録します。context providerは呼出しごとに時刻・設定を渡します。表示上の対応範囲と既存APIの扱いは[Schema基盤](docs/schema.md)を参照してください。
 
-段階1の対象16契約・9 packageの配布検証と段階2への開始条件は[段階1実装・検証](docs/schema-stage1.ja.md)を参照してください。
+現在のowner横断検証は**14契約・8 package**です。[Template分離後の再検証手順](docs/template-fixture-separation.ja.md#current-verification)で、Templateを含まないisolation indexと2つの検証commandを確認してください。段階2では、この14本番契約と新規予定の9固定契約を区別して計画します。旧16契約・9 packageの結果と当時の開始条件は[段階1の履歴](docs/schema-stage1.ja.md)として保持します。
+
+## Optional editing examples
+
+Repository examples are opt-in teaching code, not template blocks or additional package exports. See [the JSON/YAML document example](examples/document-properties.mjs) and [its guide](examples/README.ja.md). Each extension owns its actual data contract.
