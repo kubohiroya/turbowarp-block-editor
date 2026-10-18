@@ -261,7 +261,7 @@ export function commentBody(report) {
         `- トークン権限: ${report.permissions === 'verified' ? '元統括の実権限と関連workflow定義を確認（Pages/OIDC/デプロイ権限なし）' : '確認不能'}`];
     if (report.status === 'verified-success') {
         lines.push('- 親/子証跡: 同一SHA・fixtureの3 attemptsと4判定、実行中の待機、成功後だけsentinel開始を確認。子jobの実権限も照合。',
-            `- GUI前後比較: ${report.gui.comparison === 'unchanged' ? '観測したdevelop・deployment・公開build-infoは同一' : '変更あり。並行作業の有無を確認する必要があり、完全不変とは扱わない'}`,
+            `- GUI/公開サイト前後比較: ${report.gui.comparison === 'unchanged' ? '観測したGUI develop・共通Pages deployment・公開build-infoは同一' : '変更あり。並行作業の有無を確認する必要があり、完全不変とは扱わない'}`,
             `- GUI develop: \`${report.gui.before.develop}\` → \`${report.gui.after.develop}\``,
             `- Pages deployment: ${report.gui.before.deployment.id} → ${report.gui.after.deployment.id}`);
     } else lines.push('- suite成功・GUI状態の完全な検証を完了したとは扱いません。runとreport artifactを確認してください。');

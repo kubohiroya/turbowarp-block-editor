@@ -6,6 +6,9 @@ TurboWarp拡張が扱う構造化データを、フォームや独自UIで編集
 
 日本語の利用手順・API・GUI接続・公開・検証記録は[ドキュメント一覧](docs/README.md)へ集約しています。
 
+[公開エディター・日英案内](https://kubohiroya.github.io/turbowarp-extension-data-editor/) と
+[公開・検証の運用Issue #26](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/26) も本リポジトリが所有します。
+
 ## 標準の JSON Schema エディター
 
 JSON/YAML を格納する文字列引数と JSON Schema を宣言すると、react-jsonschema-form がフォームを生成します。
