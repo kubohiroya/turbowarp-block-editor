@@ -1,0 +1,58 @@
+[
+  {
+    "file": "camera-source-minimal.json",
+    "repository": "turbowarp-camera-source",
+    "path": "tests/fixtures/calibration/valid/minimal.json",
+    "sha256": "8577970c9c64bd72ecd92c9320cc3147e63a91de456a6fa4f50bbca529958b50"
+  },
+  {
+    "file": "calibration-intrinsics.json",
+    "repository": "turbowarp-camera-calibration",
+    "path": "tests/fixtures/calibration/valid-camera-intrinsics-v1.json",
+    "sha256": "050b67972b33f3745d533e2942d1ca7994be509f3e55fd57ae89806710df537e"
+  },
+  {
+    "file": "motion-calibration.json",
+    "repository": "turbowarp-realtime-motion-capture",
+    "path": "tests/fixtures/calibration/valid-camera-calibration-v1.json",
+    "sha256": "f3edd8dfafe974dabfd1d99913823cd732f734b4abc3911b4504c76cf56f3f17"
+  },
+  {
+    "file": "performance-dsl.json",
+    "repository": "turbowarp-realtime-motion-capture",
+    "path": "tests/fixtures/protocol/valid/performance-dsl.json",
+    "sha256": "328f88128ea11dd9b8b31588f2bf5a24da22fb7f08f820ac278029ee907cd19a"
+  },
+  {
+    "file": "placement-reference.json",
+    "repository": "turbowarp-time-space-sync",
+    "path": "tests/fixtures/contracts/placement-reference-valid.json",
+    "sha256": "94fd18b5525f649900211961beae76701683d07a114db0c470307e57043b9ed0"
+  },
+  {
+    "file": "placement-observation.json",
+    "repository": "turbowarp-time-space-sync",
+    "path": "tests/fixtures/contracts/placement-observation-valid.json",
+    "sha256": "bd83f1df612f3d2dabf5b897e14575df0a49a1bf74b8edd73ad46aa288eb066d"
+  },
+  {
+    "file": "scene-example.json",
+    "repository": "turbowarp-extension-template",
+    "path": "tests/fixtures/scene.json",
+    "sha256": "37f624d5d1e7712ba7146746304cdb0785dbb900301f8822431553281de8654e"
+  },
+  {
+    "file": "note-example.yaml",
+    "repository": "turbowarp-extension-template",
+    "path": "tests/fixtures/note.yaml",
+    "sha256": "6a18c20fac2b64829833251b0daa5d06ba597d007a2727bca221c32e2336e38a"
+  },
+  {
+    "file": "session-policy.json",
+    "repository": "turbowarp-realtime-motion-capture",
+    "path": "tests/fixtures/protocol/invalid/session-policy-with-credential.json",
+    "transformation": "Remove the deliberately invalid test offer field.",
+    "source_sha256": "03c1227a7f54fb37f622bfa28cf4ef40b2b0658c182ecd28c73903f1e1ce3bba",
+    "sha256": "5de9d0525eca734ac03eeacb9bdb4f7162ba62882346b4e7af818ae9e8afae9b"
+  }
+]

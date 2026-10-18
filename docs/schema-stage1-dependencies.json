@@ -1,0 +1,81 @@
+{
+  "results": [
+    {
+      "consumer": "3d-scene-runtime",
+      "producer": "scene-graph",
+      "installedVersion": "0.2.0",
+      "bundleFingerprint": "e7bd3757debac9c58855391c82d512e4fdb7b6fd5d6c2c1e4a3bbe922fc7d5a4",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "camera-calibration",
+      "producer": "camera-source",
+      "installedVersion": "0.16.0",
+      "bundleFingerprint": "517fbefdbc0e479660729b0101953911383ac47cb07adca1c95f5259b3a3b812",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "realtime-motion-capture",
+      "producer": "camera-source",
+      "installedVersion": "0.16.0",
+      "bundleFingerprint": "517fbefdbc0e479660729b0101953911383ac47cb07adca1c95f5259b3a3b812",
+      "activeProducerBundlesMatch": true
+    },
+    {
+      "consumer": "aframe",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "scene-graph",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "3d-scene-runtime",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "camera-source",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "camera-calibration",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "realtime-motion-capture",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "time-space-sync",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    },
+    {
+      "consumer": "extension-template",
+      "producer": "extension-data-editor",
+      "pinnedPureFilesCompared": 12,
+      "pureArtifactMatchesActiveSource": true,
+      "UIArtifactMayDiffer": true
+    }
+  ]
+}

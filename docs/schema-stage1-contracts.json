@@ -1,0 +1,231 @@
+{
+  "contracts": 16,
+  "packageCount": 9,
+  "sourceImports": false,
+  "results": [
+    {
+      "contract": "aframe-template",
+      "identity": {
+        "ownerId": "turbowarp-aframe",
+        "contractId": "aframe-template",
+        "revision": "parser-v0.7.0",
+        "variantId": "template-json"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "scene-document",
+      "identity": {
+        "ownerId": "turbowarp-scene-graph",
+        "contractId": "scene-document",
+        "revision": "parser-v0.2.0-ar0.3.0",
+        "variantId": "bare"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 3,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "camera-profile",
+      "identity": {
+        "ownerId": "turbowarp-camera-source",
+        "contractId": "camera-profile",
+        "revision": "profile-v0.16.0",
+        "variantId": "twcs"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "calibration-profile",
+      "identity": {
+        "ownerId": "turbowarp-camera-calibration",
+        "contractId": "calibration-profile",
+        "revision": "parser-v0.14.0",
+        "variantId": "camerasource"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "motion-calibration",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "motion-calibration",
+        "revision": "typebox-v0.7.0",
+        "variantId": "v1"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "pose2d",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "pose2d",
+        "revision": "typebox-v0.7.0",
+        "variantId": "v1"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "pose2d-v2",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "pose2d-v2",
+        "revision": "typebox-v0.7.0",
+        "variantId": "v2"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "pose3d",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "pose3d",
+        "revision": "typebox-v0.7.0",
+        "variantId": "v1"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "performance-dsl",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "performance-dsl",
+        "revision": "typebox-v0.7.0",
+        "variantId": "v1"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "protocol-union",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "protocol-union",
+        "revision": "typebox-v0.7.0",
+        "variantId": "fixed-union"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 7,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "pose2d-union",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "pose2d-union",
+        "revision": "typebox-v0.7.0",
+        "variantId": "fixed-union"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 3,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "motion-calibration-import",
+      "identity": {
+        "ownerId": "turbowarp-realtime-motion-capture",
+        "contractId": "motion-calibration-import",
+        "revision": "delegate-off-v0.7.0-on-source-v0.16.0",
+        "variantId": "delegate-off-legacy"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "placement-reference",
+      "identity": {
+        "ownerId": "turbowarp-time-space-sync",
+        "contractId": "placement-reference",
+        "revision": "spec-v0.2.0",
+        "variantId": "v1-json"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "placement-observation",
+      "identity": {
+        "ownerId": "turbowarp-time-space-sync",
+        "contractId": "placement-observation",
+        "revision": "spec-v0.2.0",
+        "variantId": "v1-json"
+      },
+      "dialect": "2020-12",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "scene-example",
+      "identity": {
+        "ownerId": "turbowarp-extension-template",
+        "contractId": "scene-example",
+        "revision": "schema-v0.4.0",
+        "variantId": "json"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    },
+    {
+      "contract": "note-example",
+      "identity": {
+        "ownerId": "turbowarp-extension-template",
+        "contractId": "note-example",
+        "revision": "schema-v0.4.0",
+        "variantId": "yaml"
+      },
+      "dialect": "draft-07",
+      "resourceCount": 1,
+      "valid": true,
+      "invalidRejected": true,
+      "inputUnchanged": true
+    }
+  ]
+}

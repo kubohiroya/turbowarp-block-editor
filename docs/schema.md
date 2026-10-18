@@ -14,7 +14,7 @@ snapshotは最大100,000訪問値・深さ128に制限し、超過は`limit-exce
 
 診断は固定codeとscope、必要なresource URI・JSON Pointer・keywordを持つ。required/additionalPropertiesは問題の子項目へPointerを付け、URI fragmentをschemaPathへ分解する。raw値・Ajvのparams・例外本文をコピーしない。未知ref・Schema不正とengine実行失敗を混同しない。
 
-同期owner合成とRJSFの追加経路はS1-3、owner形式adapterと配布はS1-4で追加する。現時点のcompile APIを既存フォームへ自動接続しない。新入口の利用を外すことで従来の経路へ戻せる。
+同期owner合成とRJSFの明示経路はS1-3で追加済み。owner形式adapterと配布はS1-4で追加し、16契約をS1-5で横断確認した。既存フォームへ自動接続しない。新入口の利用を外すことで従来の経路へ戻せる。
 
 実装根拠: [Ajvの方言](https://ajv.js.org/json-schema.html)、[Schema登録と隔離](https://ajv.js.org/guide/managing-schemas.html)。
 
@@ -33,3 +33,9 @@ RJSF v5用には正本を変えないprivateな表示Schemaを作る。閉じた
 ## S1-4pの配布
 
 段階1中はnpmへ未公開のAPIを既存の0.1.0公開版と取り違えないよう、ownerの追加pure型依存を検証済みGit commitへ固定する。Git依存のprepareで既存buildを実行し、dist/JS/型/CSS/webpack4/build-infoを生成する。ローカルfile:/tmp依存は公開manifestへ残さない。npm publishや既存GUI依存の変更はこの作業に含めない。
+
+既存hostがBlockEditorRegistrationAPI/BlockEditorServiceを実装する場合、新しいregisterSchemaBundleは任意のcapabilityとして追加する。既存の3 memberだけを持つobjectも代入できる。createBlockEditorServiceの戻り値ではSchemaBundleBlockEditorRegistrationAPIとしてこのcapabilityを保証し、外部hostでは存在を確認して利用する。ownerが固定したpure artifact a1ab4f4の./schemaは以後のRJSF型互換修正の影響を受けない。
+
+ownerのvalidate*Sourceは元source/未正規化データと診断を分けて返す。形式不正・未知variantで生のparser例外を診断へ混ぜない。Camera系は既存readerと同じtrim/BOM・ROSのtrim後サイズ条件を維持するが、返すsourceは原文を保持する。lib-editor/schemasのemit copyは配布用生成物であり、bundleのartifact.roleは元のSchema正本/TypeBox・Spec生成物の由来を表す。
+
+旧SchemaEditorOptions.schema経路は既存format/error/defaultの互換性とprovenance不在を考慮し、従来のRJSF validatorを継続する。明示bundleだけをpure engineへ接続し、それぞれlive/save/未mountで同じ判定を使う。webpack4 helperには新しい/schemaの事前build入口も追加し、既存4入口とCSS aliasを保つ。

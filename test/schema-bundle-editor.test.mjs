@@ -89,6 +89,12 @@ test('pointer field paths preserve dots, slashes, tildes and prototype-like name
 test('provider failure and missing dialect block registration/save without leaking raw failures', async () => {
   const f = fixture({validationContext: () => {throw Error('credentials');}});assert.equal((await f.session.save()).status, 'invalid');
   assert.equal(f.committed(), 0);assert.equal(JSON.stringify(f.session.getState().issues).includes('credentials'), false);f.session.dispose();
+  const rejections = [];const listener = value => rejections.push(value);process.on('unhandledRejection', listener);
+  try {
+    const rejected = fixture({validationContext: () => Promise.reject(Error('private context'))});
+    assert.equal((await rejected.session.save()).status, 'invalid');rejected.session.dispose();
+    await new Promise(resolve => setImmediate(resolve));assert.deepEqual(rejections, []);
+  } finally {process.off('unhandledRejection', listener);}
   const s = bundle();delete s.dialect;assert.throws(() => fixture({schemaBundle: s}), /dialect-required/);
 });
 
@@ -104,4 +110,12 @@ test('2020-12 resource forms mount, edit and save without cross-session context 
   await act(async () => {Simulate.change(containers[0].querySelector('input[type="number"]'), {target: {value: '4'}});});
   await act(async () => {assert.equal((await first.session.save()).status, 'saved');});
   assert.equal(first.block.arguments.JSON.value, '{"n":4}');assert.equal(second.committed(), 0);
+});
+
+test('registration snapshots one bundle value for both canonical checks and form presentation', () => {
+  let reads = 0;
+  const alternate = bundle('2020-12');alternate.root.document = {type: 'array', prefixItems: [{type: 'string'}]};
+  const options = {apiVersion: 1, extensionId: 'owner', editorId: 'snapshot', opcodes: ['owner_data'], argument: 'JSON', validationContext: () => context};
+  Object.defineProperty(options, 'schemaBundle', {enumerable: true, get() {reads++;return reads === 1 ? bundle() : alternate;}});
+  assert.doesNotThrow(() => createSchemaBundleEditor(options));assert.equal(reads, 1);
 });

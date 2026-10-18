@@ -9,6 +9,7 @@ import {Ajv2020} from 'ajv/dist/2020.js';
 import {compileSchemaBundle, validateSchemaInput, toValidationIssues} from './schema.js';
 import type {SchemaBundle, SchemaValidationContext, SyncOwnerValidator} from './schema-types.js';
 import {schemaView, fieldErrors} from './schema-view.js';
+import {snapshotJson} from './schema-json.js';
 import {cloneJson} from './data.js';
 import {decodeSource, encodeSource, sameData} from './codec.js';
 import type {SourceFormat} from './codec.js';
@@ -54,26 +55,45 @@ export interface SchemaBundleEditorOptions<C = unknown> extends Omit<SchemaEdito
 }
 
 export function createSchemaBundleEditor<C>(options: SchemaBundleEditorOptions<C>): EditorDefinition {
-  const result = compileSchemaBundle(options.schemaBundle);
+  const {schemaBundle, validationContext: provider, ownerValidate, apiVersion, extensionId, editorId,
+    opcodes, argument, format, uiSchema, validateData} = options;
+  let bundle: SchemaBundle;
+  try {bundle = snapshotJson(schemaBundle) as unknown as SchemaBundle;}
+  catch {throw new TypeError('Invalid schema bundle.');}
+  const result = compileSchemaBundle(bundle);
   if (result.kind !== 'compiled') throw new TypeError(`Schema bundle compilation failed: ${result.diagnostics[0].code}`);
-  const schema = schemaView(options.schemaBundle);
-  const provider = options.validationContext;
-  const ownerValidate = options.ownerValidate;
+  const schema = schemaView(bundle);
   const issuesFor = (data: JsonValue): readonly ValidationIssue[] => {
     let context: SchemaValidationContext<C>;
-    try {context = provider();} catch {return [{message: 'Validation could not complete: owner-context-invalid.'}];}
+    try {
+      context = provider();
+      if (context && typeof context === 'object') {
+        const prototype = Object.getPrototypeOf(context);
+        if (prototype !== Object.prototype && prototype !== null) {
+          // Drain rejected native/cross-realm promises from a malformed synchronous provider.
+          try {void Promise.prototype.then.call(context as unknown as Promise<unknown>, () => undefined, () => undefined);}
+          catch { /* The common context guard rejects other non-JSON instances below. */ }
+        }
+      }
+    } catch {return [{message: 'Validation could not complete: owner-context-invalid.'}];}
     const validation = validateSchemaInput(result.validator, data, {context, ...(ownerValidate !== undefined ? {ownerValidate} : {})});
     if (validation.kind === 'valid') return [];
     if (validation.kind === 'execution-error') return validation.diagnostics.map(d => ({message: `Validation could not complete: ${d.code}.`}));
     return toValidationIssues(validation.diagnostics);
   };
-  return createSchemaEditorImpl({...options, schema}, {issuesFor, dialect: result.validator.dialect});
+  return createSchemaEditorImpl({apiVersion, extensionId, editorId, opcodes, argument, schema,
+    ...(format === undefined ? {} : {format}), ...(uiSchema === undefined ? {} : {uiSchema}),
+    ...(validateData === undefined ? {} : {validateData})}, {issuesFor, dialect: result.validator.dialect});
 }
 
 export interface BlockEditorRegistrationAPI {
   readonly apiVersion: typeof EDITOR_API_VERSION;
   register(definition: EditorDefinition | SchemaEditorOptions): () => void;
   registerSchema(definition: SchemaEditorOptions): () => void;
+  registerSchemaBundle?<C>(definition: SchemaBundleEditorOptions<C>): () => void;
+}
+/** Capability guaranteed by the service factory, optional on a legacy host-supplied API. */
+export interface SchemaBundleBlockEditorRegistrationAPI extends BlockEditorRegistrationAPI {
   registerSchemaBundle<C>(definition: SchemaBundleEditorOptions<C>): () => void;
 }
 export interface BlockEditorService {
@@ -83,11 +103,11 @@ export interface BlockEditorService {
 }
 
 /** A host owns the service's lifetime; this module never stores VM or workspace instances. */
-export function createBlockEditorService(): BlockEditorService {
+export function createBlockEditorService(): BlockEditorService & {readonly api: SchemaBundleBlockEditorRegistrationAPI} {
   const registry = new EditorRegistry();
   const listeners = new Set<() => void>();
   const notify = () => { for (const listener of [...listeners]) listener(); };
-  const api: BlockEditorRegistrationAPI = Object.freeze({
+  const api: SchemaBundleBlockEditorRegistrationAPI = Object.freeze({
     apiVersion: EDITOR_API_VERSION,
     register: (definition: EditorDefinition | SchemaEditorOptions) => {
       const custom = definition as EditorDefinition;

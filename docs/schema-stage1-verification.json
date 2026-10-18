@@ -1,30 +1,203 @@
 {
-  "stage": "S1-3",
-  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/20",
-  "base_commit": "c41b211",
+  "stage": "S1-5",
+  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/18",
+  "observed_at_utc": "2026-10-18T05:45:15.426323+00:00",
+  "verification_parent_commit": "a1ab4f4f5b384eef08ef26e544186ee9d8ad4543",
+  "base_main": "ef703b2bbe4dcb6b74c0fee9f799db09240c266b",
   "node": "26.7.0",
-  "typescript": "6.0.3",
-  "dependency_versions": {
-    "ajv": "8.20.0",
-    "ajv-formats": "2.1.1",
-    "fast-uri": "3.1.0"
-  },
+  "common_typescript": "6.0.3",
+  "owner_typescript": "5.9.3",
   "validation": {
-    "build_with_webpack4_and_build_info": "passed",
-    "pure_consumer_skipLibCheck_false": "passed",
-    "legacy_consumer_skipLibCheck_true": "passed-with-documented-existing-declaration-limitation",
-    "selected_tests": 113,
-    "selected_tests_passed": 113,
-    "engine_boundary_cases": 14,
-    "snapshot_node_and_depth_boundaries": "passed",
-    "no_peer_or_DOM_schema_import": "passed",
-    "browser_bundle_and_import": "passed",
-    "owner_composition_cases": 5,
-    "bundle_form_cases": 7,
-    "RJSF_display_limitations": [
-      "prefixItems/dynamicRef/recursiveRef are rejected explicitly",
-      "eager object recursion rejected; array-items recursion supported"
-    ]
+    "method": "Targeted and incremental runs; unchanged prerequisites reused.",
+    "common_unique_cases": 120,
+    "owner_unique_cases": 302,
+    "headless_contracts": 16,
+    "packages": 9,
+    "source_emitted_sha256_matches": 135,
+    "common_css_sha256_matches": true,
+    "common_webpack4_outputs_checked_against_metafile": 20,
+    "common_dist_files": 75,
+    "motion_full_generated_JSON_matches": 6,
+    "placement_full_generated_JSON_matches": 5,
+    "placement_generation_check_before_after_hash_unchanged": true,
+    "pure_skipLibCheck": false,
+    "legacy_compatibility_skipLibCheck": true,
+    "legacy_skipLibCheck_limitation": "Existing RJSF/json-schema declaration dependency limitation; this is not strict validation of every third-party declaration.",
+    "common_late_runs": [
+      {
+        "file": "s1-5-common-compat.log",
+        "cases": 36,
+        "purpose": "Legacy host implementations and public entry compatibility"
+      },
+      {
+        "file": "s1-5-webpack4-schema.log",
+        "cases": 8,
+        "purpose": "New pure schema precompiled alias and source/emit entry checks"
+      },
+      {
+        "file": "s1-5-bundle-snapshot.log",
+        "cases": 32,
+        "purpose": "One bundle snapshot, malformed synchronous provider, existing forms/service/webpack4"
+      }
+    ],
+    "bundle_form_cases": 8,
+    "late_provider_and_bundle_snapshot_cases": 32
+  },
+  "packages": [
+    {
+      "repository": "turbowarp-aframe",
+      "source_emit_matches": 5,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-v2BAPP"
+    },
+    {
+      "repository": "turbowarp-scene-graph",
+      "source_emit_matches": 9,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-6UESD8"
+    },
+    {
+      "repository": "turbowarp-3d-scene-runtime",
+      "source_emit_matches": 4,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-L8af74"
+    },
+    {
+      "repository": "turbowarp-camera-source",
+      "source_emit_matches": 13,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-IgnwrJ"
+    },
+    {
+      "repository": "turbowarp-camera-calibration",
+      "source_emit_matches": 8,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-DzDLHW"
+    },
+    {
+      "repository": "turbowarp-realtime-motion-capture",
+      "source_emit_matches": 30,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-CnWuS6"
+    },
+    {
+      "repository": "turbowarp-time-space-sync",
+      "source_emit_matches": 10,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-OQsIaY"
+    },
+    {
+      "repository": "turbowarp-extension-template",
+      "source_emit_matches": 4,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-Ww0i1K"
+    },
+    {
+      "repository": "turbowarp-extension-data-editor",
+      "source_emit_matches": 52,
+      "import_global_accesses": 0,
+      "React_present": false,
+      "consumer_skipLibCheck": false,
+      "isolated_consumer": "/tmp/schema-owner-consumer-XDkK36"
+    }
+  ],
+  "owner_heads": [
+    {
+      "repo": "aframe",
+      "head": "14331b75cbcc5406bc41357fb8bfa415b7b913bd",
+      "branch": "feat/schema/stage1-aframe",
+      "issue": "https://github.com/kubohiroya/turbowarp-aframe/issues/19",
+      "targeted_cases": 36,
+      "emitted_matches": 5
+    },
+    {
+      "repo": "scene-graph",
+      "head": "8e4bc40a0d357556204e05bfa33352b481f16087",
+      "branch": "feat/schema/stage1-scene-graph",
+      "issue": "https://github.com/kubohiroya/turbowarp-scene-graph/issues/5",
+      "targeted_cases": 56,
+      "emitted_matches": 9
+    },
+    {
+      "repo": "3d-scene-runtime",
+      "head": "6bc05826956c3ab7885b71f591dcf381f97d7d49",
+      "branch": "feat/schema/stage1-3d-scene-runtime",
+      "issue": "https://github.com/kubohiroya/turbowarp-3d-scene-runtime/issues/1",
+      "targeted_cases": 11,
+      "emitted_matches": 4
+    },
+    {
+      "repo": "camera-source",
+      "head": "b158a32b78d16d79731bcb5b869840dea9b68b34",
+      "branch": "feat/schema/stage1-camera-source",
+      "issue": "https://github.com/kubohiroya/turbowarp-camera-source/issues/47",
+      "targeted_cases": 102,
+      "emitted_matches": 13
+    },
+    {
+      "repo": "camera-calibration",
+      "head": "4db5abe5df203d663fbe979de80ddc4517545a93",
+      "branch": "feat/schema/stage1-camera-calibration",
+      "issue": "https://github.com/kubohiroya/turbowarp-camera-calibration/issues/38",
+      "targeted_cases": 10,
+      "emitted_matches": 8
+    },
+    {
+      "repo": "realtime-motion-capture",
+      "head": "8d1f308f93dbb5b489e5e20e4f01e0d9bff418dc",
+      "branch": "feat/schema/stage1-realtime-motion-capture",
+      "issue": "https://github.com/kubohiroya/turbowarp-realtime-motion-capture/issues/32",
+      "targeted_cases": 63,
+      "emitted_matches": 30
+    },
+    {
+      "repo": "time-space-sync",
+      "head": "9aa806202c0dd9b2d1a493f02d5b76296579e16c",
+      "branch": "feat/schema/stage1-time-space-sync",
+      "issue": "https://github.com/kubohiroya/turbowarp-time-space-sync/issues/20",
+      "targeted_cases": 9,
+      "emitted_matches": 10
+    },
+    {
+      "repo": "extension-template",
+      "head": "1604bb18da1eeb5cbe47e520ca455140d83ad517",
+      "branch": "feat/schema/stage1-extension-template",
+      "issue": "https://github.com/kubohiroya/turbowarp-extension-template/issues/29",
+      "targeted_cases": 15,
+      "emitted_matches": 4
+    }
+  ],
+  "dependency_pins": {
+    "common_pure": "a1ab4f4f5b384eef08ef26e544186ee9d8ad4543",
+    "scene_graph": "7b8d67d47939b688895ed004bdbd035cd0fd6096",
+    "camera_source": "9a9a5c905271e603af9a08142527e8a4aace8dec"
+  },
+  "GUI_reference": {
+    "head": "1848ab82cae48d0276185dc901a4f2740dee71cf",
+    "status": "",
+    "manifest_sha256": "4b45a7bbb68f0e0a843a4fff13adde37b9eb7eb2f6b19d2f2ea934ab13d2b807",
+    "lock_sha256": "4291f3893a20f4ffd42d82c98d717eca02191addcaa882ae038b98c668c3d1fb",
+    "installed_manifest_sha256": "d7f8668a54a23254ce7c462c34838652701f9ac606b461a74cae8c5a55397f75",
+    "installed_version": "0.1.0",
+    "installed_schema_entry_present": false,
+    "dependency_updated": false,
+    "default_flag": "off; startup URL flag blockEditorDialogs=1 only"
   },
   "scope": {
     "existing_entries_preserved": [
@@ -41,8 +214,98 @@
       "toValidationIssues",
       "validateSchemaInput"
     ],
-    "owner_adapters_implemented": false,
-    "new_RJSF_path_implemented": true,
+    "new_extension_editor_registrations": false,
+    "legacy_single_schema_validator": "Existing RJSF path retained for compatibility; new explicit bundle path uses the pure engine.",
+    "S1_2_and_3_implemented": true,
+    "owner_adapters_implemented": true,
+    "S1_4p_and_5_verified": true,
+    "S2_or_later_implemented": false,
+    "schema_authoring_UI": false,
+    "arbitrary_schema_UI": false,
+    "source_rewrite_cause_investigation": false,
     "network_schema_loading": false
+  },
+  "common_source_sha256": {
+    "src/codec.ts": "5a7ef72f99d5931865b089ff5d4f425aa72916189892ab99ff18d837a65e6aa7",
+    "src/data.ts": "8a31d96ab539a9167d3ce9f84bd491e85bcb61cb7138feda37b1f3a4a4ded5e1",
+    "src/descendant-types.ts": "044a4f8b15f42dae6c74c51fe1d3ae1050648745a7949864cff3601582d220cb",
+    "src/descendants.ts": "154fe3d195bd97223d2b8bc737c78d7194be33e62e5750f78279c8013ded4385",
+    "src/field-errors.ts": "29a978ceccdaf418a8deaf528973812f99db6efafb006c72d0fa6a926b3d4b8c",
+    "src/index.ts": "8f044f55f8aa0386000f14f6d11530b7c3f35b5310037f8dc3d8e63e1da76c8f",
+    "src/react.css": "b3d9bb9f19b6602af2e01ecbff9ac8f8e93d4292f57a0708b5b8f9c8e69a0b51",
+    "src/react.tsx": "bb4facadd4b7eceb65e26b7db19bacf95256463c8b02801a1b6d7d42fa328970",
+    "src/registry.ts": "afb100420000b5df2d1503adfebf0f2266abd603a0cb3bb27f5f1e88ef8cbb90",
+    "src/rjsf.ts": "84f6e8c0df45ead7402a0f5ac3418041e24e642d30323868f380e67aca48f567",
+    "src/schema-compose.ts": "103d84ed0960b0ed17dfb7493437bb10a8e76022e79bd52c302b3016bada70f7",
+    "src/schema-engine.ts": "1dbcf2e3e1d3c5ce73a779a3b0d98f3f07c278dfb2d823bc383b50049d3ddd55",
+    "src/schema-json.ts": "f39a31decdabef84df00adc0599916a3706cd94c555f63fbe5887804f46cb566",
+    "src/schema-types.ts": "cd9f24803f0eb074e65dddcb4fec0a4b7b8b0fe96cedf881f320b77924234de1",
+    "src/schema-view.ts": "0efe12553f43916d7995236fe8a75ec7e9feed09a989c5ad6325e71030c397c8",
+    "src/schema.ts": "1b106aef415f41738128571c0f7cae6195e3fee77a39dfeaac52357c5bb89e26",
+    "src/session.ts": "60624425492145380545711c64c68bbf50ec3228e7d0f022d55cce1dd66ef3cc",
+    "src/subtree.ts": "1c06565543ed58bd0123ee4792c14c70baaed9181e10b0645f36c199d4eb9339",
+    "src/turbowarp/appearance.js": "16b5bf00e9125cca63dd06e642d4bf5ac16f09b081f9edf0d111b5a593a8742d",
+    "src/turbowarp/bridge.js": "c33a56abd521862b03f1dc3dc3f45577af750530265d35b217b5d4cb877bedc4",
+    "src/turbowarp/error-session.js": "2c2de9d56b3ad5dcb497f35289612c0e23d470c479a424d1981cfbcb786cd203",
+    "src/turbowarp/host.js": "242728a7dff0b6b419c2abc78c8448e4ebd7ffbfb6b61c7cdb7820b26bb018a0",
+    "src/turbowarp/icon.js": "03eca95183ff2c174b10e06d13b006654fde5267e83deae62127e18952fe715c",
+    "src/turbowarp/subtree.js": "8806efc3517c0dc2023ca023f447e862f88c1a5905b4f7acfd581bae70b1a66a",
+    "src/turbowarp.ts": "af32509755fdf56783bf7ed601a4b5abb972de7452870b6e61bb94eef7a33820",
+    "src/types.ts": "977c236cac4ee7f62501c8a22de8d364ed6598fb539837af750e0ba9bee65198",
+    "src/view.ts": "2c9014ef787e2237020cfec6f4bba42157917bc3a1d7b08ca70d4659b02ed73e"
+  },
+  "common_emitted_sha256": {
+    "codec.d.ts": "e0487e5d86b8c83d175fcc9201f92c1016f78d35b7d803e2a235a26accce8c2a",
+    "codec.js": "8333f2a833020f6bc7e736e50edde015ee5119e654e217f5cdfa132905a90caf",
+    "data.d.ts": "aebedeb0c065b6c2b26bc899df2835b19cd66c6dbead7b64db1051c0fcdd2b7b",
+    "data.js": "eff140903b933f24a8d59e6e19de3a33f0006a21b1dcad9d9228d5892dd560bc",
+    "descendant-types.d.ts": "8d4948d0c716c4a3fbd70c9d3ea924738bced945ed04d396ec87a9962484b793",
+    "descendant-types.js": "b6b365f5c9522aac5cea5b870547a7e5d539cbd632d554ac14b091bcec5cab85",
+    "descendants.d.ts": "669420aa5bd2dddfbbc3e4cf24953d12f6a942938636bb951d3ae7f479f0fe36",
+    "descendants.js": "8440f22be59cb308a49773d3936e9d62c58f020144122a5ed7087f6cf82584af",
+    "field-errors.d.ts": "26204ea15fd29e1b480dfbf573a0b8ff7bd85f4b5091d38f57b51935056c8b56",
+    "field-errors.js": "54967190d3327c66a3165450766acd2b6004370d447ac9e496db6b70aef2129e",
+    "index.d.ts": "fa2b46480932010f311339bd13d76f5e713a0ea22436ebb0890ff4fc8be2240a",
+    "index.js": "fa2b46480932010f311339bd13d76f5e713a0ea22436ebb0890ff4fc8be2240a",
+    "react.d.ts": "c5c4560fb47e9588dc989c8a81379e88b71e568a235099b8328ba01b39dfc0cc",
+    "react.js": "8a031ea4bea0eb31b009b8ea88e4319cfa041009145c82e2c4a1421126d4afcd",
+    "registry.d.ts": "7dbec50cc623a46d9cfc2bc94eef06ef504742154a91b675a1fb5222217ad456",
+    "registry.js": "109bcd8b3b3c09c57030990d3bf87a3522766fade2d4c1dbd2f4841c0e21531d",
+    "rjsf.d.ts": "03ec8d9cbb8d54ab5c6c1eb7734336a407500e54fb1acaa83bdb642b5b40b3da",
+    "rjsf.js": "1d2d25c9bdac854b6a044e74c4fde6be82886c7788a8359407f8e6d35ddb8d42",
+    "schema-compose.d.ts": "e9bb269fcb3be82661b692e7fdf5c55ac433a31d699ac591a86bf5358046b83e",
+    "schema-compose.js": "04b32c71920f1ad99425582c3ef57b69b3725f87191efc808ef94e28b8d7bdd2",
+    "schema-engine.d.ts": "36049b8206969175b2e9628b3cf0cb670cb6b10836e28963e5aa32c797882681",
+    "schema-engine.js": "80f203c8c8035ea3e0becd02087dfe3cd5a77ffbcf1a183cbd7976e79294efff",
+    "schema-json.d.ts": "dc0a7644776117235b33129292ec0936bce37f769adb497387a7071508ce4540",
+    "schema-json.js": "367f4deb589286fad3d2c05456cfd8b6859d5e1e2efa22dcd84e629f6d9efddc",
+    "schema-types.d.ts": "4c56872a799cb4e5e59c5ebcd3b889493e082e08c5ad6629b6b1a1c5ae24a3b0",
+    "schema-types.js": "7d29a0d2cb0e10d9c98b299939c91c64fd791f09e1284b5022d8782fa54dad9a",
+    "schema-view.d.ts": "77c66c91b30d4ce06a33f1b8fac153202f64ad68936dda467eae251117132702",
+    "schema-view.js": "7efbcdd76d653b7fb8ce6dcbbe303cc282f6d640793918501717e5dc04bf0a32",
+    "schema.d.ts": "2ad7f9350c391c59d6c641c18120c84926210d7905d0d27e51e58097ced5f7be",
+    "schema.js": "c0acab4248f09489a99ae7f931302a4cf83ad0221027e06a9c6d5b32d6d094b2",
+    "session.d.ts": "a85e13d490a75bd2c95a43cad1909b63f8dc851a6a449797c6523a03f5ee94d7",
+    "session.js": "e0789d9c31c5bbc91e8d3315b026e01363e541513cb5f759aec66a7c9fe0f089",
+    "subtree.d.ts": "996119dcc90c24a695bc650461a891512c25c25c802f2b854a4997085de6c4d7",
+    "subtree.js": "403c38f67d5211fb7dde8caed72155b3dc7919d4e02f1e973cdbca667c0a58f2",
+    "turbowarp/appearance.d.ts": "5690fe20678de61bbed3277b3c204d39754795ef7147b3c639e3af37ead4a5b5",
+    "turbowarp/appearance.js": "ee8e0ff990ef1aa01f71978ff238ec59154c29585c5a1560c5d8d69262c1544d",
+    "turbowarp/bridge.d.ts": "d8bd7375925d7a35a110fbfbf87f901cb6ce7d6b3d2895f01b5242b11f2079f2",
+    "turbowarp/bridge.js": "15f3c05becad3ccf9699ef81f3a174342a8009e9dccb4f42c37a9e274d1d8c75",
+    "turbowarp/error-session.d.ts": "667b71a4577a94f0629087f17f5251b8d70a23673b42b9e4b392a71f6481c05a",
+    "turbowarp/error-session.js": "7a1f483065c6f2b88b5f29f3dd06531e662de95b2d06fabd5b82f9d538d69675",
+    "turbowarp/host.d.ts": "99042018205feb96975dd63b5a319306d70ae6b2aabbdff2a6918d7a5887d1d7",
+    "turbowarp/host.js": "07e47fd6c3902120205b7046cfccf6830636bc037de19614654f3364c43f2db4",
+    "turbowarp/icon.d.ts": "9742439bea703258593ce8faf7937f95375625da07fb62acefb5737249d73b46",
+    "turbowarp/icon.js": "fc840b821b5ca670d418ce4ac2957a6c984062a81fd665c760d2e6f033f510ad",
+    "turbowarp/subtree.d.ts": "e39fcac9fb675e6855bc30c67681560b45c9d1a9566a2e27ccd88bbf34e1441f",
+    "turbowarp/subtree.js": "b54840263288a3819f34ede0880d5e990bf1cbbbb7714eb22508a1ee012f41a5",
+    "turbowarp.d.ts": "8477789da9988e8247666827d27681a8c79e6f0d7c649f5ac28aa4be3af0f212",
+    "turbowarp.js": "1b949ca43de0f68dbc2f67fda27b08d4d12aa0245b9ad9ced177fc830f1b5353",
+    "types.d.ts": "40f5001be3ec9db4473b522980c7ab5d319d1809a5f002b67a9c4f9e220e0091",
+    "types.js": "9b080e0b709fed592fb450a66ace9b6844abcdde0fdc19e22e5571f16319066f",
+    "view.d.ts": "a0335016930092223435704c243fe1bd649f370229b75a1ca273846b5b85dafa",
+    "view.js": "7f3392d59fa9ba8c252cd080b77b154f56be38685684fac986d900ca3bddd915"
   }
 }

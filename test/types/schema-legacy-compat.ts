@@ -70,4 +70,11 @@ export const bundleOptions: SchemaBundleEditorOptions<{delegate: boolean; nested
   schemaBundle: bundle, validationContext: () => context, ownerValidate: owner
 };
 export const bundleEditor = createSchemaBundleEditor(bundleOptions);
-api.registerSchemaBundle(bundleOptions);
+api.registerSchemaBundle?.(bundleOptions);
+createBlockEditorService().api.registerSchemaBundle(bundleOptions);
+
+// Existing host implementations remain assignable without the new optional capability.
+export const oldRegistrationAPI: BlockEditorRegistrationAPI = {
+  apiVersion: 1, register: () => () => {}, registerSchema: () => () => {}
+};
+export const oldService: BlockEditorService = {registry: new EditorRegistry(), api: oldRegistrationAPI, subscribe: () => () => {}};
