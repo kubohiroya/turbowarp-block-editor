@@ -93,3 +93,69 @@ observerの `assert-probe` がゲートのJSON artifactを読み、fixture run I
 [workflow_dispatchはGITHUB_TOKENからも子workflowを起動できる](https://docs.github.com/en/actions/how-tos/write-workflows/choose-when-workflows-run/trigger-a-workflow)仕組みを使います。公開後E2Eや通常CIへの呼出しは追加しません。
 
 週次設定のrollbackはcronとschedule許可の追加分をrevertし、手動のみへ戻します。自動テスト全体を止める場合は統括workflowを無効化します。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
+
+## 真正scheduleの検証・Issueへの自動報告
+
+`ci-gate-rerun-report.yml` は統括の完了を `workflow_run: completed` で受け、
+元runのeventが `schedule` の場合だけ検証・報告します。報告側のeventは
+`workflow_run` であり、手動テストをscheduleとして扱いません。
+報告コードはdefault branchの完全SHAを使い、元runのコードやartifact内のプログラムを実行しません。
+
+verify jobは `contents: read` / `actions: read` だけで、親・子artifact、APIの最新attempt、
+実トークン権限、対象SHAのworkflow定義を照合します。統括はGUIのdevelop SHA、Pages deployment、
+公開build-infoを無認証で開始前・終了後に読み、証跡へ保存します。
+2時点の値が異なる場合は並行変更の可能性を明記し、不変やテストによる変更を断定しません。
+観測不能・証跡不足・期限切れ・最新attemptの実行中・API障害を成功に変換しません。
+親suiteが失敗した場合と、suiteは成功しても独立検証が完了しない場合も区別します。
+
+投稿は別jobで、既定OFFです。共通側の `GITHUB_TOKEN` ではGUIのIssueへ書き込めないため、
+専用GitHub Appを利用します。Appの設定・インストールはアカウント所有者が行ってください。
+
+1. [App作成画面](https://github.com/settings/apps/new)で専用Appを作成。Homepage URLには共通repoのURLを使えます。
+   WebhookのActiveを外し、Repository permissionsは **Issues: Read and writeだけ**を選びます。
+   Account/Organization permissionsは追加しません。通常のMetadata: ReadはGitHubが付与します。
+2. Appを自分のアカウントにインストールし、Only select repositoriesで **scratch-guiだけ**を選びます。
+3. 共通repositoryのActions variable `CI_REPORT_APP_ID` に数値のApp IDを設定します。
+   Client IDではなくApp IDを使います。
+4. Generate a private keyで作成したPEMを、共通repositoryのActions secret
+   `CI_REPORT_APP_PRIVATE_KEY` に設定します。鍵をチャット・Issue・ログへ貼り付けないでください。
+5. dry-runの検証後、共通Actions variable **`CI_RERUN_REPORT_ENABLED=true`** で投稿を有効にします。
+   未設定・他の値はOFFです。認証不足で投稿が失敗しても元のテスト成功と同一視しません。
+
+report jobだけがAppの鍵を受け取り、JWTで短命tokenを発行します。
+App installationの権限そのものと、発行したtokenのpermissions/repositories/期限を検査します。
+GUIだけ・Issues:write/Metadata:read以外を拒否し、利用後にtokenを失効させます。
+Contents/Pages/Deployments/Actions等のwriteやOIDCは不要です。
+Issues権限はrepository単位であり、#12だけに制限するGitHubの権限ではありません。
+コードが投稿先を `kubohiroya/scratch-gui#12` と固定し、Issueのclose/label/assignee操作はしません。
+コメントはApp名義の定型自動報告で、run ID/attemptのマーカーと直列実行、全ページ検索で重複を抑止します。
+POST応答が失われた場合は再読し、無条件の再POSTは行いません。
+sourceの最新attemptは投稿直前にも確認しますが、確認と投稿はGitHub API上で原子的ではありません。
+
+### 実行確認と後追い
+
+```sh
+gh workflow run ci-gate-rerun-report.yml \
+  --repo kubohiroya/turbowarp-extension-data-editor --ref main \
+  -f run_id=<actual-scheduled-run-id> -F dry_run=true
+```
+
+元runが手動起動なら `ineligible` として投稿しません。
+真正scheduleのrunがまだなければ、その検証成功と実投稿は未確認として残します。
+実際のschedule runの確認後に `dry_run=false` で後追い投稿できます（投稿フラグとApp設定も必要）。
+report workflowを初回scheduleの終了後に導入した場合にも利用できます。
+
+`ci-weekly-report-<report-run-id>-<attempt>` の `report.json` に判定、検証段階、元run、
+reporter SHA、GUI観測値、4 observerへの参照を7日間保存します。
+verifyはAppの秘密を受け取らず、report側では投稿結果ID/状態だけを別artifactへ保存します。
+失敗・cancelの週次runも報告対象ですが、setupが完了しなかった等で実権限を確認できなければ
+`unconfirmed` とし、検証できたとは書きません。
+
+完了イベントだけでは、週次run自体の未起動や完了しないrunを検出できません。
+未起動監視cronは別段階です。既存のローカル確認予約は、真正scheduleと実投稿の動作確認後に停止します。
+rollbackは投稿フラグOFF、必要ならreport workflow無効化とApp設定・秘密鍵失効です。
+統括の週次テスト、GUI、Pages、既存の公開版E2Eに変更は不要です。
+
+対象テストは `node --test test/ci/weekly-report.test.mjs`、既存境界との統合確認は
+`node --test test/ci/*.test.mjs` です。元runの誤identity・最新attemptの変化、
+過剰権限、証跡不足、GUI変更、投稿の重複/成否不明、AppのJWT/権限/期限/失効を確認します。

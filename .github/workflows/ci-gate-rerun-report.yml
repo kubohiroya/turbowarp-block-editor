@@ -1,0 +1,97 @@
+name: Verify and report scheduled CI attempts
+on:
+  workflow_run:
+    workflows: [Test latest CI attempts without publishing]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: Actual scheduled source run ID
+        type: string
+        required: true
+      dry_run:
+        description: Verify without posting an Issue comment
+        type: boolean
+        default: true
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: ci-weekly-report-${{ github.event.workflow_run.id || inputs.run_id }}
+  cancel-in-progress: false
+jobs:
+  verify:
+    if: github.repository == 'kubohiroya/turbowarp-extension-data-editor' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    outputs:
+      eligible: ${{ steps.verify.outputs.eligible }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Verify the completed schedule and its evidence
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_RUN_ID: ${{ github.event.workflow_run.id || inputs.run_id }}
+        run: node scripts/ci/report-weekly-ci.mjs verify
+      - name: Preserve verification without publication credentials
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-weekly-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/ci-weekly-report/
+          retention-days: 7
+      - name: Explain publication state
+        if: always()
+        env:
+          ENABLED: ${{ vars.CI_RERUN_REPORT_ENABLED }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+        run: |
+          if [ "$ENABLED" != 'true' ] || [ "$DRY_RUN" = 'true' ]; then
+            echo 'Issue publication is disabled or dry-run; verification artifacts are preserved.' >> "$GITHUB_STEP_SUMMARY"
+          fi
+  report:
+    needs: verify
+    if: >-
+      always() && needs.verify.outputs.eligible == 'true' &&
+      vars.CI_RERUN_REPORT_ENABLED == 'true' &&
+      (github.event_name == 'workflow_run' || !inputs.dry_run)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/download-artifact@v4
+        with:
+          name: ci-weekly-report-${{ github.run_id }}-${{ github.run_attempt }}
+          path: verified-report
+      - name: Post once with an Issues-only dedicated App
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CI_RERUN_REPORT_ENABLED: ${{ vars.CI_RERUN_REPORT_ENABLED }}
+          REPORT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+          CI_REPORT_APP_ID: ${{ vars.CI_REPORT_APP_ID }}
+          CI_REPORT_APP_PRIVATE_KEY: ${{ secrets.CI_REPORT_APP_PRIVATE_KEY }}
+        run: node scripts/ci/report-weekly-ci.mjs publish
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ci-weekly-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/ci-weekly-report/
+          retention-days: 7
