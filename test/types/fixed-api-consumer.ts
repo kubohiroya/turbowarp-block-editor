@@ -37,3 +37,16 @@ export const authority: FixedInputDeclaration | undefined = registry.resolveFixe
 export const invalidNativeFlag: TurboWarpHostOptions = {...oldHostOptions, enableFixedInputs: 'true'};
 // @ts-expect-error The callback-free authority never exposes owner callbacks.
 authority?.readFixed({});
+
+// GUI presentation locale is independent of candidate validation and feature startup.
+createBlockEditorService({fixedInputs: true, fixedInputMessages: {reset: 'リセット'}});
+createBlockEditorService({fixedInputs: true, fixedInputMessages: () => ({reset: 'Reset', readOnly: 'Read only'})});
+// @ts-expect-error Presentation providers cannot return asynchronous messages.
+createBlockEditorService({fixedInputs: true, fixedInputMessages: async () => ({reset: 'Reset'})});
+import {attachTurboWarpBlockEditors} from '@kubohiroya/turbowarp-extension-data-editor/turbowarp';
+const bridgeOptions = {...oldHostOptions, enabled: false, service: {registry, subscribe: () => () => {}},
+  label: 'Edit', canOpen: () => false, onOpen: () => {}};
+attachTurboWarpBlockEditors(bridgeOptions);
+attachTurboWarpBlockEditors({...bridgeOptions, fixedInputs: true});
+// @ts-expect-error The fixed bridge startup option must be a boolean.
+attachTurboWarpBlockEditors({...bridgeOptions, fixedInputs: '1'});

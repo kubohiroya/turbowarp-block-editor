@@ -87,7 +87,7 @@ test('default E2E selection preserves both reload routes and includes both theme
     const result = spawnSync(process.execPath, [require.resolve('@playwright/test/cli'), 'test',
         '--config', path.join(__dirname, 'playwright.config.cjs'), '--list', '--reporter=json'], {
         cwd: path.resolve(__dirname, '../../..'),
-        env: {...process.env, E2E_NATIVE: '0'},
+        env: {...process.env, E2E_NATIVE: '0', E2E_FIXED_INPUTS: '0'},
         encoding: 'utf8',
         timeout: 15_000
     });
@@ -104,4 +104,48 @@ test('default E2E selection preserves both reload routes and includes both theme
     }
     for (const entry of themes) assert.equal(entry.projectName, 'chromium-project-url');
     for (const entry of cases) assert.equal(entry.expectedStatus, 'passed', entry.title);
+});
+
+test('explicit fixed-input E2E profile selects all fixed cases without capability skips', () => {
+    const run = args => {
+        const result = spawnSync(process.execPath, [require.resolve('@playwright/test/cli'), 'test',
+            '--config', path.join(__dirname, 'playwright.config.cjs'), '--list', '--reporter=json', ...args], {
+            cwd: path.resolve(__dirname, '../../..'),
+            env: {...process.env, E2E_NATIVE: '0', E2E_FIXED_INPUTS: '1'},
+            encoding: 'utf8', timeout: 15_000
+        });
+        assert.equal(result.status, 0, result.stderr);
+        const collect = suite => [...(suite.specs || []), ...(suite.suites || []).flatMap(collect)];
+        return JSON.parse(result.stdout).suites.flatMap(collect).flatMap(spec =>
+            spec.tests.map(entry => ({...entry, file: spec.file, title: spec.title})));
+    };
+    const combined = run([]);
+    assert.equal(combined.length, 27);
+    assert.equal(combined.filter(entry => entry.file === 'fixed-inputs.spec.cjs').length, 21);
+    const fixed = run(['--project=chromium-project-url', 'fixed-inputs.spec.cjs']);
+    assert.equal(fixed.length, 21);
+    for (const entry of fixed) {
+        assert.equal(entry.file, 'fixed-inputs.spec.cjs');
+        assert.equal(entry.projectName, 'chromium-project-url');
+    }
+    for (const entry of combined) assert.equal(entry.expectedStatus, 'passed', entry.title);
+    const script = require('../../../package.json').scripts['test:e2e:fixed-inputs'];
+    assert.equal(script, 'E2E_FIXED_INPUTS=1 playwright test --config test/e2e/turbowarp/playwright.config.cjs ' +
+        '--project=chromium-project-url fixed-inputs.spec.cjs');
+});
+
+test('native picker profile remains editor-only even when fixed-input opt-in is present', () => {
+    // Inspect the macOS-only profile without launching a browser on other CI hosts.
+    const result = spawnSync(process.execPath, ['-e',
+        `Object.defineProperty(process, 'platform', {value: 'darwin'});` +
+        `process.stdout.write(JSON.stringify(require(${JSON.stringify(path.join(__dirname, 'playwright.config.cjs'))})));`], {
+        cwd: path.resolve(__dirname, '../../..'),
+        env: {...process.env, E2E_NATIVE: '1', E2E_FIXED_INPUTS: '1'}, encoding: 'utf8'
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const config = JSON.parse(result.stdout);
+    assert.equal(config.projects.length, 1);
+    assert.equal(config.projects[0].name, 'chrome-macos-native');
+    assert.equal(config.projects[0].testMatch, 'editor.spec.cjs');
+    assert.equal(config.projects[0].use.channel, 'chrome');
 });

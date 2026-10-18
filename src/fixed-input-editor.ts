@@ -2,20 +2,26 @@ import {compileSchemaBundle} from './schema-engine.js';
 import {isJsonRecord, snapshotJson} from './schema-json.js';
 import {isLiteral} from './data.js';
 import {parseFixedNumberInput} from './fixed-input-schema.js';
-import {captureFixedInputDeclaration} from './fixed-input-snapshot.js';
-import type {FixedBlockSnapshot, FixedInputDeclaration, FixedInputEditorDefinition, FixedPreparedSave} from './fixed-input-types.js';
+import {captureFixedInputDeclaration, captureFixedSnapshot} from './fixed-input-snapshot.js';
+import {resolveFixedBranches, validateFixedBranchChanges} from './fixed-input-branches.js';
+import type {FixedBlockSnapshot, FixedInputBranchRule, FixedInputControl, FixedInputDeclaration, FixedInputEditorDefinition,
+  FixedInputViewDescription, FixedInputViewInput, FixedPreparedSave} from './fixed-input-types.js';
 import type {CompiledSchema, SchemaBundle, SchemaValidationContext} from './schema-types.js';
 import type {EditorDefinition, JsonObject, JsonValue, LiteralArgumentChange, LiteralValue, ValidationIssue} from './types.js';
 
 export interface FixedInputBinding<C = null> {
   readonly argument: string;
   readonly schemaBundle: SchemaBundle;
+  readonly control?: FixedInputControl;
   /** Produce a JSON editing projection. Throw to retain the raw literal as readonly. */
   read(value: LiteralValue): JsonValue;
   /** Construct the exact literal candidate once. A numeric buffer supplies its validated string token, which must be returned unchanged. Neither this nor validation may be asynchronous. */
   encode(value: JsonValue, context: SchemaValidationContext<C>): LiteralValue;
   /** Check the exact candidate. Messages from this callback are never rendered verbatim. */
   validateCandidate(candidate: LiteralValue, context: SchemaValidationContext<C>, snapshot: FixedBlockSnapshot): readonly ValidationIssue[];
+}
+export interface FixedInputBranchPolicy<C = null> extends Omit<FixedInputBranchRule, 'cases'> {
+  readonly cases: readonly (FixedInputBranchRule['cases'][number] & {readonly bindings?: readonly FixedInputBinding<C>[]})[];
 }
 export interface FixedInputEditorOptions<C = null> {
   readonly apiVersion: 1;
@@ -26,6 +32,7 @@ export interface FixedInputEditorOptions<C = null> {
   readonly contractRevision: string;
   readonly readOnlyArguments?: readonly string[];
   readonly dependencies?: FixedInputDeclaration['dependencies'];
+  readonly branchPolicies?: readonly FixedInputBranchPolicy<C>[];
   readonly bindings: readonly FixedInputBinding<C>[];
   readonly validationContext: () => SchemaValidationContext<C>;
 }
@@ -80,11 +87,13 @@ export function captureFixedInputEditorDefinition<C = null>(value: FixedInputEdi
   const saveContract = ownData(value, 'saveContract');
   if (apiVersion !== 1 || saveContract !== 'prepared-fixed-v1') return fixedDeclarationError();
   const opcodes = captureOpcodes(ownData(value, 'opcodes'), extensionId);
+  const branchRules = ownData(value, 'branchRules', true);
   const declaration = fixedDeclaration({
     contractId: declarationText(ownData(value, 'contractId')), contractRevision: declarationText(ownData(value, 'contractRevision')),
     editableArguments: ownData(value, 'editableArguments') as readonly string[],
     readOnlyArguments: ownData(value, 'readOnlyArguments') as readonly string[],
-    dependencies: ownData(value, 'dependencies') as FixedInputDeclaration['dependencies']
+    dependencies: ownData(value, 'dependencies') as FixedInputDeclaration['dependencies'],
+    ...(branchRules === undefined ? {} : {branchRules: branchRules as readonly FixedInputBranchRule[]})
   });
   const read = ownData(value, 'read');
   const validate = ownData(value, 'validate');
@@ -92,12 +101,15 @@ export function captureFixedInputEditorDefinition<C = null>(value: FixedInputEdi
   const readFixed = ownData(value, 'readFixed');
   const prepareFixedSave = ownData(value, 'prepareFixedSave');
   const mount = ownData(value, 'mount', true);
+  const describeFixed = ownData(value, 'describeFixed', true);
   if (typeof read !== 'function' || typeof validate !== 'function' || typeof createPatch !== 'function' ||
       typeof readFixed !== 'function' || typeof prepareFixedSave !== 'function' ||
-      (mount !== undefined && typeof mount !== 'function')) return fixedDeclarationError();
+      (mount !== undefined && typeof mount !== 'function') ||
+      (describeFixed !== undefined && typeof describeFixed !== 'function')) return fixedDeclarationError();
   return Object.freeze({apiVersion, extensionId, editorId, opcodes, saveContract, ...declaration,
     read: read as EditorDefinition['read'], validate: validate as EditorDefinition['validate'], createPatch: createPatch as EditorDefinition['createPatch'],
     readFixed: readFixed as FixedInputEditorDefinition<C>['readFixed'], prepareFixedSave: prepareFixedSave as FixedInputEditorDefinition<C>['prepareFixedSave'],
+    ...(describeFixed === undefined ? {} : {describeFixed: describeFixed as NonNullable<FixedInputEditorDefinition<C>['describeFixed']>}),
     ...(mount === undefined ? {} : {mount: mount as NonNullable<EditorDefinition['mount']>})});
 }
 function drain(value: unknown): void {
@@ -165,35 +177,205 @@ export function createFixedInputEditor<C = null>(options: FixedInputEditorOption
   const inputBindings = declarationArray(ownData(options, 'bindings'));
   const readOnlyArguments = ownData(options, 'readOnlyArguments', true);
   const dependencies = ownData(options, 'dependencies', true);
+  const branchPolicies = ownData(options, 'branchPolicies', true);
   if (apiVersion !== 1 || !inputBindings.length || typeof contextProvider !== 'function') throw new TypeError('Invalid fixed editor options.');
   const provider = contextProvider as FixedInputEditorOptions<C>['validationContext'];
-  const bindings: {argument: string; read: FixedInputBinding<C>['read']; encode: FixedInputBinding<C>['encode']; validateCandidate: FixedInputBinding<C>['validateCandidate']; validator: CompiledSchema}[] = [];
-  for (let i = 0; i < inputBindings.length; i++) {
-    const binding = inputBindings[i];plainDeclaration(binding);
+  type Binding = {argument: string; read: FixedInputBinding<C>['read']; encode: FixedInputBinding<C>['encode'];
+    validateCandidate: FixedInputBinding<C>['validateCandidate']; validator: CompiledSchema; schemaBundle: SchemaBundle; control?: FixedInputControl};
+  const compileBinding = (binding: unknown): Binding => {
+    plainDeclaration(binding);
     const argument = declarationText(ownData(binding, 'argument'));
     const read = ownData(binding, 'read');
     const encode = ownData(binding, 'encode');
     const validateCandidate = ownData(binding, 'validateCandidate');
     const schemaBundle = declarationJson(ownData(binding, 'schemaBundle')) as unknown as SchemaBundle;
+    const inputControl = ownData(binding, 'control', true);
+    let control: FixedInputControl | undefined;
+    if (inputControl !== undefined) {
+      const item = declarationJson(inputControl);
+      if (!isJsonRecord(item) || !['text', 'number', 'enum', 'color'].includes(item.kind as string) ||
+          (item.label !== undefined && typeof item.label !== 'string') ||
+          (item.choices !== undefined && (!Array.isArray(item.choices) || item.choices.some(choice =>
+            !isJsonRecord(choice) || !Object.hasOwn(choice, 'value') || (choice.label !== undefined && typeof choice.label !== 'string'))))) return fixedDeclarationError();
+      freeze(item);control = item as unknown as FixedInputControl;
+    }
     if (typeof read !== 'function' || typeof encode !== 'function' || typeof validateCandidate !== 'function') throw new TypeError('Invalid fixed binding callbacks.');
     const result = compileSchemaBundle(schemaBundle);
     if (result.kind !== 'compiled') throw new TypeError('Invalid fixed input schema.');
-    bindings.push(Object.freeze({argument, read: read as FixedInputBinding<C>['read'], encode: encode as FixedInputBinding<C>['encode'],
-      validateCandidate: validateCandidate as FixedInputBinding<C>['validateCandidate'], validator: result.validator}));
+    freeze(schemaBundle);
+    return Object.freeze({argument, read: read as FixedInputBinding<C>['read'], encode: encode as FixedInputBinding<C>['encode'],
+      validateCandidate: validateCandidate as FixedInputBinding<C>['validateCandidate'], validator: result.validator, schemaBundle,
+      ...(control === undefined ? {} : {control})});
+  };
+  const bindings = inputBindings.map(compileBinding);
+  const policyBindings: (readonly (readonly Binding[])[])[] = [];
+  const policyRules: FixedInputBranchRule[] = [];
+  if (branchPolicies !== undefined) {
+    for (const input of declarationArray(branchPolicies)) {
+      plainDeclaration(input);
+      const selector = declarationText(ownData(input, 'selector'));
+      const normalization = ownData(input, 'normalize', true);
+      const cases: FixedInputBranchRule['cases'][number][] = [];
+      const variants: (readonly Binding[])[] = [];
+      for (const caseInput of declarationArray(ownData(input, 'cases'))) {
+        plainDeclaration(caseInput);
+        const requirements = ownData(caseInput, 'requireOnSelectorChange', true);
+        const overrides = ownData(caseInput, 'bindings', true);
+        cases.push({values: declarationJson(ownData(caseInput, 'values')) as unknown as readonly string[],
+          activeDependents: declarationJson(ownData(caseInput, 'activeDependents')) as unknown as readonly string[],
+          ...(requirements === undefined ? {} : {requireOnSelectorChange: declarationJson(requirements) as unknown as NonNullable<FixedInputBranchRule['cases'][number]['requireOnSelectorChange']>})});
+        variants.push(overrides === undefined ? [] : declarationArray(overrides).map(compileBinding));
+      }
+      policyRules.push({selector, cases, ...(normalization === undefined ? {} : {normalize: declarationJson(normalization) as unknown as NonNullable<FixedInputBranchRule['normalize']>})});
+      policyBindings.push(variants);
+    }
   }
   const declaration = fixedDeclaration({contractId, contractRevision,
     editableArguments: bindings.map(binding => binding.argument), readOnlyArguments: (readOnlyArguments ?? []) as readonly string[],
-    dependencies: (dependencies ?? []) as FixedInputDeclaration['dependencies']});
+    dependencies: (dependencies ?? []) as FixedInputDeclaration['dependencies'],
+    ...(branchPolicies === undefined ? {} : {branchRules: policyRules})});
+  for (const [index, rule] of (declaration.branchRules ?? []).entries()) {
+    const group = declaration.dependencies.find(item => item.selector === rule.selector)!;
+    for (const variants of policyBindings[index]!) {
+      if (new Set(variants.map(binding => binding.argument)).size !== variants.length ||
+          variants.some(binding => !group.dependents.includes(binding.argument))) return fixedDeclarationError();
+    }
+  }
   const diagnostic = (code: string, argument?: string): ValidationIssue => Object.freeze({
     message: `Fixed input validation failed: ${code}; contract=${JSON.stringify(contractId)}${argument === undefined ? '' : `; argument=${JSON.stringify(argument)}`}.`,
     ...(argument === undefined ? {} : {path: pointer(argument)})
   });
-  const project = (binding: typeof bindings[number], snapshot: FixedBlockSnapshot): JsonObject => {
-    const slot = Object.hasOwn(snapshot.arguments, binding.argument) ? snapshot.arguments[binding.argument] : undefined;
-    const metadata = snapshot.fixedContext.inputs[binding.argument];
-    if (slot?.kind !== 'literal' || metadata?.role !== 'editable' || (metadata.source !== 'field' && metadata.source !== 'shadow')) return {readOnly: true};
+  const literal = (snapshot: FixedBlockSnapshot, argument: string): boolean => {
+    const metadata = snapshot.fixedContext.inputs[argument];
+    return snapshot.arguments[argument]?.kind === 'literal' && metadata?.role === 'editable' &&
+      (metadata.source === 'field' || metadata.source === 'shadow');
+  };
+  const project = (binding: Binding, snapshot: FixedBlockSnapshot): JsonObject => {
+    const slot = snapshot.arguments[binding.argument];
+    if (slot?.kind !== 'literal' || !literal(snapshot, binding.argument)) return {readOnly: true};
     try {return {value: copySync(binding.read(slot.value)) as JsonValue, changed: false};}
     catch {return {readOnly: true};}
+  };
+  const entryFor = (draft: JsonObject, argument: string): JsonObject | undefined => {
+    const entry = isJsonRecord(draft.inputs) && Object.hasOwn(draft.inputs, argument) ? draft.inputs[argument] : undefined;
+    return isJsonRecord(entry) ? entry as JsonObject : undefined;
+  };
+  const selection = (snapshot: FixedBlockSnapshot, draft?: JsonObject) => {
+    const arguments_ = {...snapshot.arguments};
+    if (draft) for (const rule of declaration.branchRules ?? []) {
+      const entry = entryFor(draft, rule.selector);
+      if (entry?.changed === true && Object.hasOwn(entry, 'value') && isLiteral(entry.value)) {
+        Object.defineProperty(arguments_, rule.selector, {value: {kind: 'literal', value: entry.value}, enumerable: true});
+      }
+    }
+    const branches = resolveFixedBranches(declaration, snapshot, arguments_);
+    const selected = new Map(bindings.map(binding => [binding.argument, binding]));
+    const states = new Map<string, 'readonly' | 'hidden'>();
+    const unruled = new Set<string>();
+    for (const group of declaration.dependencies) {
+      if (branches.some(branch => branch.selector === group.selector)) continue;
+      for (const argument of [group.selector, ...group.dependents]) {
+        states.set(argument, 'readonly');unruled.add(argument);
+      }
+    }
+    for (const [policyIndex, branch] of branches.entries()) {
+      const group = declaration.dependencies.find(item => item.selector === branch.selector)!;
+      if (!branch.selected) {for (const argument of group.dependents) states.set(argument, 'readonly');continue;}
+      for (const argument of group.dependents) if (!branch.selected.activeDependents.includes(argument)) states.set(argument, 'hidden');
+      const caseIndex = branch.rule.cases.indexOf(branch.selected);
+      for (const binding of policyBindings[policyIndex]![caseIndex]!) selected.set(binding.argument, binding);
+    }
+    return {branches, bindings: [...selected.values()], states, unruled};
+  };
+  const initialProjection = (argument: string, snapshot: FixedBlockSnapshot): JsonObject => {
+    const binding = selection(snapshot).bindings.find(item => item.argument === argument)!;
+    return project(binding, snapshot);
+  };
+  const parseEntry = (_binding: Binding, entry: JsonObject, original: JsonObject): {changed: boolean; value: JsonValue; token?: string} => {
+    if (original.readOnly === true) {
+      if (sameProjection(original, entry)) return {changed: false, value: null};
+      if (entry.repair !== true) throw new TypeError();
+    }
+    if (!Object.hasOwn(entry, 'value') || typeof entry.changed !== 'boolean' || entry.readOnly === true) throw new TypeError();
+    let value = copySync(entry.value) as JsonValue;
+    let token: string | undefined;
+    if (Object.hasOwn(entry, 'buffer')) {
+      if (!entry.changed || typeof entry.buffer !== 'string') throw new TypeError();
+      const parsed = parseFixedNumberInput(entry.buffer);
+      if (parsed.kind !== 'valid' || typeof value !== 'number' || !Object.is(parsed.value, value)) throw new TypeError();
+      token = parsed.token;value = token;
+    }
+    if (token === undefined && original.readOnly !== true && sameProjection(original.value!, value)) return {changed: false, value};
+    if (!entry.changed) throw new TypeError();
+    return {changed: true, value, ...(token === undefined ? {} : {token})};
+  };
+  const validateExact = (binding: Binding, candidate: LiteralValue, context: SchemaValidationContext<C>, snapshot: FixedBlockSnapshot): ValidationIssue | undefined => {
+    const projectedCandidate = copySync(binding.read(candidate));
+    if (binding.validator.validate(projectedCandidate, {consumerId: context.consumerId}).kind !== 'valid') return diagnostic('schema-data-invalid', binding.argument);
+    const owner = copySync(binding.validateCandidate(candidate, context, snapshot));
+    if (!Array.isArray(owner)) throw new TypeError();
+    for (const issue of owner) {
+      if (!isJsonRecord(issue) || typeof issue.message !== 'string' || (issue.path !== undefined && typeof issue.path !== 'string')) throw new TypeError();
+    }
+    return owner.length ? diagnostic('owner-input-invalid', binding.argument) : undefined;
+  };
+  const description = (draft: JsonObject, snapshot: FixedBlockSnapshot): FixedInputViewDescription => {
+    const current = selection(snapshot, draft);
+    const inputs: Record<string, FixedInputViewInput> = Object.create(null) as Record<string, FixedInputViewInput>;
+    const issues: ValidationIssue[] = [];
+    const changes: LiteralArgumentChange[] = [];
+    const describe = (argument: string, binding?: Binding): void => {
+      const metadata = snapshot.fixedContext.inputs[argument];
+      const slot = snapshot.arguments[argument];
+      const entry = entryFor(draft, argument);
+      const projected = binding ? project(binding, snapshot) : undefined;
+      const schema = binding?.schemaBundle.root.document;
+      const schemaType = schema && typeof schema === 'object' && !Array.isArray(schema) ? (schema as {type?: unknown}).type : undefined;
+      const value = entry?.value ?? projected?.value;
+      const valueType = schemaType === 'number' || schemaType === 'integer' ? 'number' :
+        schemaType === 'string' ? 'string' : typeof value === 'number' ? 'number' : 'string';
+      const explicit = binding?.control;
+      const state = current.states.get(argument) ?? (binding && literal(snapshot, argument) ? 'editable' : 'readonly');
+      const schemaEnum = schema && typeof schema === 'object' && !Array.isArray(schema) ? (schema as {enum?: unknown}).enum : undefined;
+      const choices = explicit?.choices ?? (Array.isArray(schemaEnum) ? schemaEnum.map(value => ({value: value as JsonValue})) : undefined);
+      const control = explicit?.kind ?? (choices ? 'enum' : valueType === 'number' ? 'number' : 'text');
+      const rawDisplay = slot?.kind === 'literal' ? String(slot.value) : undefined;
+      const reason = state === 'hidden' ? 'Inactive branch; its draft is retained and is not saved.' :
+        current.states.get(argument) === 'readonly' ? 'The selector is unavailable; the dependent input is read-only.' :
+        state === 'readonly' ? 'This input is read-only; connected expressions are not evaluated.' : undefined;
+      inputs[argument] = Object.freeze({state, control, valueType,
+        ...(rawDisplay === undefined ? {} : {rawDisplay}),
+        ...(explicit?.label === undefined ? {} : {label: explicit.label}), ...(choices === undefined ? {} : {choices}),
+        ...(explicit && Object.hasOwn(explicit, 'reset') ? {reset: explicit.reset!} : {}),
+        ...(reason === undefined ? {} : {reason}), ...(metadata?.source === 'reporter' ? {unverified: true as const} : {})});
+      if (!binding || state !== 'editable' || !entry) return;
+      try {
+        const parsed = parseEntry(binding, entry, initialProjection(argument, snapshot));
+        if (!parsed.changed) return;
+        const projection = parsed.token === undefined ? parsed.value : parseFixedNumberInput(parsed.token);
+        const data = typeof projection === 'object' && projection !== null && 'kind' in projection && projection.kind === 'valid' ? projection.value : projection;
+        if (binding.validator.validate(data, {consumerId: contractId}).kind !== 'valid') issues.push(diagnostic('schema-data-invalid', argument));
+        if (isLiteral(parsed.value)) changes.push({argument, value: parsed.value});
+      } catch {issues.push(diagnostic('fixed-input-invalid', argument));}
+    };
+    for (const binding of current.bindings) describe(binding.argument, binding);
+    for (const argument of declaration.readOnlyArguments) describe(argument);
+    issues.push(...validateFixedBranchChanges(declaration, snapshot, changes));
+    for (const branch of current.branches) {
+      if (!branch.selected || !changes.some(change => change.argument === branch.selector)) continue;
+      for (const argument of branch.selected.activeDependents) {
+        if (changes.some(change => change.argument === argument)) continue;
+        const binding = current.bindings.find(binding => binding.argument === argument)!;
+        const slot = snapshot.arguments[argument];
+        if (slot?.kind !== 'literal') continue;
+        try {
+          const projected = copySync(binding.read(slot.value));
+          if (binding.validator.validate(projected, {consumerId: contractId}).kind !== 'valid') issues.push(diagnostic('schema-data-invalid', argument));
+        } catch {issues.push(diagnostic('fixed-input-invalid', argument));}
+      }
+    }
+    return Object.freeze({inputs: Object.freeze(inputs), issues: Object.freeze(issues), branches: Object.freeze(current.branches.map(({selector, status, value}) =>
+      Object.freeze({selector, status, ...(value === undefined ? {} : {value})})))});
   };
   return Object.freeze({
     apiVersion, extensionId, editorId, opcodes, ...declaration,
@@ -203,9 +385,10 @@ export function createFixedInputEditor<C = null>(options: FixedInputEditorOption
     createPatch: () => {throw new TypeError('Fixed editors require a compatible host.');},
     readFixed: (snapshot: FixedBlockSnapshot) => {
       const inputs: JsonObject = {};
-      for (const binding of bindings) Object.defineProperty(inputs, binding.argument, {value: project(binding, snapshot), enumerable: true});
+      for (const binding of selection(snapshot).bindings) Object.defineProperty(inputs, binding.argument, {value: project(binding, snapshot), enumerable: true});
       return {inputs};
     },
+    describeFixed: description,
     prepareFixedSave: (draft: JsonObject, snapshot: FixedBlockSnapshot): FixedPreparedSave<C> => {
       const issues: ValidationIssue[] = [];
       const changes: LiteralArgumentChange[] = [];
@@ -215,49 +398,56 @@ export function createFixedInputEditor<C = null>(options: FixedInputEditorOption
         if (!isJsonRecord(value) || typeof value.consumerId !== 'string' || !value.consumerId || typeof value.nowMs !== 'number' || !Number.isFinite(value.nowMs) || !Object.hasOwn(value, 'settings')) throw new TypeError();
         freeze(value);context = value as unknown as SchemaValidationContext<C>;
       } catch {return {kind: 'invalid', issues: [diagnostic('owner-context-invalid')]};}
-      for (const binding of bindings) {
+      const current = selection(snapshot, draft);
+      const candidates = new Map<string, LiteralValue>();
+      const finalArguments = {...snapshot.arguments};
+      for (const binding of current.bindings) {
         const {argument} = binding;
         try {
-          const original = project(binding, snapshot);
-          const entry = isJsonRecord(draft.inputs) && Object.hasOwn(draft.inputs, argument) ? draft.inputs[argument] : undefined;
-          if (!isJsonRecord(entry)) throw new TypeError();
-          if (original.readOnly === true) {
-            if (sameProjection(original, entry as JsonObject)) continue;
-            const metadata = snapshot.fixedContext.inputs[argument];
-            if (entry.repair !== true || snapshot.arguments[argument]?.kind !== 'literal' || metadata?.role !== 'editable' ||
-                (metadata.source !== 'field' && metadata?.source !== 'shadow')) throw new TypeError();
+          const entry = entryFor(draft, argument);
+          if (!entry) throw new TypeError();
+          if (current.states.get(argument) === 'hidden') continue;
+          if (current.states.get(argument) === 'readonly') {
+            if (sameProjection(project(binding, snapshot), entry)) continue;
+            if (current.unruled.has(argument)) {
+              issues.push(diagnostic('fixed-dependency-validation-unavailable', argument));continue;
+            }
+            throw new TypeError();
           }
-          if (!Object.hasOwn(entry, 'value') || typeof entry.changed !== 'boolean' || entry.readOnly === true) throw new TypeError();
-          let value = copySync(entry.value) as JsonValue;
-          let token: string | undefined;
-          if (Object.hasOwn(entry, 'buffer')) {
-            if (!entry.changed || typeof entry.buffer !== 'string') throw new TypeError();
-            const parsed = parseFixedNumberInput(entry.buffer);
-            if (parsed.kind !== 'valid' || typeof value !== 'number' || !Object.is(parsed.value, value)) throw new TypeError();
-            token = parsed.token;value = token;
+          const original = initialProjection(argument, snapshot);
+          if (!literal(snapshot, argument)) {
+            if (sameProjection(original, entry)) continue;
+            throw new TypeError();
           }
-          if (token === undefined && original.readOnly !== true && sameProjection(original.value!, value)) continue;
-          if (!entry.changed) throw new TypeError();
-          if (declaration.dependencies.some(group => group.selector === argument || group.dependents.includes(argument))) {
-            issues.push(diagnostic('fixed-dependency-validation-unavailable', argument));continue;
-          }
-          const raw: unknown = binding.encode(value, context);
+          const parsed = parseEntry(binding, entry, original);
+          if (!parsed.changed) continue;
+          const raw: unknown = binding.encode(parsed.value, context);
           if (!isLiteral(raw)) {drain(raw);throw new TypeError();}
-          const candidate = raw;
-          if (token !== undefined && candidate !== token) throw new TypeError();
-          const projectedCandidate = copySync(binding.read(candidate));
-          const validation = binding.validator.validate(projectedCandidate, {consumerId: context.consumerId});
-          if (validation.kind !== 'valid') {issues.push(diagnostic('schema-data-invalid', argument));continue;}
-          const owner = copySync(binding.validateCandidate(candidate, context, snapshot));
-          if (!Array.isArray(owner)) throw new TypeError();
-          for (let i = 0; i < owner.length; i++) {
-            const issue = owner[i];
-            if (!isJsonRecord(issue) || typeof issue.message !== 'string' || (issue.path !== undefined && typeof issue.path !== 'string')) throw new TypeError();
-          }
-          if (owner.length) {issues.push(diagnostic('owner-input-invalid', argument));continue;}
+          if (parsed.token !== undefined && raw !== parsed.token) throw new TypeError();
+          candidates.set(argument, raw);
+          Object.defineProperty(finalArguments, argument, {value: {kind: 'literal', value: raw}, enumerable: true, configurable: true});
           const slot = snapshot.arguments[argument];
-          if (slot?.kind !== 'literal') throw new TypeError();
-          if (!Object.is(candidate, slot.value)) changes.push(Object.freeze({argument, value: candidate}));
+          if (slot?.kind === 'literal' && !Object.is(raw, slot.value)) changes.push(Object.freeze({argument, value: raw}));
+        } catch {issues.push(diagnostic('fixed-input-invalid', argument));}
+      }
+      issues.push(...validateFixedBranchChanges(declaration, snapshot, changes));
+      const finalBranches = resolveFixedBranches(declaration, snapshot, finalArguments);
+      // Encoding a selector must not silently choose a different codec from the displayed finite branch.
+      for (let index = 0; index < current.branches.length; index++) {
+        if (current.branches[index]!.selected !== finalBranches[index]!.selected) issues.push(diagnostic('selector-codec-mismatch', current.branches[index]!.selector));
+      }
+      const validateNames = new Set(candidates.keys());
+      for (const branch of finalBranches) if (branch.selected && changes.some(change => change.argument === branch.selector)) {
+        for (const argument of branch.selected.activeDependents) validateNames.add(argument);
+      }
+      const finalSnapshot = captureFixedSnapshot({...snapshot, arguments: finalArguments}, snapshot, declaration);
+      for (const argument of validateNames) {
+        const binding = current.bindings.find(binding => binding.argument === argument)!;
+        const slot = finalArguments[argument];
+        if (slot?.kind !== 'literal') continue;
+        try {
+          const issue = validateExact(binding, slot.value, context, finalSnapshot);
+          if (issue) issues.push(issue);
         } catch {issues.push(diagnostic('fixed-input-invalid', argument));}
       }
       return issues.length ? {kind: 'invalid', issues} : {kind: 'ready', changes, context};

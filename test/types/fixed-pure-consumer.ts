@@ -99,3 +99,21 @@ export const asyncContext: FixedInputEditorOptions = {...options, validationCont
 export const functionSettings: FixedInputEditorOptions<{fn: () => number}> = {...options, validationContext: () => ({consumerId: 'owner', nowMs: 0, settings: {fn: () => 1}})};
 // @ts-expect-error Host-erased contexts remain JSON-compatible.
 export const functionHostSettings: Parameters<FixedInputEditorHost['commit']>[0] = {...commitForHost, context: {consumerId: 'owner', nowMs: 0, settings: {fn: () => 1}}};
+
+// Stage 3 UI descriptions and finite policies remain DOM/React-free contracts.
+import type {FixedInputBranchRule, FixedInputControl, FixedInputViewDescription, EditorViewContext} from '@kubohiroya/turbowarp-extension-data-editor';
+export const branchRule: FixedInputBranchRule = {selector: 'VALUE', normalize: {trim: true, lowercase: true},
+  cases: [{values: ['known'], activeDependents: [], requireOnSelectorChange: [{argument: 'CONDITION', rule: 'nonempty-string'}]}]};
+export const enumControl: FixedInputControl = {kind: 'enum', choices: [{value: 'stored', label: '表示名'}], reset: ''};
+export const description: FixedInputViewDescription = {inputs: {VALUE: {state: 'editable', control: 'enum', choices: enumControl.choices}}, branches: [], issues: []};
+export const withPresentation: FixedInputEditorDefinition = {...fixed, describeFixed: () => description};
+export const scopedFixedHost: FixedInputEditorHost = {...fixedHost, subscribeInvalidation: (_reference, _declaration, _listener) => () => {}};
+export const optionalView = (context: EditorViewContext) => context.getFixedInputView?.();
+// @ts-expect-error Branch selectors use finite data rules rather than executable runtime providers.
+export const executableRule: FixedInputBranchRule = {...branchRule, normalize: () => 'known'};
+// @ts-expect-error Static choices do not accept a dynamic candidate provider.
+export const dynamicChoices: FixedInputControl = {kind: 'enum', choices: () => []};
+// @ts-expect-error Presentation must be synchronous like the fixed prepared contract.
+export const asyncDescription: FixedInputEditorDefinition = {...fixed, describeFixed: async () => description};
+// @ts-expect-error Lifetime subscriptions return a synchronous unsubscriber.
+export const asyncScope: FixedInputEditorHost = {...fixedHost, subscribeInvalidation: async () => () => {}};

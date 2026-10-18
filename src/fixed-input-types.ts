@@ -11,12 +11,52 @@ export interface FixedInputDependency {
   readonly dependents: readonly string[];
 }
 
+/** Finite owner-declared branch rules; the host never evaluates owner code. */
+export interface FixedInputBranchCase {
+  readonly values: readonly string[];
+  readonly activeDependents: readonly string[];
+  readonly requireOnSelectorChange?: readonly {readonly argument: string; readonly rule: 'literal' | 'nonempty-string'}[];
+}
+export interface FixedInputBranchRule {
+  readonly selector: string;
+  readonly normalize?: {readonly trim?: boolean; readonly lowercase?: boolean};
+  readonly cases: readonly FixedInputBranchCase[];
+}
+export interface FixedInputControl {
+  readonly kind: 'text' | 'number' | 'enum' | 'color';
+  readonly label?: string;
+  readonly choices?: readonly {readonly value: JsonValue; readonly label?: string}[];
+  readonly reset?: JsonValue;
+}
+export interface FixedInputViewInput {
+  readonly state: 'editable' | 'readonly' | 'hidden';
+  readonly control: FixedInputControl['kind'];
+  readonly label?: string;
+  readonly choices?: FixedInputControl['choices'];
+  readonly reset?: JsonValue;
+  readonly valueType?: 'number' | 'string';
+  readonly reason?: string;
+  readonly rawDisplay?: string;
+  readonly unverified?: true;
+}
+export interface FixedInputBranchState {
+  readonly selector: string;
+  readonly status: 'known' | 'alias' | 'unknown' | 'reporter' | 'unsupported' | 'missing';
+  readonly value?: string;
+}
+export interface FixedInputViewDescription {
+  readonly inputs: Readonly<Record<string, FixedInputViewInput>>;
+  readonly issues: readonly ValidationIssue[];
+  readonly branches: readonly FixedInputBranchState[];
+}
+
 export interface FixedInputDeclaration {
   readonly contractId: string;
   readonly contractRevision: string;
   readonly editableArguments: readonly string[];
   readonly readOnlyArguments: readonly string[];
   readonly dependencies: readonly FixedInputDependency[];
+  readonly branchRules?: readonly FixedInputBranchRule[];
 }
 
 /** Host-owned field identity only; live VM and Blockly objects never cross this port. */
@@ -56,6 +96,7 @@ export interface FixedInputEditorDefinition<C = null> extends EditorDefinition, 
   readonly saveContract: 'prepared-fixed-v1';
   readFixed(snapshot: FixedBlockSnapshot): JsonObject;
   prepareFixedSave(draft: JsonObject, snapshot: FixedBlockSnapshot): FixedPreparedSave<C>;
+  describeFixed?(draft: JsonObject, snapshot: FixedBlockSnapshot): FixedInputViewDescription;
 }
 
 export interface FixedCommitRequest<C = null> {
@@ -80,6 +121,8 @@ export interface FixedInputEditorHost {
   readBlock(reference: BlockReference, declaration: FixedInputDeclaration): FixedBlockSnapshot | null;
   /** Recheck all identities and dependencies at the actual atomic write boundary. */
   commit(request: FixedHostCommitRequest): void | Promise<void>;
+  /** Optional lifetime notification; ordinary same-scope edits remain save-time conflicts. */
+  subscribeInvalidation?(reference: BlockReference, declaration: FixedInputDeclaration, listener: (error: unknown) => void): () => void;
 }
 
 /** Inspect methods without evaluating accessor-backed capability advertisements. */

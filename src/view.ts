@@ -22,6 +22,10 @@ export class EditorView {
     };
     const context: EditorViewContext = Object.freeze({
       getDraft: () => owner.getDraft(),
+      ...(owner.getFixedInputView ? {getFixedInputView: () => {
+        assertMounted();
+        return owner.getFixedInputView!();
+      }} : {}),
       setDraft: (draft: JsonObject) => { assertMounted(); owner.setDraft(draft); },
       setValidationIssues: (issues: readonly ValidationIssue[]) => {
         assertMounted();

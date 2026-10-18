@@ -10,4 +10,4 @@ export type {FixedNumberInputResult} from './fixed-input-schema.js';
 export * from './fixed-input-types.js';
 export {captureFixedInputDeclaration, captureFixedSnapshot, sameFixedSnapshot} from './fixed-input-snapshot.js';
 export {createFixedInputEditor} from './fixed-input-editor.js';
-export type {FixedInputBinding, FixedInputEditorOptions} from './fixed-input-editor.js';
+export type {FixedInputBinding, FixedInputBranchPolicy, FixedInputEditorOptions} from './fixed-input-editor.js';

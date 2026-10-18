@@ -39,6 +39,8 @@ export interface TurboWarpBlockEditorOptions {
   /** Only true attaches listeners or decorates icons. Read feature flags in the host at startup. */
   readonly enabled?: boolean;
   readonly descendants?: boolean;
+  /** Opt in to fixed argument editors independently of SourceForms and Descendants. */
+  readonly fixedInputs?: boolean;
   readonly ScratchBlocks: object;
   readonly workspace: object;
   readonly vm: object;
@@ -65,7 +67,7 @@ export interface TurboWarpBlockEditorAttachment {
 /** Attach to one workspace. No global VM, feature flag, React or GUI module is consulted. */
 export function attachTurboWarpBlockEditors(options: TurboWarpBlockEditorOptions): TurboWarpBlockEditorAttachment {
   if (options.enabled !== true) return Object.freeze({refresh() {}, dispose() {}});
-  const bridge = createBridge({...options, descendants: options.descendants === true,
+  const bridge = createBridge({...options, descendants: options.descendants === true, fixedInputs: options.fixedInputs === true,
     onError: options.onError ?? console.error});
   let disposed = false;
   return Object.freeze({

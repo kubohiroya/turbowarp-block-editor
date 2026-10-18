@@ -17,6 +17,14 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
     let lastTarget = vm.editingTarget;
     const versions = new Map();
     const invalidations = new Set();
+    const fixedScopeListeners = new Set();
+    const notifyFixedScopes = () => {
+        for (const listener of [...fixedScopeListeners]) {
+            try { listener(); } catch (error) {
+                try { onError(error); } catch { /* Scope observers cannot interrupt native events. */ }
+            }
+        }
+    };
     let notifyInvalidations = () => {};
     const identities = new WeakMap();
     const identify = object => {
@@ -39,6 +47,7 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
             for (const id of ids) if (id) versions.set(id, (versions.get(id) || 0) + 1);
         }
         if (!committing) notifyInvalidations();
+        notifyFixedScopes();
     };
     const renew = () => {
         generation++;
@@ -247,6 +256,8 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
         invalidate: renew,
         dispose: () => {
             disposed = true;
+            notifyFixedScopes();
+            fixedScopeListeners.clear();
             notifyInvalidations();
             invalidations.clear();
             workspace.removeChangeListener(invalidate);
@@ -281,6 +292,10 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
     }
     if (enableFixedInputs === true) {
         host.fixedInputs = createFixedInputPort({ScratchBlocks, workspace, vm, registry, identify, onError,
+            subscribeScope: listener => {
+                fixedScopeListeners.add(listener);
+                return () => { fixedScopeListeners.delete(listener); };
+            },
             getState: () => ({disposed, revision, generation, externalRevision}),
             begin: () => {
                 committing = true;
