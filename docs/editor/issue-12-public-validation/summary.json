@@ -1,0 +1,206 @@
+{
+  "status": "passed",
+  "plannedTests": 6,
+  "recordedTests": 6,
+  "byTheme": {
+    "light": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    },
+    "dark": {
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "skipped": 0
+    }
+  },
+  "platform": "linux 6.17.0-1022-azure",
+  "results": [
+    {
+      "title": "専用エディターの検証・保存・キャンセルと実sb3の保存/再読込",
+      "project": "chromium-file-input",
+      "status": "passed",
+      "retry": 0,
+      "duration": 8765,
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "completed",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "file-input/filechooser",
+      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Mobile Safari/537.36",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    },
+    {
+      "title": "通常起動では専用エディターが既定OFF",
+      "project": "chromium-file-input",
+      "status": "passed",
+      "retry": 0,
+      "duration": 3389,
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "default-off",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "file-input/filechooser",
+      "userAgent": "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/156.0.8078.4 Mobile Safari/537.36",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    },
+    {
+      "title": "専用エディターの検証・保存・キャンセルと実sb3の保存/再読込",
+      "project": "chromium-project-url",
+      "status": "passed",
+      "retry": 0,
+      "duration": 8881,
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "completed",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "project_url",
+      "userAgent": "browser-default",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    },
+    {
+      "title": "通常起動では専用エディターが既定OFF",
+      "project": "chromium-project-url",
+      "status": "passed",
+      "retry": 0,
+      "duration": 3273,
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "default-off",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "project_url",
+      "userAgent": "browser-default",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    },
+    {
+      "title": "invalid表示と修正後の解除・ブロック色の保持 (light)",
+      "project": "chromium-project-url",
+      "status": "passed",
+      "retry": 0,
+      "duration": 13661,
+      "theme": "light",
+      "scenario": "invalid-theme",
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "completed",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "project_url",
+      "userAgent": "browser-default",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    },
+    {
+      "title": "invalid表示と修正後の解除・ブロック色の保持 (dark)",
+      "project": "chromium-project-url",
+      "status": "passed",
+      "retry": 0,
+      "duration": 13818,
+      "theme": "dark",
+      "scenario": "invalid-theme",
+      "baseURL": "https://kubohiroya.github.io/scratch-gui/",
+      "browser": "156.0.8078.4",
+      "platform": "linux 6.17.0-1022-azure",
+      "nativeOSPicker": "not-run",
+      "stage": "completed",
+      "expectedGUI": "4222d70005a59540dc454cf689668b1a9daa351e",
+      "expectedCore": "9e041e5278a1ea70146a76c10732d1401955a12a",
+      "configuredReloadRoute": "project_url",
+      "userAgent": "browser-default",
+      "before": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "after": {
+        "repository": "https://github.com/kubohiroya/scratch-gui",
+        "revision": "4222d70005a59540dc454cf689668b1a9daa351e",
+        "coreRepository": "https://github.com/kubohiroya/turbowarp-extension-data-editor",
+        "coreRevision": "9e041e5278a1ea70146a76c10732d1401955a12a"
+      },
+      "failureCategory": null,
+      "error": ""
+    }
+  ]
+}

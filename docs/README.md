@@ -22,5 +22,6 @@ GUI用ガイドの `src/`・`scripts/`・`site/`・`test/`・`.github/` はscrat
 
 - [初版の受け入れ確認](block-editor-acceptance.md)
 - [.sb3保存・再読込の初期検証](block-editor-sb3-validation.md)
+- [Issue #12 公開配信後E2Eの画像・実測JSON](editor/issue-12-public-validation/README.md)
 
 過去の記録にあるSHA・テスト件数・未確認項目は、その検証時点の結果です。最新の実装・CI・公開状況は[共通 #7](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/7)、[GUI #15](https://github.com/kubohiroya/scratch-gui/issues/15)、[E2E #12](https://github.com/kubohiroya/scratch-gui/issues/12)で管理します。
