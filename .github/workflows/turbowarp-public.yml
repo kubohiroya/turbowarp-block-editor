@@ -20,13 +20,13 @@ jobs:
     timeout-minutes: 15
     defaults:
       run:
-        working-directory: turbowarp-block-editor
+        working-directory: turbowarp-extension-data-editor
     steps:
       - uses: actions/checkout@v4
         with:
-          repository: kubohiroya/turbowarp-block-editor
+          repository: kubohiroya/turbowarp-extension-data-editor
           ref: ${{ inputs.runner_revision }}
-          path: turbowarp-block-editor
+          path: turbowarp-extension-data-editor
           persist-credentials: false
       - uses: actions/setup-node@v4
         with:
@@ -62,8 +62,8 @@ jobs:
         with:
           name: block-editor-public-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
-            turbowarp-block-editor/test-results/block-editor/
-            turbowarp-block-editor/test-results/block-editor-deployment/
-            turbowarp-block-editor/playwright-report/block-editor/
+            turbowarp-extension-data-editor/test-results/block-editor/
+            turbowarp-extension-data-editor/test-results/block-editor-deployment/
+            turbowarp-extension-data-editor/playwright-report/block-editor/
           retention-days: 7
           if-no-files-found: warn

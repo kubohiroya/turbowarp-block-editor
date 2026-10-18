@@ -4,7 +4,7 @@
 
 ## セットアップ
 
-本体・開発依存・CI手順はturbowarp-block-editorが所有する。Node.js 22以上とpnpm 11.18.0を使い、GUIと共通リポジトリを隣に配置する。以下は共通リポジトリで実行する。GUIにPlaywrightを追加しない。
+本体・開発依存・CI手順はturbowarp-extension-data-editorが所有する。Node.js 22以上とpnpm 11.18.0を使い、GUIと共通リポジトリを隣に配置する。以下は共通リポジトリで実行する。GUIにPlaywrightを追加しない。
 
 ```sh
 pnpm install --frozen-lockfile
@@ -14,7 +14,7 @@ cd ../scratch-gui
 npm ci --ignore-scripts --no-audit --no-fund
 node scripts/prepublish.mjs
 ROOT=/scratch-gui/ npm run build:pages
-cd ../turbowarp-block-editor
+cd ../turbowarp-extension-data-editor
 E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor
 ```
 

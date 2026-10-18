@@ -1,12 +1,12 @@
 # TurboWarp アダプターAPI
 
-`@kubohiroya/turbowarp-block-editor/turbowarp` はScratchBlocks / VMの専用接続入口です。
+`@kubohiroya/turbowarp-extension-data-editor/turbowarp` はScratchBlocks / VMの専用接続入口です。
 共通ルートのセッションAPI、`/rjsf` の登録/フォーム、`/react` の表示から分離しています。
 GUIの内部モジュール、Redux、翻訳、テーマ、URLフラグをimportしません。
 ScratchBlocksやVMを独自にインストールせず、ホストが使用中の実体を渡します。
 
 ```js
-import {attachTurboWarpBlockEditors} from '@kubohiroya/turbowarp-block-editor/turbowarp';
+import {attachTurboWarpBlockEditors} from '@kubohiroya/turbowarp-extension-data-editor/turbowarp';
 
 const attachment = attachTurboWarpBlockEditors({
   enabled: startupFlags.blockEditorDialogs,

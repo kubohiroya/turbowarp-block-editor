@@ -4,7 +4,7 @@ const path = require('node:path');
 const withBlockEditorWebpack4 = (config, {hostRoot}) => {
     if (!path.isAbsolute(hostRoot || '')) throw new Error('hostRoot must be an absolute GUI root.');
     if (Array.isArray(config)) return config.map(item => withBlockEditorWebpack4(item, {hostRoot}));
-    const prefix = '@kubohiroya/turbowarp-block-editor';
+    const prefix = '@kubohiroya/turbowarp-extension-data-editor';
     const alias = {...config.resolve?.alias};
     for (const entry of ['index', 'rjsf', 'react', 'turbowarp']) {
         alias[`${prefix}${entry === 'index' ? '' : `/${entry}`}$`] = path.join(__dirname, 'dist/webpack4', `${entry}.js`);

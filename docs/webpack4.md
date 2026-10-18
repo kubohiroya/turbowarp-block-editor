@@ -3,7 +3,7 @@
 通常のESM/型宣言と、webpack 4のparserが読めるES2018配布物を `pnpm build` で生成する。後者はRJSF/AJV/YAMLを含む。esbuildは開発依存のみ。CSSはホストの既存CSS modules loaderを使う。
 
 ```js
-const {withBlockEditorWebpack4} = require('@kubohiroya/turbowarp-block-editor/webpack4');
+const {withBlockEditorWebpack4} = require('@kubohiroya/turbowarp-extension-data-editor/webpack4');
 module.exports = withBlockEditorWebpack4(config, {hostRoot: __dirname});
 ```
 

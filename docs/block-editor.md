@@ -1,6 +1,6 @@
 # 拡張ブロック編集の接続と受け入れ確認
 
-対象: [scratch-gui #1](https://github.com/kubohiroya/scratch-gui/issues/1)、依存: [共通 API #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1)。
+対象: [scratch-gui #1](https://github.com/kubohiroya/scratch-gui/issues/1)、依存: [共通 API #1](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/1)。
 基盤はPR #3で`develop`へ、YAML互換はPR #5、初版受け入れ修正はPR #6で`feat/site/github-pages`へ統合しました。
 開発の統合先である`develop`にも、公開ブランチのYAML互換・受け入れ修正とPages配信機構を取り込んでいます。
 初版の検証記録は当時の`fix/editor/issue-1-acceptance`とサイト用ブランチを対象にした履歴です。
@@ -14,7 +14,7 @@ Issue #2の階層編集は別の既定OFFフラグで追加しています。[�
 
 Node.js 22.18 以降を使い、両リポジトリを同じ親ディレクトリへ置きます。
 共通 API を先に `pnpm install`、`pnpm build` でビルドします。
-GUI のローカル依存は `file:../turbowarp-block-editor` で、未公開パッケージです。
+GUIは `@kubohiroya/turbowarp-extension-data-editor` の公開版を固定versionで参照します。`npm ci`で配布物を取得でき、共通リポジトリのローカルリンクは不要です。
 
 ```sh
 npm ci --ignore-scripts --no-audit --no-fund

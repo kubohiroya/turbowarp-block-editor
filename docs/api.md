@@ -1,6 +1,6 @@
 # API v1 とホスト契約（設計・最小実装）
 
-対象: [共通基盤 #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1)。この文書の API は本パッケージ独自であり、TurboWarp 標準 API ではありません。GUI の最小接続を検証中であり、互換性を確定した安定版ではありません。
+対象: [共通基盤 #1](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/1)。この文書の API は本パッケージ独自であり、TurboWarp 標準 API ではありません。GUI の最小接続を検証中であり、互換性を確定した安定版ではありません。
 
 ## 登録
 
@@ -122,7 +122,7 @@ TurboWarp接続は `/turbowarp` の [アダプターAPI](turbowarp-adapter.md) �
 
 初版は単一ブロックの編集です。`read` は初期下書き、`validate` は検証、`createPatch` は変更案だけを扱い、実際の書き込みはホストの `commit` に集約します。本文 UI は外側のモーダルや HTML form を所有しません。標準フォームも本文を `div` として描画します。
 
-[次版 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2) の階層編集は、[追加 capability と階層セッション](descendants.md) として実装しています。ノードごとの検証・変更案を集め、全体を1回で commit します。単一ブロックの `EditorSession` / `commit` は維持し、子セッションの `save()` を順に呼ぶ方法では代用しません。構造変更は対象外で、実 GUI の探索・一括適用は scratch-gui #2 で接続する契約です。機能の世代と `apiVersion: 1` を混同せず、未実装・未結合のホスト機能を対応済みとは扱いません。
+[次版 #2](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/2) の階層編集は、[追加 capability と階層セッション](descendants.md) として実装しています。ノードごとの検証・変更案を集め、全体を1回で commit します。単一ブロックの `EditorSession` / `commit` は維持し、子セッションの `save()` を順に呼ぶ方法では代用しません。構造変更は対象外で、実 GUI の探索・一括適用は scratch-gui #2 で接続する契約です。機能の世代と `apiVersion: 1` を混同せず、未実装・未結合のホスト機能を対応済みとは扱いません。
 
 ## 検証状況と後続
 

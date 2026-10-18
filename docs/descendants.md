@@ -1,13 +1,13 @@
 # 階層セッションと一括保存の追加 API
 
-対象は [共通基盤 #2](https://github.com/kubohiroya/turbowarp-block-editor/issues/2)。既存の `apiVersion: 1` の登録定義と本文 UI を使い、複数ノードの下書き・検証・変更案を集約します。GUI の探索・階層モーダル・実 workspace トランザクションは [scratch-gui #2](https://github.com/kubohiroya/scratch-gui/issues/2) で接続する契約です。現在の GUI が階層編集に対応済みという意味ではありません。
+対象は [共通基盤 #2](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/2)。既存の `apiVersion: 1` の登録定義と本文 UI を使い、複数ノードの下書き・検証・変更案を集約します。GUI の探索・階層モーダル・実 workspace トランザクションは [scratch-gui #2](https://github.com/kubohiroya/scratch-gui/issues/2) で接続する契約です。現在の GUI が階層編集に対応済みという意味ではありません。
 
 ## 能力の交渉と開始
 
 `BlockEditorHost.descendants` は任意の追加ポートです。`capability: 'descendant-editing-v1'`、同期の `readSubtree(reference)`、`commitSubtree(request)` を明示的に提供します。`supportsDescendantEditing(host)` はこの組み合わせを検査します。既存の `readBlock` / `commit` の意味は変わりません。
 
 ```js
-import {supportsDescendantEditing} from '@kubohiroya/turbowarp-block-editor';
+import {supportsDescendantEditing} from '@kubohiroya/turbowarp-extension-data-editor';
 
 // The GUI owns startup flags and all modal/save/close controls.
 const useDescendants = flags.blockEditorDialogs && flags.blockEditorDescendants &&
