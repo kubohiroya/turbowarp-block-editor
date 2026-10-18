@@ -22,6 +22,8 @@ export interface TurboWarpHostOptions {
   readonly vm: object;
   readonly registry: EditorRegistry;
   readonly enableDescendants?: boolean;
+  /** Opt in to standard fixed fields; GUI binding remains a separate capability. */
+  readonly enableFixedInputs?: boolean;
   readonly onError?: (error: unknown) => void;
 }
 export interface TurboWarpBlockEditorHost extends BlockEditorHost {

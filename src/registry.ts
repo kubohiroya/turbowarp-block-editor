@@ -9,13 +9,14 @@ import type {BlockEditorHost, BlockReference, EditorDefinition, EditorDescriptor
 import type {PreparedEditorDefinition} from './prepared-types.js';
 import {isPreparedEditor} from './prepared-save.js';
 import {isFixedInputEditor, captureFixedInputEditorDefinition} from './fixed-input-editor.js';
-import {captureFixedSnapshot} from './fixed-input-snapshot.js';
+import {captureFixedInputDeclaration, captureFixedSnapshot} from './fixed-input-snapshot.js';
 import {supportsFixedInputEditing} from './fixed-input-types.js';
-import type {FixedInputEditorDefinition} from './fixed-input-types.js';
+import type {FixedInputDeclaration, FixedInputEditorDefinition} from './fixed-input-types.js';
 
 export class EditorRegistry {
   #editors = new Map<string, EditorDefinition>();
   #opcodes = new Map<string, EditorDefinition>();
+  #fixedDeclarations = new Map<EditorDefinition, FixedInputDeclaration>();
   #changes = new Set<() => void>();
 
   register(definition: EditorDefinition): () => void {
@@ -66,6 +67,7 @@ export class EditorRegistry {
       opcodes: Object.freeze([...definition.opcodes]),
       editableArguments: Object.freeze([...definition.editableArguments])
     });
+    if (isFixedInputEditor(entry)) this.#fixedDeclarations.set(entry, captureFixedInputDeclaration(entry));
     this.#editors.set(key, entry);
     for (const opcode of entry.opcodes) this.#opcodes.set(opcode, entry);
     this.#notifyChanges();
@@ -73,6 +75,7 @@ export class EditorRegistry {
       if (this.#editors.get(key) !== entry) return;
       this.#editors.delete(key);
       for (const opcode of entry.opcodes) this.#opcodes.delete(opcode);
+      this.#fixedDeclarations.delete(entry);
       this.#notifyChanges();
     };
   }
@@ -84,6 +87,12 @@ export class EditorRegistry {
       apiVersion: entry.apiVersion, extensionId: entry.extensionId, editorId: entry.editorId,
       opcodes: entry.opcodes, editableArguments: entry.editableArguments
     });
+  }
+
+  /** Stable, callback-free authority for this exact registration, never caller metadata. */
+  resolveFixed(opcode: string): FixedInputDeclaration | undefined {
+    const entry = this.#opcodes.get(opcode);
+    return entry ? this.#fixedDeclarations.get(entry) : undefined;
   }
 
   open(reference: BlockReference, host: BlockEditorHost): EditorSession | undefined {

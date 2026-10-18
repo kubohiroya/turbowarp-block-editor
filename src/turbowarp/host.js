@@ -1,16 +1,19 @@
 import {BlockEditorConflictError, DESCENDANT_EDITING_CAPABILITY} from '../index.js';
 import collectBlockEditorSubtree from './subtree.js';
+import createFixedInputPort from './fixed-transaction.js';
 
 const owns = (object, key) => Object.prototype.hasOwnProperty.call(object, key);
 
 // Adapt only standard, unvalidated text shadows; never evaluate connected reporters.
-const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDescendants = false,
+const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDescendants = false, enableFixedInputs = false,
     onError = console.error}) => {
     let disposed = false;
     let committing = false;
     let revision = 0;
     let identity = 0;
     let generation = 1;
+    let externalRevision = 0;
+    let fixedTransaction = null;
     let lastTarget = vm.editingTarget;
     const versions = new Map();
     const invalidations = new Set();
@@ -23,6 +26,14 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
     const invalidate = event => {
         if (event && event.isUiEvent) return;
         revision++;
+        if (fixedTransaction && event && fixedTransaction.events.has(event)) {
+            fixedTransaction.revisions++;
+            if (enableDescendants) {
+                for (const id of new Set([event.blockId, ...(event.ids || [])])) {
+                    if (id) fixedTransaction.versions.set(id, (fixedTransaction.versions.get(id) || 0) + 1);
+                }
+            }
+        } else externalRevision++;
         if (enableDescendants && event) {
             const ids = new Set([event.blockId, ...(event.ids || [])]);
             for (const id of ids) if (id) versions.set(id, (versions.get(id) || 0) + 1);
@@ -52,6 +63,7 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
         const block = workspace.getBlockById(reference.blockId);
         if (!block || block.isInFlyout || block.isShadow()) return null;
         const descriptor = registry.resolve(block.type);
+        if (typeof registry.resolveFixed === 'function' && registry.resolveFixed(block.type)) return null;
         const vmBlock = target.blocks.getBlock(block.id);
         if ((!structural && !descriptor) || (!block.isEditable() && (!structural || descriptor)) ||
             !vmBlock || vmBlock.opcode !== block.type) return null;
@@ -215,10 +227,16 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
     const host = {
         isCommitting: () => committing,
         readBlock: reference => {
+            const block = workspace.getBlockById(reference.blockId);
+            const declaration = block && typeof registry.resolveFixed === 'function' && registry.resolveFixed(block.type);
+            if (declaration) return host.fixedInputs ? host.fixedInputs.readBlock(reference, declaration) : null;
             const result = inspect(reference);
             return result ? result.snapshot : null;
         },
         commit: ({expected, changes}) => {
+            if (typeof registry.resolveFixed === 'function' && registry.resolveFixed(expected.opcode)) {
+                throw new TypeError('Fixed input editors require the fixed transaction port.');
+            }
             const current = inspect(expected);
             if (!current || JSON.stringify(current.snapshot) !== JSON.stringify(expected)) {
                 throw new BlockEditorConflictError();
@@ -260,6 +278,27 @@ const createBlockEditorHost = ({ScratchBlocks, workspace, vm, registry, enableDe
                 return () => invalidations.delete(item);
             }
         };
+    }
+    if (enableFixedInputs === true) {
+        host.fixedInputs = createFixedInputPort({ScratchBlocks, workspace, vm, registry, identify, onError,
+            getState: () => ({disposed, revision, generation, externalRevision}),
+            begin: () => {
+                committing = true;
+                fixedTransaction = {events: new WeakSet(), revisions: 0, versions: new Map()};
+            },
+            markEvent: event => fixedTransaction.events.add(event),
+            finish: succeeded => {
+                if (!succeeded) {
+                    revision -= fixedTransaction.revisions;
+                    for (const [id, delta] of fixedTransaction.versions) {
+                        const remaining = (versions.get(id) || 0) - delta;
+                        if (remaining > 0) versions.set(id, remaining);
+                        else versions.delete(id);
+                    }
+                }
+                fixedTransaction = null;
+                committing = false;
+            }});
     }
     return host;
 };
