@@ -129,3 +129,11 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 ## webpack 4 / E2E
 
 [webpack 4配布物と設定API](docs/webpack4.md)、[GUI接続E2EとCIの実行手順](docs/block-editor-e2e.md)を参照。専用編集UIから互換ビルド・E2Eまで共通側で管理し、GUIには明示的なホスト接続とCI呼出しを残す。
+
+## Schemaの共通型と診断変換
+
+`@kubohiroya/turbowarp-extension-data-editor/schema`はDOM・React・RJSFをロードせずに利用できる入口です。Schema bundle、正本・生成物・参照用の役割、処理段階別の診断・結果、同期owner検証の型を公開します。
+
+`toValidationIssues()`は入力診断を既存の`ValidationIssue`へ変換し、JSON Pointerのpath・順序・件数を維持した凍結結果を返します。不正な診断やcompile/execution診断はTypeErrorで拒否します。既存RJSFのpathや保存時専用の非同期`validateData`の契約は変わりません。
+
+この段階ではengineと`compileSchemaBundle`、`validateSchemaInput`、新しいRJSFオプションは提供していません。既存5入口とCSS buildは維持しています。

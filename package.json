@@ -37,7 +37,11 @@
     "./webpack4": {
       "require": "./webpack4.cjs"
     },
-    "./build-info": "./dist/build-info.json"
+    "./build-info": "./dist/build-info.json",
+    "./schema": {
+      "types": "./dist/schema.d.ts",
+      "import": "./dist/schema.js"
+    }
   },
   "files": [
     "dist",
