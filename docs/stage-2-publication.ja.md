@@ -27,3 +27,9 @@
 共通0.2.0はまだnpm未公開の時点で、direct fast-uri3.1.0に8high/1moderateのadvisoryを確認した。対象packageはfast-uriだけである。間接AJVで既に使っている3.1.8へ直接依存も固定し、lockの全fast-uri edgeを3.1.8へ統一する。Schemaの正本・owner・既存API・保存形式は変更しない。
 
 0.2.0の公開前修正として別PRでmainへ統合し、後続pinには修正後の最終SHAを使う。旧4818a4dの検証は履歴として保持し、最終配布の証拠と区別する。fresh install後にaudit、Schema/ref/診断/Source/Form/8入口を含む全common検証、packを確認する。一次資料: https://github.com/advisories/GHSA-qw65-cvwx-89v3 および保存した9件のaudit JSON。
+
+## 最終GUI/site固定の追補
+
+共通配布artifactはsecurity修正を含むGit `76fa1d50a3c188082ceef723ea018a9d8769ea6e`、GUIは `1caa902a51ec3338b9b30372174f71d04044ecd8` へ固定する。site/source.jsonのGUI/coreをこの対応へ更新する。siteのmain revisionと共通配布のcore revisionは役割が異なるため、siteだけの追補でconsumerのcore pinを循環更新しない。source/package/build入力がcore76faから不変であることを確認する。
+
+最終production GUIの実依存34edgeがlockと一致し、62block-editorテスト・既存addon33テスト・全6browserentryのproduction buildが成功。共通所有のChromium E2E6件もこのGUI/coreの組合せで成功した。npm公開とowner代表Source/Form確認の最終結果は集約記録へ保存する。既定OFFは維持する。
