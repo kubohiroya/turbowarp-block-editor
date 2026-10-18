@@ -42,8 +42,11 @@ module.exports = defineConfig({
         trace: 'retain-on-failure',
         screenshot: 'only-on-failure'
     },
-    projects: native ? [{name: 'chrome-macos-native', use: {browserName: 'chromium', channel: 'chrome'}}] : [
+    projects: native ? [{name: 'chrome-macos-native',
+        testMatch: 'editor.spec.cjs',
+        use: {browserName: 'chromium', channel: 'chrome'}}] : [
         {name: 'chromium-file-input',
+            testMatch: 'editor.spec.cjs',
             use: {
                 browserName: 'chromium', userAgent: devices['Pixel 7'].userAgent
             }},

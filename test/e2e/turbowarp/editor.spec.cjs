@@ -1,9 +1,8 @@
 const fs = require('node:fs/promises');
-const os = require('node:os');
 const {createHash} = require('node:crypto');
 const JSZip = require('@turbowarp/jszip');
 const {selectNativeProject} = require('./native-picker.cjs');
-const {test: base, expect} = require('@playwright/test');
+const {test, expect} = require('./fixtures.cjs');
 
 const savedValue = {duration: 9, label: '最新版「秋」 & "scene"'};
 const iconSelector = '[data-block-editor-icon]';
@@ -12,97 +11,6 @@ const label = page => modal(page).getByRole('textbox', {name: 'Scene label*', ex
 const duration = page => modal(page).getByRole('spinbutton', {name: 'Duration (seconds)*', exact: true});
 const save = page => modal(page).getByRole('button', {name: '保存', exact: true});
 const cancel = page => modal(page).getByRole('button', {name: 'キャンセル', exact: true});
-
-const buildInfo = async (request, baseURL, onRead) => {
-    const url = new URL('build-info.json', baseURL);
-    url.searchParams.set('e2e_time', String(Date.now()));
-    const response = await request.get(url.href, {
-        headers: {'Cache-Control': 'no-cache'}
-    });
-    expect(response.ok(), 'build-info.json must identify the tested deployment').toBeTruthy();
-    const info = await response.json();
-    if (onRead) onRead(info);
-    expect(info.revision).toMatch(/^[a-f0-9]{40}$/);
-    expect(info.coreRevision).toMatch(/^[a-f0-9]{40}$/);
-    if (process.env.E2E_EXPECT_GUI_REVISION) expect(info.revision).toBe(process.env.E2E_EXPECT_GUI_REVISION);
-    if (process.env.E2E_EXPECT_CORE_REVISION) expect(info.coreRevision).toBe(process.env.E2E_EXPECT_CORE_REVISION);
-    return info;
-};
-
-const test = base.extend({
-    evidence: [async ({page, request, baseURL, browser}, use, testInfo) => {
-        const logs = [];
-        const native = testInfo.project.name === 'chrome-macos-native';
-        const execution = {
-            baseURL,
-            browser: browser.version(),
-            platform: `${process.platform} ${os.release()}`,
-            project: testInfo.project.name,
-            nativeOSPicker: 'not-run',
-            stage: 'deployment-start',
-            expectedGUI: process.env.E2E_EXPECT_GUI_REVISION || null,
-            expectedCore: process.env.E2E_EXPECT_CORE_REVISION || null,
-            configuredReloadRoute: native ? 'native-macos-open' :
-                (testInfo.project.name === 'chromium-file-input' ? 'file-input/filechooser' : 'project_url'),
-            userAgent: testInfo.project.use.userAgent || 'browser-default'
-        };
-        const observe = observedPage => {
-            observedPage.on('console', message => {
-                if (message.type() === 'error') logs.push({type: 'console', message: message.text()});
-            });
-            observedPage.on('pageerror', error => logs.push({type: 'pageerror', message: error.message}));
-            observedPage.on('requestfailed', failedRequest => logs.push({
-                type: 'requestfailed', url: failedRequest.url(), failure: failedRequest.failure()
-            }));
-            observedPage.on('response', response => {
-                if (response.status() >= 400) logs.push({type: 'http', url: response.url(), status: response.status()});
-            });
-        };
-        observe(page);
-        try {
-            execution.before = await buildInfo(request, baseURL, info => {
-                execution.before = info;
-            });
-            await use({observe,
-                stage: value => {
-                    execution.stage = value;
-                },
-                nativeSelected: () => {
-                    execution.nativeOSPicker = 'selected-file';
-                },
-                nativePassed: () => {
-                    execution.nativeOSPicker = 'passed';
-                }});
-            try {
-                execution.after = await buildInfo(request, baseURL, info => {
-                    execution.after = info;
-                });
-                const message = 'Deployment changed during the test; do not combine results from different builds';
-                expect(execution.after, message)
-                    .toEqual(execution.before);
-            } catch (error) {
-                execution.stage = 'deployment-end';
-                execution.failureCategory = 'deployment-or-environment';
-                throw error;
-            }
-            if (logs.some(log => log.type === 'pageerror')) execution.failureCategory = 'application-error';
-            expect(logs.filter(log => log.type === 'pageerror'), 'Uncaught application errors').toEqual([]);
-        } catch (error) {
-            execution.failureCategory = execution.failureCategory ||
-                (execution.stage.startsWith('deployment') ? 'deployment-or-environment' : 'assertion-or-environment');
-            throw error;
-        } finally {
-            const passed = testInfo.status === 'passed';
-            execution.failureCategory = execution.failureCategory || (passed ? null :
-                (execution.stage.startsWith('deployment') ? 'deployment-or-environment' : 'assertion-or-environment'));
-            await testInfo.attach('execution.json', {body: JSON.stringify(execution, null, 2),
-                contentType: 'application/json'});
-            await testInfo.attach('browser-errors.json', {
-                body: JSON.stringify(logs, null, 2), contentType: 'application/json'
-            });
-        }
-    }, {auto: true}]
-});
 
 const start = async (page, enabled = true) => {
     await page.goto(`editor.html?lang=ja${enabled ? '&blockEditorDialogs=1' : ''}`);

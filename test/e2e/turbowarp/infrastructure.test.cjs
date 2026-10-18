@@ -82,3 +82,26 @@ test('local host selection is explicit and independent of the caller working dir
         fs.rmSync(directory, {recursive: true, force: true});
     }
 });
+
+test('default E2E selection preserves both reload routes and includes both themes without static skips', () => {
+    const result = spawnSync(process.execPath, [require.resolve('@playwright/test/cli'), 'test',
+        '--config', path.join(__dirname, 'playwright.config.cjs'), '--list', '--reporter=json'], {
+        cwd: path.resolve(__dirname, '../../..'),
+        env: {...process.env, E2E_NATIVE: '0'},
+        encoding: 'utf8',
+        timeout: 15_000
+    });
+    assert.equal(result.status, 0, result.stderr);
+    const collect = suite => [...(suite.specs || []), ...(suite.suites || []).flatMap(collect)];
+    const specs = JSON.parse(result.stdout).suites.flatMap(collect);
+    const cases = specs.flatMap(spec => spec.tests.map(entry => ({...entry, file: spec.file, title: spec.title})));
+    assert.equal(cases.length, 6);
+    assert.equal(cases.filter(entry => entry.file === 'editor.spec.cjs').length, 4);
+    const themes = cases.filter(entry => entry.file === 'invalid-theme.spec.cjs');
+    assert.equal(themes.length, 2);
+    for (const theme of ['light', 'dark']) {
+        assert.equal(themes.filter(entry => entry.title.endsWith(`(${theme})`)).length, 1);
+    }
+    for (const entry of themes) assert.equal(entry.projectName, 'chromium-project-url');
+    for (const entry of cases) assert.equal(entry.expectedStatus, 'passed', entry.title);
+});
