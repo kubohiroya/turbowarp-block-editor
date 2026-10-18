@@ -21,3 +21,9 @@
 安定版build段階ではfresh frozen install、全commonテスト、CI/site/infrastructure、typecheck、8公開入口・CSS・packを検証する。最終merge SHAからpackした同一tarballをnpmへ公開し、registry integrityとbuild-infoを照合する。producer/consumerは最終共通Git SHAへpin・lock・allowBuilds・実解決を揃える。GUIの起動時固定・既定OFFを維持する。
 
 公開後の問題には、フラグOFFと逆依存順のrevertで対応する。公開済み版を削除せず、修正は新しいversionで公開する。
+
+## 公開直前の依存audit追補
+
+共通0.2.0はまだnpm未公開の時点で、direct fast-uri3.1.0に8high/1moderateのadvisoryを確認した。対象packageはfast-uriだけである。間接AJVで既に使っている3.1.8へ直接依存も固定し、lockの全fast-uri edgeを3.1.8へ統一する。Schemaの正本・owner・既存API・保存形式は変更しない。
+
+0.2.0の公開前修正として別PRでmainへ統合し、後続pinには修正後の最終SHAを使う。旧4818a4dの検証は履歴として保持し、最終配布の証拠と区別する。fresh install後にaudit、Schema/ref/診断/Source/Form/8入口を含む全common検証、packを確認する。一次資料: https://github.com/advisories/GHSA-qw65-cvwx-89v3 および保存した9件のaudit JSON。
