@@ -49,12 +49,14 @@ jobs:
           E2E_BASE_URL: ${{ steps.target.outputs.base_url }}
           E2E_EXPECT_GUI_REVISION: ${{ steps.target.outputs.gui_revision }}
           E2E_EXPECT_CORE_REVISION: ${{ steps.target.outputs.core_revision }}
+          E2E_EXPECT_SITE_REVISION: ${{ steps.target.outputs.site_revision }}
         run: node test/e2e/turbowarp/wait-public.cjs
       - name: Verify public UI and real sb3 roundtrip
         env:
           E2E_BASE_URL: ${{ steps.target.outputs.base_url }}
           E2E_EXPECT_GUI_REVISION: ${{ steps.target.outputs.gui_revision }}
           E2E_EXPECT_CORE_REVISION: ${{ steps.target.outputs.core_revision }}
+          E2E_EXPECT_SITE_REVISION: ${{ steps.target.outputs.site_revision }}
         run: pnpm test:e2e:block-editor
       - name: Preserve public verification evidence
         if: always()

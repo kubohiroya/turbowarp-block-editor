@@ -1,68 +1,64 @@
 # GitHub Pages 公開
 
-対象: [scratch-gui Issue #4](https://github.com/kubohiroya/scratch-gui/issues/4)、[公開経路とE2EのIssue #12](https://github.com/kubohiroya/scratch-gui/issues/12)。
-この文書の `.github/`・`scripts/`・`site/`・`build/` とGUI用コマンドはscratch-guiのルートを基準とします。
-開発の統合先とPagesの公開ソースは、どちらも `develop` です。
-`develop` へのpushで自動公開し、手動公開も同じbranchから実行します。公開用branchへの同期やcherry-pickは不要です。
+公開と運用の正本は共通リポジトリです。[運用Issue #26](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/26) を使用します。
+GUIフォークにはエディターAPIへの接続を置き、サイト・公開用ビルド・Pages・公開E2E起動は共通側が所有します。
 
-## 公開物
+## 公開物と固定ソース
 
-- 入口: `https://kubohiroya.github.io/scratch-gui/`
-- 日本語: `/scratch-gui/ja/`、英語: `/scratch-gui/en/`
-- 拡張版: `/scratch-gui/editor.html?blockEditorDialogs=1`
-- 通常版: `/scratch-gui/editor.html`。機能フラグの既定 OFF は維持。
-- `build-info.json` に GUI と共通 API のリポジトリ・完全 SHA を記録。公開ソースへのリンクと GPL の LICENSE を同梱。
+- 入口: https://kubohiroya.github.io/turbowarp-extension-data-editor/
+- 日本語 `/ja/`、英語 `/en/`、拡張版 `editor.html?blockEditorDialogs=1`、通常版 `editor.html`。
+- `site/source.json` にGUIのrepository/完全SHAと、GUI lockfileで取得するnpm配布物のcore完全SHAを固定します。
+- `build-info.json` の `revision` はGUI SHA、`coreRevision` は実配布物のcore SHA、`siteRevision` はサイト生成・公開を所有する共通SHAです。3つを混同しません。
+- 移行は公開配置だけを変更し、既存npm製品版の差替えや未公開Schema機能の導入は行いません。新しい製品版へ切替えるときはGUI lockfileとcore pinを合わせます。
 
-GitHub Pages は静的配信であり、HTTP Accept-Language をサーバーで交渉する機能は使いません。
-入口の JS は保存した手動選択、navigator.languages の優先順、英語フォールバックの順で日英を選びます。
-各言語は HTML の実体を持ち、言語切替リンクと JavaScript 無効時の入口を提供します。
-エディターの `lang` は既存の言語設定機構へ渡します。エディターで保存した言語設定は上流の優先順位に従います。
+日英の実HTML、言語の手動選択とnavigator.languages、Octocatリンク、本家TurboWarp/Scratchへのクレジットと独自拡張の説明を維持します。
+Pagesは静的配信のため、サーバーのAccept-Language交渉は使いません。フラグ `blockEditorDialogs` は既定OFFです。
+GUIのGPL LICENSEを取得したGUIソースから同梱し、GUIとcoreの公開ソースへの完全SHAリンクを残します。
 
-サンプルは案内ページで同梱のコードをコピーし、カスタム拡張の「テキスト」へ貼り付け、サンドボックスなしで実行することをユーザーが選択します。
-URL の直接読込は上流が未信頼URLに sandbox を強制するため、このサンプルには使いません。コピーできない環境ではソースのテキスト欄を表示します。
-セキュリティマネージャーの信頼するURLや権限確認は変更しません。
+## ビルド
 
-## ビルドと依存
-
-共通APIの固定SHAはscratch-guiの `.github/workflows/pages.yml` のcheckout設定で管理します。通常CIのbuild用checkoutもこのcore SHAへ揃えます。公開E2E runnerとCIゲートは検証ツールとして独立した完全SHAへ固定し、それぞれのworkflow参照とrunner_revisionを一致させます。[webpack設定API](webpack4.md)と[共通E2E・CI手順](block-editor-e2e.md)を参照してください。
-`build:pages` はインストールされた共通APIの `/build-info` から公開元の完全SHAを取得し、`build-info.json` と日英クレジットのソースリンクに使います。依存先にGit checkoutは不要です。metadataが欠落・不正な場合は失敗させ、GUIのSHAを代用しません。
-Actionsは検証手順を所有する共通リポジトリを別途checkoutし、pnpm 11.18.0とNode 22で検証します。GUIはnpm配布物を利用し、そのmetadataのSHAとworkflowの固定SHAが一致することを確認します。
-GUI は npm ci、既存のアセット生成、限定テストの後に `npm run build:pages` を実行します。
+共通ルートで実行します。GUI checkoutは `site/source.json` の完全SHAへ合わせ、依存と上流生成資材を準備します。
 
 ```sh
-ROOT=/scratch-gui/ npm run build:pages
+pnpm install --frozen-lockfile
+cd /absolute/path/scratch-gui
+npm ci --ignore-scripts --no-audit --no-fund
+node scripts/prepublish.mjs
+cd /absolute/path/turbowarp-extension-data-editor
+E2E_GUI_ROOT=/absolute/path/scratch-gui node scripts/site/build.mjs
 ```
 
-このコマンドは生成物 `build/` を作り直し、production のアプリだけをビルドします。UMD ライブラリ配布物 `dist/` は公開しません。
-通常プレイヤーは `player.html` に残し、`index.html` は日英振り分けの入口です。
-`site/` の日英文面と共通CSS、`scripts/generate-pages.mjs` が案内HTMLを生成します。
-Node の旧 OpenSSL 互換設定はビルドスクリプト内で webpack 4 に限定して渡します。
+公開用設定は `scripts/site/webpack.config.cjs` がGUIのブラウザ用設定を選択します。
+`build/` はGUI checkoutの作業領域に生成しますが、GUIへコミットしません。
+案内HTML・言語選択・CSS・公開metadata・favicon選択は共通側の処理です。
 
-## 検証と公開
+## 公開と検証
 
-`npm run test:pages` で優先言語・保存選択・フォールバック、日英 HTML のクレジット、GUI・共通 API のソース SHA の一致と不正 SHA の拒否、フラグ opt-in / 通常版のリンクとサブパスを確認します。
-`npm run test:block-editor` と共通 API テストを実行し、公開URLでもモーダル・検証・保存・キャンセルを確認します。
-サブパスで確認するときは、親ディレクトリに `scratch-gui` として build を置き、静的HTTPサーバーで配信します。
-
-`.github/workflows/pages.yml` は `develop` のpushと手動実行を入口にします。手動実行ではActions画面のbranchに `develop` を選ぶか、次のコマンドを使います。
+共通mainへのpushとmainからの `workflow_dispatch` だけが公開対象です。
+GitHub PagesのsourceはActions、github-pages環境はmain branchだけを許可します。
 
 ```sh
-gh workflow run pages.yml --repo kubohiroya/scratch-gui --ref develop
+gh workflow run pages.yml --repo kubohiroya/turbowarp-extension-data-editor --ref main
 ```
 
-build jobは `github.ref == 'refs/heads/develop'` の場合だけ実行します。他branchやtagからこのガードを持つworkflowを手動起動すると、buildと後続のdeploy・公開後検証はskipします。checkoutと `build-info.json` はイベントのSHAを使い、公開後E2Eにも同じ完全SHAを渡します。checkoutだけを最新developへ固定してSHAをずらさないでください。
+build前とdeploy直前に共通mainの鮮度、固定GUI SHAのdevelop push CI全体の最新attempt成功を確認します。
+GUI CIは公開APIで読み取り、他repoへのtokenやwriteは不要です。実行中・失敗・確認不能なら公開を止めます。
+GUI CIの確認は短い上限で失敗するため、未完了だった場合は成功後に新しい公開runを起動します。
+さらに共通側の同一site SHAの通常CI全体成功を既存ゲートで待ち、最新attemptの失敗・実行中で古い成功を採用しません。
+buildとCIゲートの両方が成功したときだけdeployへ進み、鮮度を再確認します。
+公開jobだけがPages:write/id-token:writeを持ちます。最新attemptテストや公開E2Eへ渡しません。
 
-GitHub Pagesの配信元はGitHub Actionsを維持します。`github-pages` 環境の許可branchは `develop`（type: branch）だけにし、旧 `feat/site/github-pages` とtagは許可しません。ガード導入前のworkflowが残る旧branchの公開も、この環境ルールで拒否します。旧branchを削除する必要はありません。
+公開前と公開後に既存E2E6件を実行します。GUI/core/siteの期待SHAはソースのpinから決め、配信された値を自己採用しません。
+専用エディター起動・validation・保存・cancel・実sb3の書出し/再読込・明暗テーマを検証します。
+手動と月曜11:17 JSTの公開版E2Eは共通 `site-public.yml` が起動します。
+OSネイティブファイル選択は対話可能なmacOSで行う既存手順を維持し、Linux CI成功で代替しません。
 
-公開jobだけが `pages: write` と `id-token: write` を持ちます。build・deploy・公開後E2Eを同じworkflowで順番に実行し、concurrencyの `cancel-in-progress: false` を維持します。これは実行中の公開を維持する設定で、すべてのpending runの実行や最新commitだけの公開を保証するものではありません。
+## 移行とロールバック
 
-通常CIは独立したworkflowのまま実行します。Pagesはbuildの後に共通の[通常CI成功ゲート](ci-success-gate.md)を呼び、同一SHAのdevelop push CI全体が成功した場合だけdeployします。自動・手動とも同じ条件です。ゲート失敗時はdeployと公開後E2Eをskipし、既存の公開物を保持します。CI待機後にも既存のdevelop鮮度チェックを行います。PRのCI成功だけでは公開しません。
-検証対象は今回の公開経路と変更部分です。この公開は実験版で、安定版リリースのフル検証を完了したものではありません。
+新サイトの公開と公開版E2Eが成功してから、GUI側のサイト資材・公開workflowを撤去します。
+旧 `https://kubohiroya.github.io/scratch-gui/` の既存配信は移行中に維持し、公開workflow撤去後は凍結した旧版として扱います。
+旧URLから新URLへの自動redirectを実現したとは扱いません。旧URLの廃止・redirect公開は別の明示判断で行います。
 
-## ロールバック
-
-公開物の切戻しは、`develop` で対象変更をrevertする新しいコミットを作り、同じworkflowで再公開します。古いrunの再実行を通常の切戻し手順にはしません。
-公開元の一本化自体を戻す場合は、環境の旧branch許可を復元し、workflowのbranch条件とガードをrevertしてから、同期済みの旧branchを使って公開します。
-公開を取り消す場合は GitHub Pages の unpublish を実施します。
-拡張 UI だけを外す場合は `blockEditorDialogs=1` なしの通常版を使用します。保存済み JSON は通常引数に残ります。
-本番の既定フラグを ON に変更する前には、回帰結果とロールバックを別タスクで確認します。
+新サイト不具合は共通mainのGUI/core pinを前の検証済み値へ戻し、通常CIとゲート経由で再公開します。
+失敗時にゲートを解除しません。公開を止める場合は共通pages workflowを無効化します。
+GUIのコードと既定OFFの機能フラグ、sb3保存形式には公開配置による変更を加えません。

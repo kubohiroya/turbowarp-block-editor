@@ -13,8 +13,8 @@ pnpm exec playwright install --with-deps chromium
 cd ../scratch-gui
 npm ci --ignore-scripts --no-audit --no-fund
 node scripts/prepublish.mjs
-ROOT=/scratch-gui/ npm run build:pages
 cd ../turbowarp-extension-data-editor
+E2E_GUI_ROOT=/absolute/path/scratch-gui node scripts/site/build.mjs
 E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor
 ```
 
@@ -65,7 +65,7 @@ E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor invalid-theme
 
 `summary.json`には予定／記録件数とテーマ別の成功・失敗・skip件数を出力し、GitHub summaryにもテーマとテスト名を示します。通常実行が6件で明色・暗色を各1件含むことを確認し、意図しないskip・未検出を完了扱いにしません。
 
-公開経路への導入は、共通変更のcommit/push・統合後、GUI側の公開workflowの`uses`と`runner_revision`（通常CI／Pagesの共通action参照も変更する場合はその参照）を同じ新しい完全SHAへ更新する順です。`main`にテストを追加しただけでは、旧runnerに固定された配信後・手動・週次E2Eへ反映されません。実際のPages配信後ジョブでこの2ケースの成功と4枚・JSONのartifactを確認し、Actions URLと両SHAを共通Issue #12へ記録して公開導入を完了とします。 npm版の製品ソースSHAとE2E runnerのSHAは区別します。このテストだけを追加するために製品versionや公開`coreRevision`を書き換えず、期待coreは配信された製品の実ソースに対応させます。
+公開経路は共通側のpages/site-public workflowが所有し、GUI側に公開workflowを置きません。共通mainのworkflowとrunnerを同じ完全SHAで実行します。`main`にテストを追加しただけでは、旧runnerに固定された配信後・手動・週次E2Eへ反映されません。実際のPages配信後ジョブでこの2ケースの成功と4枚・JSONのartifactを確認し、Actions URLと両SHAを共通Issue #12へ記録して公開導入を完了とします。 npm版の製品ソースSHAとE2E runnerのSHAは区別します。このテストだけを追加するために製品versionや公開`coreRevision`を書き換えず、期待coreは配信された製品の実ソースに対応させます。
 
 表示テストだけ切り戻す場合は新spec／fixtureと呼出し参照変更を対でrevertし、直前の確認済みrunnerへ戻します。既存の配信版照合・sb3往復・既定OFFテストを維持し、恒久skipや無条件retryで失敗を隠しません。製品のフラグ・スキーマ・保存形式は変更しません。
 
@@ -88,7 +88,7 @@ Linux CIには対話可能なmacOSデスクトップがないため、ネイテ�
 外部URLの実行にはGUI/coreの完全SHAを必須とする。`build-info.json`から期待値をそのまま自己採用せず、配信元コミットとPages workflowの固定coreを使う。
 
 ```sh
-E2E_BASE_URL=https://kubohiroya.github.io/scratch-gui/ \
+E2E_BASE_URL=https://kubohiroya.github.io/turbowarp-extension-data-editor/ \
 E2E_EXPECT_GUI_REVISION=<GUIの40桁SHA> \
 E2E_EXPECT_CORE_REVISION=<coreの40桁SHA> \
 pnpm test:e2e:block-editor

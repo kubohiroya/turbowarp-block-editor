@@ -32,12 +32,21 @@ const main = async () => {
         }
     }
     if (!sha(revision)) throw new Error('A successful Pages deployment or an explicit full expected SHA is required.');
-    const workflow = await api(`contents/.github/workflows/pages.yml?ref=${revision}`);
-    const core = coreRevision(Buffer.from(workflow.content, 'base64').toString('utf8'));
-    const baseURL = new URL(process.env.PUBLIC_BASE_URL || 'https://kubohiroya.github.io/scratch-gui/');
+    const ownSite = repository === 'kubohiroya/turbowarp-extension-data-editor';
+    let gui = revision, core;
+    if (ownSite) {
+        const file = await api(`contents/site/source.json?ref=${revision}`);
+        const pins = JSON.parse(Buffer.from(file.content, 'base64').toString('utf8'));
+        if (pins.guiRepository !== 'kubohiroya/scratch-gui' || !sha(pins.guiRevision) || !sha(pins.coreRevision)) throw new Error('Invalid site source pins');
+        gui = pins.guiRevision; core = pins.coreRevision;
+    } else {
+        const workflow = await api(`contents/.github/workflows/pages.yml?ref=${revision}`);
+        core = coreRevision(Buffer.from(workflow.content, 'base64').toString('utf8'));
+    }
+    const baseURL = new URL(process.env.PUBLIC_BASE_URL || `https://kubohiroya.github.io/${ownSite ? 'turbowarp-extension-data-editor' : 'scratch-gui'}/`);
     if (baseURL.protocol !== 'https:' || !baseURL.pathname.endsWith('/') || baseURL.search || baseURL.hash ||
         baseURL.username || baseURL.password) throw new Error('Use an HTTPS application root ending with /.');
-    const output = {base_url: baseURL.href, gui_revision: revision, core_revision: core};
+    const output = {base_url: baseURL.href, gui_revision: gui, core_revision: core, site_revision: ownSite ? revision : ''};
     for (const [key, value] of Object.entries(output)) {
         fs.appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${value}\n`);
     }

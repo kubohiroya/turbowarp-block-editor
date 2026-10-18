@@ -52,7 +52,7 @@ runs:
         node -e "const info = require('@kubohiroya/turbowarp-extension-data-editor/build-info'); if (info.revision !== process.env.EXPECTED_CORE_REVISION) throw new Error('Installed editor source does not match the pinned workflow source.');"
         node scripts/prepublish.mjs
         npm run test:block-editor
-        npm run test:pages
+        node --test ../turbowarp-extension-data-editor/test/site/*.test.cjs
     - name: Verify upstream addon tests
       if: inputs.mode == 'ci'
       shell: bash
@@ -68,7 +68,7 @@ runs:
         NODE_OPTIONS: --openssl-legacy-provider --max-old-space-size=6144
       run: |
         if [ "$CHECK_MODE" = pages ]; then
-          ROOT=/scratch-gui/ npm run build:pages
+          E2E_GUI_ROOT="$PWD" ROOT=/scratch-gui/ node ../turbowarp-extension-data-editor/scripts/site/build.mjs
         elif [ "$E2E_SELECTED" = true ]; then
           ROOT=/scratch-gui/ NODE_ENV=production npm run build
           E2E_GUI_ROOT="$PWD" node ../turbowarp-extension-data-editor/test/e2e/turbowarp/prepare-build.cjs

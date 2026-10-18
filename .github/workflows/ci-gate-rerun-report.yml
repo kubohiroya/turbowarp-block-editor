@@ -1,4 +1,4 @@
-name: Verify and report scheduled CI attempts
+name: Verify scheduled CI attempts
 on:
   workflow_run:
     workflows: [Test latest CI attempts without publishing]
@@ -10,10 +10,6 @@ on:
         description: Actual scheduled source run ID
         type: string
         required: true
-      dry_run:
-        description: Verify without posting an Issue comment
-        type: boolean
-        default: true
 permissions:
   contents: read
   actions: read
@@ -52,23 +48,19 @@ jobs:
           name: ci-weekly-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: test-results/ci-weekly-report/
           retention-days: 7
-      - name: Explain publication state
+      - name: Explain reporting scope
         if: always()
-        env:
-          ENABLED: ${{ vars.CI_RERUN_REPORT_ENABLED }}
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
         run: |
-          if [ "$ENABLED" != 'true' ] || [ "$DRY_RUN" = 'true' ]; then
-            echo 'Issue publication is disabled or dry-run; verification artifacts are preserved.' >> "$GITHUB_STEP_SUMMARY"
-          fi
-  report:
+          echo 'Verification is read-only. A separate opt-in job records results in the common operations Issue.' >> "$GITHUB_STEP_SUMMARY"
+  record:
     needs: verify
-    if: >-
-      always() && needs.verify.outputs.eligible == 'true' &&
-      vars.CI_RERUN_REPORT_ENABLED == 'true' &&
-      (github.event_name == 'workflow_run' || !inputs.dry_run)
+    if: always() && needs.verify.outputs.eligible == 'true' && vars.CI_RERUN_REPORT_ENABLED == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
+      actions: read
+      issues: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -81,17 +73,14 @@ jobs:
         with:
           name: ci-weekly-report-${{ github.run_id }}-${{ github.run_attempt }}
           path: verified-report
-      - name: Post once with an Issues-only dedicated App
+      - name: Record in this repository's operations Issue
         env:
           GH_TOKEN: ${{ github.token }}
           CI_RERUN_REPORT_ENABLED: ${{ vars.CI_RERUN_REPORT_ENABLED }}
-          REPORT_DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-          CI_REPORT_APP_ID: ${{ vars.CI_REPORT_APP_ID }}
-          CI_REPORT_APP_PRIVATE_KEY: ${{ secrets.CI_REPORT_APP_PRIVATE_KEY }}
-        run: node scripts/ci/report-weekly-ci.mjs publish
+        run: node scripts/ci/post-local-report.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: ci-weekly-publication-${{ github.run_id }}-${{ github.run_attempt }}
-          path: test-results/ci-weekly-report/
+          path: test-results/ci-weekly-publication/
           retention-days: 7

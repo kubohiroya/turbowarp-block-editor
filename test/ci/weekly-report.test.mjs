@@ -1,12 +1,10 @@
 import assert from 'node:assert/strict';
 import {test} from 'node:test';
 import {readFileSync} from 'node:fs';
-import {generateKeyPairSync, verify} from 'node:crypto';
 import YAML from 'yaml';
 import {captureGUI, compareGUI, guiRepository} from '../../scripts/ci/gui-snapshot.mjs';
 import {repository, fixtureFile, probeFile, scenarios} from '../../scripts/ci/assert-rerun-probe.mjs';
-import {verifyWeekly, checkPermissions, commentBody, postOnce, publishReport, appSession,
-    requestAPI, evidenceAPI, pages, driverFile, issuePath} from '../../scripts/ci/report-weekly-ci.mjs';
+import {verifyWeekly, checkPermissions, commentBody, requestAPI, evidenceAPI, driverFile} from '../../scripts/ci/report-weekly-ci.mjs';
 
 const revision = 'a'.repeat(40), reporterSha = 'b'.repeat(40);
 const date = n => new Date(1_800_000_000_000 + n * 1000).toISOString();
@@ -80,7 +78,7 @@ test('a genuine completed schedule is independently verified with exact artifact
     assert.equal(result.gui.comparison, 'unchanged'); assert.equal(result.observers.length, 4);
     assert.equal(h.freshReads(), 2);
     assert.match(commentBody(result), /ci-weekly-report:10:1/);
-    assert.match(commentBody(result), /専用GitHub App/);
+    assert.match(commentBody(result), /検証結果の草案/);
 });
 
 test('GUI changes are reported distinctly without attributing them to the test', async () => {
@@ -159,42 +157,6 @@ test('public GUI snapshots do not receive credentials and API failures stay unav
     assert.equal((await captureGUI({fetchImpl: async () => {throw new Error('secret');}})).status, 'unavailable');
 });
 
-test('comment pagination and lost POST response do not create duplicate comments', async () => {
-    const report = await fixture().execute(); let posts = 0, stored;
-    const api = async (path, method, payload) => {
-        if (method === 'POST') {
-            posts++; assert.equal(path, issuePath); stored = {id: 987, body: payload.body,
-                user: {login: 'weekly-reporter[bot]', type: 'Bot'}}; throw new Error('lost response');
-        }
-        const page = new URL(`https://api.github.com${path}`).searchParams.get('page');
-        return page === '1' ? Array.from({length: 100}, (_, id) => ({id, body: 'other'})) : stored ? [stored] : [];
-    };
-    assert.equal((await postOnce(report, api, 'weekly-reporter[bot]')).status, 'already-posted');
-    assert.equal((await postOnce(report, api, 'weekly-reporter[bot]')).id, 987); assert.equal(posts, 1);
-    await assert.rejects(pages(async () => ({jobs: [], total_count: 1}), '/repos/a/b/jobs', 'jobs'), /Incomplete/);
-});
-
-test('uncertain posting never blindly retries POST, including 403 failures', async () => {
-    let posts = 0;
-    await assert.rejects(postOnce(await fixture().execute(), async (_path, method) => {
-        if (method === 'POST') {posts++; throw new Error('403');} return [];
-    }, 'weekly-reporter[bot]'), /no automatic second POST/);
-    assert.equal(posts, 1);
-});
-
-test('publication rechecks the latest source attempt before acquiring the App credential', async () => {
-    const h = fixture(), report = await h.execute(); h.root.run_attempt = 2;
-    await assert.rejects(publishReport(report, {api: h.api, session: async () => {assert.fail('must not mint');}}));
-});
-
-test('publication always revokes the short-lived App token, including post failure', async () => {
-    const h = fixture(), report = await h.execute(); let revoked = false;
-    await assert.rejects(publishReport(report, {api: h.api, session: async () => ({
-        api: async () => {throw new Error('403');}, botLogin: 'weekly-reporter[bot]', revoke: async () => {revoked = true;}
-    })}));
-    assert.equal(revoked, true);
-});
-
 test('signed downloads never forward tokens; errors never expose API responses', async () => {
     const calls = [];
     const api = requestAPI('secret', async (url, options) => {
@@ -202,13 +164,13 @@ test('signed downloads never forward tokens; errors never expose API responses',
         return calls.length === 1 ? {status: 302, headers: new Headers({location: 'https://storage.example/log'})} :
             {ok: true, arrayBuffer: async () => new TextEncoder().encode('proof').buffer};
     });
-    assert.equal(await api.download('/repos/a/b/log'), 'proof');
+    assert.equal(await api.download(`/repos/${repository}/log`), 'proof');
     assert.equal(calls[0].options.headers.Authorization, 'Bearer secret');
     assert.equal(calls[1].options.headers, undefined);
-    await assert.rejects(requestAPI('secret', async () => {throw new Error('secret');})('/repos/a/b'),
+    await assert.rejects(requestAPI('secret', async () => {throw new Error('secret');})(`/repos/${repository}/test`),
         error => !error.message.includes('secret'));
     await assert.rejects(requestAPI('secret', async () => ({status: 302,
-        headers: new Headers({location: 'http://storage.example'})})).download('/repos/a/b'), /Unsafe/);
+        headers: new Headers({location: 'http://storage.example'})})).download(`/repos/${repository}/test`), /Unsafe/);
 });
 
 test('artifact downloads require one exact unexpired source artifact and read JSON without extraction', async () => {
@@ -233,53 +195,61 @@ test('artifact downloads require one exact unexpired source artifact and read JS
     }
 });
 
-const {privateKey, publicKey} = generateKeyPairSync('rsa', {modulusLength: 2048});
-test('App JWT and issued token are scoped to GUI Issues only; extra permissions are refused and revoked', async () => {
-    for (const bad of ['', 'installation', 'token', 'repository', 'expired']) {
-        const calls = [];
-        const fetchImpl = async (url, options) => {
-            const path = new URL(url).pathname; calls.push({path, options});
-            const permissions = {issues: 'write', metadata: 'read'};
-            let value;
-            if (path.endsWith('/installation')) {
-                const jwt = options.headers.Authorization.slice(7).split('.');
-                assert.ok(verify('RSA-SHA256', Buffer.from(jwt.slice(0, 2).join('.')), publicKey, Buffer.from(jwt[2], 'base64url')));
-                const payload = JSON.parse(Buffer.from(jwt[1], 'base64url'));
-                assert.equal(payload.iss, '123'); assert.equal(payload.iat, 1799999940); assert.equal(payload.exp, 1800000540);
-                value = {id: 7, app_id: 123, app_slug: 'weekly-reporter', repository_selection: 'selected',
-                    permissions: {...permissions, ...(bad === 'installation' ? {contents: 'write'} : {})}};
-            } else if (path.endsWith('/access_tokens')) {
-                assert.deepEqual(JSON.parse(options.body), {repositories: ['scratch-gui'], permissions: {issues: 'write'}});
-                value = {token: 'app-token', permissions: {...permissions, ...(bad === 'token' ? {pages: 'write'} : {})},
-                    repositories: [{full_name: bad === 'repository' ? 'other/repo' : guiRepository}],
-                    expires_at: date(bad === 'expired' ? -1 : 3600)};
-            } else if (path === '/installation/repositories') value = {total_count: 1, repositories: [{full_name: guiRepository}]};
-            else if (path === '/installation/token') return {ok: true, status: 204};
-            else assert.fail(path);
-            return {ok: true, status: 200, json: async () => value};
-        };
-        const options = {fetchImpl, now: () => 1_800_000_000_000};
-        if (bad) {
-            await assert.rejects(appSession('123', privateKey, options));
-            assert.equal(calls.some(c => c.path === '/installation/token'), bad !== 'installation');
-        } else {const session = await appSession('123', privateKey, options); await session.revoke();}
-    }
-});
-
-test('workflow separates read-only verification from App credentials and defaults publication off', () => {
+test('workflow retains read-only verification without App or Issue publication', () => {
     const w = YAML.parse(readFileSync(new URL('../../.github/workflows/ci-gate-rerun-report.yml', import.meta.url), 'utf8'));
     assert.deepEqual(w.on.workflow_run, {workflows: ['Test latest CI attempts without publishing'], types: ['completed'], branches: ['main']});
-    assert.equal(w.on.workflow_dispatch.inputs.dry_run.default, true);
+    assert.deepEqual(Object.keys(w.jobs), ['verify', 'record']);
+    assert.deepEqual(w.jobs.record.permissions, {contents: 'read', actions: 'read', issues: 'write'});
+    assert.deepEqual(Object.keys(w.on.workflow_dispatch.inputs), ['run_id']);
     assert.deepEqual(w.permissions, {contents: 'read', actions: 'read'});
-    assert.doesNotMatch(JSON.stringify(w.jobs.verify), /secrets\.|PRIVATE_KEY|CI_REPORT_APP_ID/);
-    assert.match(w.jobs.report.if, /CI_RERUN_REPORT_ENABLED == 'true'/);
-    assert.match(w.jobs.report.if, /always\(\)/);
-    assert.equal(w.jobs.report.needs, 'verify');
+    assert.doesNotMatch(JSON.stringify(w), /secrets\.|PRIVATE_KEY|CI_REPORT_APP/);
+    assert.doesNotMatch(JSON.stringify(w.jobs), /publish/);
     for (const job of Object.values(w.jobs)) {
-        assert.equal(job.environment, undefined); assert.equal(job.permissions, undefined);
+        assert.equal(job.environment, undefined);
+        assert.equal((job.permissions || w.permissions).pages, undefined);
+        assert.equal((job.permissions || w.permissions)['id-token'], undefined);
         assert.doesNotMatch(JSON.stringify(job), /deploy-pages|npm publish|secrets: inherit/);
         for (const step of job.steps.filter(s => s.uses?.startsWith('actions/checkout'))) {
             assert.equal(step.with.ref, '${{ github.sha }}'); assert.equal(step.with['persist-credentials'], false);
         }
     }
+});
+
+
+test('the reader uses only GET and refuses other repositories or App endpoints', async () => {
+    const calls = [];
+    const api = requestAPI('read-token', async (url, options) => {
+        calls.push({url, options}); return {ok: true, status: 200, json: async () => ({ok: true})};
+    });
+    await api(`/repos/${repository}/actions/runs/10`, 'POST', {body: 'ignored'});
+    assert.equal(calls[0].options.method, 'GET');
+    assert.equal(calls[0].options.body, undefined);
+    await assert.rejects(api('/repos/kubohiroya/scratch-gui/issues/12/comments'));
+    await assert.rejects(api('/app/installations/1/access_tokens'));
+    assert.equal(calls.length, 1);
+});
+
+
+test('same-repository reporting needs no App and writes only the approved operations Issue once', async () => {
+    const {postLocalReport, issuePath} = await import('../../scripts/ci/post-local-report.mjs');
+    const h = fixture(), report = await h.execute(); let stored, posts = 0;
+    const env = {GITHUB_REPOSITORY: repository, GITHUB_REF: 'refs/heads/main',
+        GITHUB_SHA: reporterSha, CI_RERUN_REPORT_ENABLED: 'true', GH_TOKEN: 'own-issue-token'};
+    const fetchImpl = async (url, options) => {
+        const path = new URL(url).pathname;
+        if (options.method === 'POST') {
+            assert.equal(path, issuePath); posts++;
+            stored = {id: 55, body: JSON.parse(options.body).body, user: {login: 'github-actions[bot]', type: 'Bot'}};
+            throw new Error('lost response');
+        }
+        return {ok: true, status: 200, json: async () => path.endsWith('/runs/10') ? h.root : stored ? [stored] : []};
+    };
+    assert.equal((await postLocalReport(report, env, {fetchImpl})).status, 'already-posted');
+    assert.equal((await postLocalReport(report, env, {fetchImpl})).id, 55); assert.equal(posts, 1);
+    assert.equal(issuePath, `/repos/${repository}/issues/26/comments`);
+    h.root.run_attempt = 2;
+    await assert.rejects(postLocalReport(report, env, {fetchImpl}));
+    await assert.rejects(postLocalReport(report, {...env, CI_RERUN_REPORT_ENABLED: ''}, {fetchImpl}));
+    await assert.rejects(postLocalReport(report, {...env, GITHUB_REPOSITORY: guiRepository}, {fetchImpl}));
+    assert.equal(posts, 1);
 });

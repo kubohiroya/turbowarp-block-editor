@@ -1,56 +1,33 @@
 # 通常CI成功ゲート
 
-対象: [scratch-gui Issue #12](https://github.com/kubohiroya/scratch-gui/issues/12)。
-GUI側は `.github/workflows/pages.yml` の共通workflow呼出しと `deploy.needs: [build, ci-gate]` を持ちます。
-API判定・待機・証跡・境界テストはこの共通リポジトリが所有します。アプリ配布版、build用core SHA、公開E2E runnerは変更不要です。
+公開・検証の正本: [共通Issue #26](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/26)。
+共通 `.github/workflows/pages.yml` がbuild、CIゲート、deploy、公開後E2Eを所有します。
+GUIフォークには公開用workflowを置きません。
 
-## 呼出しAPI
+## 公開条件
 
-`require-successful-ci.yml` の参照と `runner_revision` を同一の共通側完全SHAへ固定します。
+- 共通mainのイベントSHAとサイト成果物のsiteRevisionを一致させます。
+- 共通 `ci.yml` のmain push CI全体が同一SHAでcompleted/successの場合だけ公開します。
+- ゲートはcaller自身のrepoの標準tokenを利用し、repo/head repo、workflow ID、event、branch、完全SHAを照合します。
+- 一致する最新run番号と詳細APIの最新attemptを確認。queued/実行中は15秒間隔、全体30分上限で待機します。
+- 失敗・cancel・timeout・skip・不完全なAPI・権限不足は拒否し、古い成功を代用しません。
+- ゲート自身にCI起動・再実行・承認・cancel・Pages権限はありません。
+- `normal-ci-gate-<run id>-<attempt>` のdecision.jsonとsummaryに採用SHA/run/attempt/観測時刻/理由を保存します。
 
-```yaml
-ci-gate:
-  needs: build
-  if: github.ref == 'refs/heads/develop'
-  permissions:
-    contents: read
-    actions: read
-  uses: kubohiroya/turbowarp-extension-data-editor/.github/workflows/require-successful-ci.yml@<full-tooling-SHA>
-  with:
-    runner_revision: <full-tooling-SHA>
-    expected_revision: ${{ needs.build.outputs.revision }}
-    workflow_file: node.js.yml
-    branch: develop
-    event: push
-```
-
-`expected_revision` は検証済みPages成果物の完全SHAです。共通workflowはcaller自身の `github.repository` と `github.token` を使い、指定workflowファイルをAPIでIDへ解決します。異なるrepoの成功で代用できません。
-必要権限は `contents: read` と `actions: read` だけです。ゲートはCIを起動・承認・再実行・cancelしません。
-共通ツールだけをcheckoutし、Node 22で実行します。依存のinstallやアプリの再buildは不要です。
-
-## 公開条件と証跡
-
-- repo/head repo、workflow ID、event、branch、完全SHAがすべて一致するworkflow runの最新run番号を採用し、詳細APIで最新attemptを確認します。
-- workflow全体の `status=completed` / `conclusion=success` だけを許可します。古い成功、PR CI、Pages自身、同名checkは代用しません。
-- 未登録・queued・実行中は15秒間隔、全体30分上限（job35分）で待機します。失敗・cancel・timeout・skip・不正状態・不完全な一覧・API障害/権限不足は拒否します。API障害をsuccess扱いするfallbackはありません。
-- success直前に再度一覧と詳細を確認します。CI状態の照合とdeployは完全には原子的にできません。採用run/attemptと観測時刻を保存します。
-- summaryと `normal-ci-gate-<run id>-<attempt>` artifactの `decision.json` に判断・SHA・CI ID/URL/attempt・conclusion・理由を残します。tokenやAPIエラー本文は出力しません。
-- deployはbuildとゲートのsuccessに依存し、deploy直前にGUIの既存develop鮮度ガードを再実行します。公開jobに `always()` を付けないでください。
-
-自動・手動Pagesの条件は同じです。未登録のCIを手動公開で迂回できません。
-ゲート失敗時はdeployと公開後E2Eがskipし、前の公開物を保持します。これはUIテスト失敗とは区別します。
-公開後E2E6件と手動/週次チェックは既存のままです。期待SHA省略時は成功したPages deploymentを選び、未公開のdevelop先端は採用しません。
+公開jobはbuildとgateのsuccessに依存し、直前に共通main鮮度と固定GUI SHAのCI成功を再確認します。
+GUI CIの読取りは `scripts/site/source.mjs` が同じ判定本体を利用します。
+公開APIだけを使い、未完了や確認不能なら短い上限で拒否します。
+PagesやE2E自身を通常CIの代用にせず、公開後E2E失敗と公開前の抑止を区別します。
+同一SHA確認とdeployは原子的ではないため、観測時刻と最終鮮度確認を残します。
 
 ## 検証・ロールバック
 
-ローカル境界テスト: `node --test test/ci/*.test.mjs`。通常CIでも実行します。
-実APIでの成功/失敗と後続jobのskipは、共通側の手動workflow `ci-gate-probe.yml` で検証します。
-`expected_revision` とそのpush CIの `branch`、期待する `expect`（failure/success）を指定します。
-probe自身にPages/OIDC/write権限やdeploy処理はありません。実CIが失敗するとgateがfailure、publish-sentinelがskipped、assert-suppressionがsuccessになります。workflow全体のfailureは期待された負の対照です。
-
-失敗fixtureが必要な場合は、この共通repoの独立した一時branchに限り `ci.yml` をread-only・`exit 1` のCIへ変更してpushします。そのCIの失敗を確認後、mainのprobeから同じbranch/SHAを検証します。main/developや実公開用workflowを故意に壊さず、証跡保存後に一時branchを削除します。
-
-rollbackはGUIのci-gate呼出しとdeployのneedsだけをrevertします。確認不能時に自動解除しません。既定OFFのアプリ機能と保存形式には影響しません。公開後E2E失敗時の既存切戻しは[Pages運用](github-pages.md)を参照してください。
+境界テストは `node --test test/ci/*.test.mjs`、サイト入口は `node --test test/site/*.test.cjs`。
+既存の `ci-gate-probe.yml` は読み取り専用ゲートと公開代替sentinelを検証します。
+意図した負の対照ではgate=failure、sentinel=skipped、assert=successが期待値です。
+実公開を故意に壊さず、隔離fixtureだけを使います。
+rollbackは公開workflow停止、または前の検証済みサイト設定へrevertしてCI経由で再公開します。
+確認不能を理由にgateを解除しません。[Pages運用](github-pages.md)を参照してください。
 
 ## 最新attemptの自動実検証
 
@@ -94,68 +71,28 @@ observerの `assert-probe` がゲートのJSON artifactを読み、fixture run I
 
 週次設定のrollbackはcronとschedule許可の追加分をrevertし、手動のみへ戻します。自動テスト全体を止める場合は統括workflowを無効化します。GUIの固定SHA、アプリ配布版、公開ゲートの運用は変更不要です。
 
-## 真正scheduleの検証・Issueへの自動報告
+## 真正scheduleの独立検証と運用記録
 
-`ci-gate-rerun-report.yml` は統括の完了を `workflow_run: completed` で受け、
-元runのeventが `schedule` の場合だけ検証・報告します。報告側のeventは
-`workflow_run` であり、手動テストをscheduleとして扱いません。
-報告コードはdefault branchの完全SHAを使い、元runのコードやartifact内のプログラムを実行しません。
+`ci-gate-rerun-report.yml` は統括の完了をworkflow_runで受け、元runのevent=schedule、
+親/子artifact、最新attempt、実権限、GUI/サイトの前後観測を独立に検証します。
+手動runはineligibleとし、真正schedule成功に置き換えません。
+verifyはcontents:read/actions:readのみ。結果はsummary/report.jsonに7日間保存します。
+失敗と証跡不足を区別し、API障害を成功へ変換しません。
 
-verify jobは `contents: read` / `actions: read` だけで、親・子artifact、APIの最新attempt、
-実トークン権限、対象SHAのworkflow定義を照合します。統括はGUIのdevelop SHA、Pages deployment、
-公開build-infoを無認証で開始前・終了後に読み、証跡へ保存します。
-2時点の値が異なる場合は並行変更の可能性を明記し、不変やテストによる変更を断定しません。
-観測不能・証跡不足・期限切れ・最新attemptの実行中・API障害を成功に変換しません。
-親suiteが失敗した場合と、suiteは成功しても独立検証が完了しない場合も区別します。
-
-投稿は別jobで、既定OFFです。共通側の `GITHUB_TOKEN` ではGUIのIssueへ書き込めないため、
-専用GitHub Appを利用します。Appの設定・インストールはアカウント所有者が行ってください。
-
-1. [App作成画面](https://github.com/settings/apps/new)で専用Appを作成。Homepage URLには共通repoのURLを使えます。
-   WebhookのActiveを外し、Repository permissionsは **Issues: Read and writeだけ**を選びます。
-   Account/Organization permissionsは追加しません。通常のMetadata: ReadはGitHubが付与します。
-2. Appを自分のアカウントにインストールし、Only select repositoriesで **scratch-guiだけ**を選びます。
-3. 共通repositoryのActions variable `CI_REPORT_APP_ID` に数値のApp IDを設定します。
-   Client IDではなくApp IDを使います。
-4. Generate a private keyで作成したPEMを、共通repositoryのActions secret
-   `CI_REPORT_APP_PRIVATE_KEY` に設定します。鍵をチャット・Issue・ログへ貼り付けないでください。
-5. dry-runの検証後、共通Actions variable **`CI_RERUN_REPORT_ENABLED=true`** で投稿を有効にします。
-   未設定・他の値はOFFです。認証不足で投稿が失敗しても元のテスト成功と同一視しません。
-
-report jobだけがAppの鍵を受け取り、JWTで短命tokenを発行します。
-App installationの権限そのものと、発行したtokenのpermissions/repositories/期限を検査します。
-GUIだけ・Issues:write/Metadata:read以外を拒否し、利用後にtokenを失効させます。
-Contents/Pages/Deployments/Actions等のwriteやOIDCは不要です。
-Issues権限はrepository単位であり、#12だけに制限するGitHubの権限ではありません。
-コードが投稿先を `kubohiroya/scratch-gui#12` と固定し、Issueのclose/label/assignee操作はしません。
-コメントはApp名義の定型自動報告で、run ID/attemptのマーカーと直列実行、全ページ検索で重複を抑止します。
-POST応答が失われた場合は再読し、無条件の再POSTは行いません。
-sourceの最新attemptは投稿直前にも確認しますが、確認と投稿はGitHub API上で原子的ではありません。
-
-### 実行確認と後追い
+運用記録先を同repoのIssue #26へ移したため、専用GitHub App・PAT・秘密鍵は不要です。
+別jobの標準GITHUB_TOKENにIssues:writeを付け、固定された同repo Issueへ定型記録します。
+投稿jobにPages/OIDCやコードwriteを付けず、GUIのIssueへは書き込みません。
+CI_RERUN_REPORT_ENABLED未設定はOFF。導入検証後に共通Actions variableをtrueにします。
+元run/attemptとreporter SHAを照合して投稿直前に最新attemptを再確認し、
+マーカー・全ページ検索・直列実行で重複を抑止します。POST応答が失われたら再読し、再POSTしません。
 
 ```sh
 gh workflow run ci-gate-rerun-report.yml \
   --repo kubohiroya/turbowarp-extension-data-editor --ref main \
-  -f run_id=<actual-scheduled-run-id> -F dry_run=true
+  -f run_id=<actual-scheduled-run-id>
 ```
 
-元runが手動起動なら `ineligible` として投稿しません。
-真正scheduleのrunがまだなければ、その検証成功と実投稿は未確認として残します。
-実際のschedule runの確認後に `dry_run=false` で後追い投稿できます（投稿フラグとApp設定も必要）。
-report workflowを初回scheduleの終了後に導入した場合にも利用できます。
-
-`ci-weekly-report-<report-run-id>-<attempt>` の `report.json` に判定、検証段階、元run、
-reporter SHA、GUI観測値、4 observerへの参照を7日間保存します。
-verifyはAppの秘密を受け取らず、report側では投稿結果ID/状態だけを別artifactへ保存します。
-失敗・cancelの週次runも報告対象ですが、setupが完了しなかった等で実権限を確認できなければ
-`unconfirmed` とし、検証できたとは書きません。
-
-完了イベントだけでは、週次run自体の未起動や完了しないrunを検出できません。
-未起動監視cronは別段階です。既存のローカル確認予約は、真正scheduleと実投稿の動作確認後に停止します。
-rollbackは投稿フラグOFF、必要ならreport workflow無効化とApp設定・秘密鍵失効です。
-統括の週次テスト、GUI、Pages、既存の公開版E2Eに変更は不要です。
-
-対象テストは `node --test test/ci/weekly-report.test.mjs`、既存境界との統合確認は
-`node --test test/ci/*.test.mjs` です。元runの誤identity・最新attemptの変化、
-過剰権限、証跡不足、GUI変更、投稿の重複/成否不明、AppのJWT/権限/期限/失効を確認します。
+完了イベントだけでは未起動／永久待機は検出しません。未起動監視は別段階です。
+GUI前後観測は2時点だけで、途中の変更・復元を検出したとは主張しません。
+App案は撤回し、Appの作成・インストール・秘密鍵の登録は行いません。
+rollbackは投稿変数OFF、必要ならreport workflow停止。週次suite・GUI・Pagesは維持します。

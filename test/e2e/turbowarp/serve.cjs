@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 
 const root = path.join(require('./gui-root.cjs')(), 'build');
-const prefix = '/scratch-gui/';
+const prefix = process.env.E2E_PATH_PREFIX || '/scratch-gui/';
 if (!fs.existsSync(path.join(root, 'build-info.json'))) {
     throw new Error('Build the Pages application first: ROOT=/scratch-gui/ npm run build:pages');
 }

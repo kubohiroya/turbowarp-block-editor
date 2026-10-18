@@ -13,9 +13,9 @@ const main = async () => {
         {cwd: root, encoding: 'utf8'}).trim();
     const hostRequire = createRequire(path.join(root, 'package.json'));
     const {revision: coreRevision} = hostRequire('@kubohiroya/turbowarp-extension-data-editor/build-info');
-    const {generatePages} = await import(pathToFileURL(path.join(root, 'scripts/generate-pages.mjs')).href);
+    const {generatePages} = await import(pathToFileURL(path.resolve(__dirname, '../../../scripts/site/generate-pages.mjs')).href);
     await fs.rename(path.join(output, 'index.html'), path.join(output, 'player.html'));
-    await generatePages(output, revision, coreRevision);
+    await generatePages(output, revision, coreRevision, {licensePath: path.join(root, 'LICENSE')});
 };
 if (require.main === module) {
     main().catch(error => {
