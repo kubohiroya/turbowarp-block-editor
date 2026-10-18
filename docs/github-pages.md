@@ -1,10 +1,9 @@
 # GitHub Pages 公開
 
-対象: [scratch-gui Issue #4](https://github.com/kubohiroya/scratch-gui/issues/4)。
+対象: [scratch-gui Issue #4](https://github.com/kubohiroya/scratch-gui/issues/4)、[公開経路とE2EのIssue #12](https://github.com/kubohiroya/scratch-gui/issues/12)。
 この文書の `.github/`・`scripts/`・`site/`・`build/` とGUI用コマンドはscratch-guiのルートを基準とします。
-開発の統合先は `develop`、Pages の公開ソースは `feat/site/github-pages` です。
-公開ブランチの YAML 互換・初版受け入れ修正・Pages 配信機構を `develop` に統合しています。
-Pages の自動配信は公開ソース branch の push で実行します。`develop` の変更を配信する際は、公開ソースへ反映した上で同じ workflow を使います。
+開発の統合先とPagesの公開ソースは、どちらも `develop` です。
+`develop` へのpushで自動公開し、手動公開も同じbranchから実行します。公開用branchへの同期やcherry-pickは不要です。
 
 ## 公開物
 
@@ -45,13 +44,25 @@ Node の旧 OpenSSL 互換設定はビルドスクリプト内で webpack 4 に�
 `npm run test:block-editor` と共通 API テストを実行し、公開URLでもモーダル・検証・保存・キャンセルを確認します。
 サブパスで確認するときは、親ディレクトリに `scratch-gui` として build を置き、静的HTTPサーバーで配信します。
 
-`.github/workflows/pages.yml` は公開ソース branch の push と手動実行を入口にします。
-GitHub Pages の配信元は GitHub Actions。公開 job だけが `pages: write` と `id-token: write` を持ちます。
+`.github/workflows/pages.yml` は `develop` のpushと手動実行を入口にします。手動実行ではActions画面のbranchに `develop` を選ぶか、次のコマンドを使います。
+
+```sh
+gh workflow run pages.yml --repo kubohiroya/scratch-gui --ref develop
+```
+
+build jobは `github.ref == 'refs/heads/develop'` の場合だけ実行します。他branchやtagからこのガードを持つworkflowを手動起動すると、buildと後続のdeploy・公開後検証はskipします。checkoutと `build-info.json` はイベントのSHAを使い、公開後E2Eにも同じ完全SHAを渡します。checkoutだけを最新developへ固定してSHAをずらさないでください。
+
+GitHub Pagesの配信元はGitHub Actionsを維持します。`github-pages` 環境の許可branchは `develop`（type: branch）だけにし、旧 `feat/site/github-pages` とtagは許可しません。ガード導入前のworkflowが残る旧branchの公開も、この環境ルールで拒否します。旧branchを削除する必要はありません。
+
+公開jobだけが `pages: write` と `id-token: write` を持ちます。build・deploy・公開後E2Eを同じworkflowで順番に実行し、concurrencyの `cancel-in-progress: false` を維持します。これは実行中の公開を維持する設定で、すべてのpending runの実行や最新commitだけの公開を保証するものではありません。
+
+通常CIは独立したworkflowで、Pagesはその全体の完了を待ちません。Pages自身の関連テスト・build・実sb3 E2Eが成功してからdeployしますが、通常CIのaddonテスト成功までを公開条件にはしていません。PRの必要CIを確認してからdevelopへマージしてください。branch保護やCI全体をdeploy条件にする構成は別途管理します。
 検証対象は今回の公開経路と変更部分です。この公開は実験版で、安定版リリースのフル検証を完了したものではありません。
 
 ## ロールバック
 
-公開物の切戻しは、公開ソースの直前の正常コミットへ戻すコミットを作り、同じ workflow で再デプロイします。
+公開物の切戻しは、`develop` で対象変更をrevertする新しいコミットを作り、同じworkflowで再公開します。古いrunの再実行を通常の切戻し手順にはしません。
+公開元の一本化自体を戻す場合は、環境の旧branch許可を復元し、workflowのbranch条件とガードをrevertしてから、同期済みの旧branchを使って公開します。
 公開を取り消す場合は GitHub Pages の unpublish を実施します。
 拡張 UI だけを外す場合は `blockEditorDialogs=1` なしの通常版を使用します。保存済み JSON は通常引数に残ります。
 本番の既定フラグを ON に変更する前には、回帰結果とロールバックを別タスクで確認します。
