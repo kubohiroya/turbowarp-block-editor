@@ -1,4 +1,4 @@
-import {toValidationIssues} from '@kubohiroya/turbowarp-extension-data-editor/schema';
+import {compileSchemaBundle, toValidationIssues} from '@kubohiroya/turbowarp-extension-data-editor/schema';
 import type {
   ValidationIssue, NonEmpty, JsonPointer, SchemaDialect, SchemaJsonValue, SchemaJsonObject,
   SchemaDocument, JsonSettings, SchemaIdentity, SchemaSourceReference, SchemaProvenance,
@@ -136,7 +136,6 @@ export const undefinedSettings: SchemaValidationContext<{n?: string}> = {consume
 export const undefinedTuple: SchemaValidationContext<Settings> = {consumerId: 'c', nowMs: 0, settings: {delegate: true, pair: [1, undefined]}};
 // @ts-expect-error Generic inference must not admit functions into settings.
 validateSchemaInput(compiled, object, {context: {consumerId: 'c', nowMs: 0, settings: {f: () => 1}}});
-// @ts-expect-error The new engine is not exported in S1-1.
-import {compileSchemaBundle} from '@kubohiroya/turbowarp-extension-data-editor/schema';
+export const checkedBundle: SchemaCompileResult = compileSchemaBundle(bundle);
 // @ts-expect-error The composition implementation is not exported in S1-1.
 import {validateSchemaInput as unpublishedComposition} from '@kubohiroya/turbowarp-extension-data-editor/schema';

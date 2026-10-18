@@ -37,8 +37,8 @@ test('built JavaScript and declarations match source emission hashes', () => {
   }
 });
 
-test('adds only the pure schema runtime API, without exposing future engine functions', () => {
-  assert.deepEqual(Object.keys(schema), ['toValidationIssues']);
+test('exports the implemented pure engine and bridge without future owner composition', () => {
+  assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'toValidationIssues']);
   assert.deepEqual(schema.toValidationIssues([]), []);
 });
 
@@ -82,19 +82,31 @@ test('the schema JS and declarations work in an isolated package with no peers o
   mkdirSync(packagePath, {recursive: true});
   cpSync(join(root, 'dist'), join(packagePath, 'dist'), {recursive: true});
   cpSync(join(root, 'package.json'), join(packagePath, 'package.json'));
+  const copied = new Set();
+  const copyRuntimeDependency = (name, from) => {
+    if (copied.has(name)) return;
+    const location = createRequire(from).resolve(`${name}/package.json`);
+    const definition = JSON.parse(readFileSync(location, 'utf8'));
+    copied.add(name);
+    cpSync(dirname(location), join(isolated, 'node_modules', name), {recursive: true, dereference: true});
+    for (const child of Object.keys(definition.dependencies ?? {})) copyRuntimeDependency(child, location);
+  };
+  for (const name of ['ajv', 'ajv-formats', 'fast-uri']) copyRuntimeDependency(name, join(root, 'package.json'));
   writeFileSync(join(isolated, 'package.json'), JSON.stringify({private: true, type: 'module'}));
   cpSync(join(root, 'test/types/schema-pure-consumer.ts'), join(isolated, 'schema-pure-consumer.ts'));
   cpSync(join(root, 'test/types/tsconfig.schema-pure.json'), join(isolated, 'tsconfig.json'));
 
-  // This package intentionally contains no installed dependencies or peer packages.
+  // Install the pure engine's dependencies, excluding UI packages and peer dependencies.
   assert.equal(existsSync(join(packagePath, 'node_modules')), false);
+  assert.equal(existsSync(join(isolated, 'node_modules', 'react')), false);
+  assert.equal(existsSync(join(isolated, 'node_modules', '@rjsf')), false);
   writeFileSync(join(isolated, 'consumer.mjs'), `
     import assert from 'node:assert/strict';
     for (const name of ['window', 'document', 'navigator', 'HTMLElement', 'Element', 'Node']) {
       Object.defineProperty(globalThis, name, {configurable: true, get() {throw new Error('DOM accessed');}});
     }
     const schema = await import('${packageName}/schema');
-    assert.deepEqual(Object.keys(schema), ['toValidationIssues']);
+    assert.deepEqual(Object.keys(schema), ['compileSchemaBundle', 'toValidationIssues']);
     assert.deepEqual(schema.toValidationIssues([]), []);
   `);
   const env = {...process.env};

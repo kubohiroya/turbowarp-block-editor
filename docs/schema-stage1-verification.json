@@ -1,0 +1,41 @@
+{
+  "stage": "S1-2",
+  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/19",
+  "base_commit": "33778a6",
+  "node": "26.7.0",
+  "typescript": "6.0.3",
+  "dependency_versions": {
+    "ajv": "8.20.0",
+    "ajv-formats": "2.1.1",
+    "fast-uri": "3.1.0"
+  },
+  "validation": {
+    "build_with_webpack4_and_build_info": "passed",
+    "pure_consumer_skipLibCheck_false": "passed",
+    "legacy_consumer_skipLibCheck_true": "passed-with-documented-existing-declaration-limitation",
+    "selected_tests": 100,
+    "selected_tests_passed": 100,
+    "engine_boundary_cases": 14,
+    "snapshot_node_and_depth_boundaries": "passed",
+    "no_peer_or_DOM_schema_import": "passed",
+    "browser_bundle_and_import": "passed"
+  },
+  "scope": {
+    "existing_entries_preserved": [
+      ".",
+      "./rjsf",
+      "./react",
+      "./react/styles.css",
+      "./turbowarp",
+      "./webpack4",
+      "./build-info"
+    ],
+    "schema_runtime_exports": [
+      "compileSchemaBundle",
+      "toValidationIssues"
+    ],
+    "owner_adapters_implemented": false,
+    "new_RJSF_path_implemented": false,
+    "network_schema_loading": false
+  }
+}
