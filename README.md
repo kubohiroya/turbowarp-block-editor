@@ -117,3 +117,7 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 標準フォームは機能有効時の既定の描画方法であり、機能フラグ自体を既定 ON にしません。
 フラグを外して再読込すれば従来の操作へ戻せます。
 確定値は既存引数へ保存し、UI・下書き・関数・revision をプロジェクトデータへ追加しません。
+
+## webpack 4 / E2E
+
+[webpack 4配布物と設定API](docs/webpack4.md)、[GUI接続E2EとCIの実行手順](docs/block-editor-e2e.md)を参照。専用編集UIから互換ビルド・E2Eまで共通側で管理し、GUIには明示的なホスト接続とCI呼出しを残す。
