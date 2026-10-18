@@ -1,0 +1,50 @@
+name: Probe CI publication suppression without deploying
+on:
+  workflow_dispatch:
+    inputs:
+      expected_revision:
+        description: Full SHA of a completed CI run in this repository
+        type: string
+        required: true
+      branch:
+        description: Branch of that push CI (use an isolated fixture branch for a failure)
+        type: string
+        required: true
+      expect:
+        description: Expected gate result
+        type: choice
+        options: [failure, success]
+        default: failure
+permissions:
+  contents: read
+  actions: read
+jobs:
+  gate:
+    uses: ./.github/workflows/require-successful-ci.yml
+    with:
+      runner_revision: ${{ github.sha }}
+      expected_revision: ${{ inputs.expected_revision }}
+      workflow_file: ci.yml
+      branch: ${{ inputs.branch }}
+      event: push
+  publish-sentinel:
+    needs: gate
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Gate accepted; no publishing credentials or deployment steps exist in this probe.'
+  assert-suppression:
+    if: always()
+    needs: [gate, publish-sentinel]
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          EXPECT: ${{ inputs.expect }}
+          GATE: ${{ needs.gate.result }}
+          SENTINEL: ${{ needs.publish-sentinel.result }}
+        run: |
+          node -e '
+            const {EXPECT, GATE, SENTINEL} = process.env;
+            const expectedSentinel = EXPECT === "failure" ? "skipped" : "success";
+            if (GATE !== EXPECT || SENTINEL !== expectedSentinel) process.exit(1);
+            console.log(`Verified gate=${GATE}, publish-sentinel=${SENTINEL}; no deployment performed.`);
+          '
