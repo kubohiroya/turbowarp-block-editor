@@ -130,5 +130,5 @@ TurboWarp接続は `/turbowarp` の [アダプターAPI](turbowarp-adapter.md) �
 ブラウザで Schema の範囲違反と必須項目、保存・キャンセル・Undo/Redo を確認します。
 現在の GUI は配置済みブロックの既存アイコンと通常の text shadow のみ対象です。
 GUI で `.sb3` を実保存し、新しい画面の標準 `project_url` 経路で JSON 値・拡張登録・専用エディターが復元されることを確認しました。OS picker、アイコンなしへの入口追加、テーマ・翻訳・全対応環境は後続です。
-検証手順・結果は GUI の `docs/block-editor-sb3-validation.md` を参照してください。
+検証手順・結果は[GUIの.sb3保存・再読込記録](block-editor-sb3-validation.md)を参照してください。
 フラグの読み取りは GUI の `src/lib/tw-feature-flags.js`、起動時固定・既定 OFF。URL から `blockEditorDialogs=1` を外して再読込するとロールバックできます。

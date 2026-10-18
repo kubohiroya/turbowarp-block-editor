@@ -1,0 +1,97 @@
+name: Build and verify the TurboWarp host
+description: Own shared distribution, host verification and scoped E2E orchestration.
+inputs:
+  mode:
+    description: ci or pages
+    default: ci
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: npm
+        cache-dependency-path: scratch-gui/package-lock.json
+    - uses: pnpm/action-setup@v4
+      with:
+        version: 11.18.0
+        run_install: false
+    - name: Build and verify the shared distribution
+      shell: bash
+      working-directory: turbowarp-block-editor
+      run: |
+        pnpm install --frozen-lockfile
+        pnpm typecheck
+        pnpm test
+        pnpm test:e2e:infrastructure
+    - name: Select host regression scope
+      id: scope
+      shell: bash
+      working-directory: turbowarp-block-editor
+      env:
+        E2E_GUI_ROOT: ${{ github.workspace }}/scratch-gui
+        CHECK_MODE: ${{ inputs.mode }}
+      run: |
+        if [ "$CHECK_MODE" = pages ]; then
+          echo 'run=true' >> "$GITHUB_OUTPUT"
+        elif [ "$CHECK_MODE" = ci ]; then
+          node test/e2e/turbowarp/ci-scope.cjs
+        else
+          echo 'Unsupported mode' >&2
+          exit 1
+        fi
+    - name: Prepare the host and verify its integration
+      shell: bash
+      working-directory: scratch-gui
+      run: |
+        npm ci --ignore-scripts --no-audit --no-fund
+        node scripts/prepublish.mjs
+        npm run test:block-editor
+        npm run test:pages
+    - name: Verify upstream addon tests
+      if: inputs.mode == 'ci'
+      shell: bash
+      working-directory: scratch-gui
+      run: npm run test:unit
+    - name: Build the host once
+      shell: bash
+      working-directory: scratch-gui
+      env:
+        CHECK_MODE: ${{ inputs.mode }}
+        E2E_SELECTED: ${{ steps.scope.outputs.run }}
+        BUILD_REVISION: ${{ github.sha }}
+        NODE_OPTIONS: --openssl-legacy-provider --max-old-space-size=6144
+      run: |
+        if [ "$CHECK_MODE" = pages ]; then
+          ROOT=/scratch-gui/ npm run build:pages
+        elif [ "$E2E_SELECTED" = true ]; then
+          ROOT=/scratch-gui/ NODE_ENV=production npm run build
+          E2E_GUI_ROOT="$PWD" node ../turbowarp-block-editor/test/e2e/turbowarp/prepare-build.cjs
+        else
+          npm run build
+        fi
+    - name: Install the test browser
+      if: steps.scope.outputs.run == 'true'
+      shell: bash
+      working-directory: turbowarp-block-editor
+      run: pnpm exec playwright install --with-deps chromium
+    - name: Verify editor UI and real sb3 roundtrip
+      if: steps.scope.outputs.run == 'true'
+      shell: bash
+      working-directory: turbowarp-block-editor
+      env:
+        E2E_GUI_ROOT: ${{ github.workspace }}/scratch-gui
+        E2E_EXPECT_GUI_REVISION: ${{ github.sha }}
+      run: |
+        export E2E_EXPECT_CORE_REVISION="$(git rev-parse HEAD)"
+        pnpm test:e2e:block-editor
+    - name: Preserve host verification evidence
+      if: always() && steps.scope.outputs.run == 'true'
+      uses: actions/upload-artifact@v4
+      with:
+        name: block-editor-${{ inputs.mode }}-${{ github.run_id }}-${{ github.run_attempt }}
+        path: |
+          turbowarp-block-editor/test-results/block-editor/
+          turbowarp-block-editor/playwright-report/block-editor/
+        retention-days: 7
+        if-no-files-found: warn
