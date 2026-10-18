@@ -10,7 +10,7 @@ on:
         default: ''
       base_url:
         type: string
-        default: https://kubohiroya.github.io/scratch-gui/
+        default: https://kubohiroya.github.io/turbowarp-extension-data-editor/
 permissions:
   contents: read
   deployments: read

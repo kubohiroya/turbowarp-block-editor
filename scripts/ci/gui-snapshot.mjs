@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {isDeepStrictEqual} from 'node:util';
 
 export const guiRepository = 'kubohiroya/scratch-gui';
-export const publicBuildInfo = 'https://kubohiroya.github.io/scratch-gui/build-info.json';
+export const publicationRepository = 'kubohiroya/turbowarp-extension-data-editor';
+export const publicBuildInfo = 'https://kubohiroya.github.io/turbowarp-extension-data-editor/build-info.json';
 const sha = value => typeof value === 'string' && /^[0-9a-f]{40}$/.test(value);
 
 export function validateSnapshot(value) {
@@ -15,6 +16,10 @@ export function validateSnapshot(value) {
     assert.equal(value.buildInfo?.repository, `https://github.com/${guiRepository}`);
     assert.equal(value.buildInfo?.coreRepository, 'https://github.com/kubohiroya/turbowarp-extension-data-editor');
     assert.ok(sha(value.buildInfo.revision) && sha(value.buildInfo.coreRevision));
+    if (value.buildInfo.siteRevision !== undefined) {
+        assert.ok(sha(value.buildInfo.siteRevision));
+        assert.equal(value.buildInfo.siteRepository, `https://github.com/${publicationRepository}`);
+    }
     return value;
 }
 
@@ -30,7 +35,7 @@ export async function captureGUI({fetchImpl = fetch, now = Date.now} = {}) {
         };
         const [branch, deployments, buildInfo] = await Promise.all([
             get(`https://api.github.com/repos/${guiRepository}/branches/develop`),
-            get(`https://api.github.com/repos/${guiRepository}/deployments?environment=github-pages&per_page=1`),
+            get(`https://api.github.com/repos/${publicationRepository}/deployments?environment=github-pages&per_page=1`),
             get(publicBuildInfo)
         ]);
         return validateSnapshot({...result, status: 'observed', develop: branch.commit?.sha,

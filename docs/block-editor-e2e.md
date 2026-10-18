@@ -1,6 +1,6 @@
 # 専用エディターとsb3の継続E2E
 
-関連: [基盤・sb3のGUI Issue #12](https://github.com/kubohiroya/scratch-gui/issues/12)、[テーマ別invalid表示の共通Issue #12](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/12)。Playwright Testで同梱サンプルの読込、ブロック配置、アイコン起動、入力検証、保存、キャンセル、実際の `.sb3` の書出しと再読込を操作する。アプリやセキュリティ確認を差し替えず、内部VM APIでデータを投入しない。
+運用の正本: [共通Issue #26](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/26)。関連: [基盤・sb3のGUI Issue #12](https://github.com/kubohiroya/scratch-gui/issues/12)、[テーマ別invalid表示の共通Issue #12](https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/12)。Playwright Testで同梱サンプルの読込、ブロック配置、アイコン起動、入力検証、保存、キャンセル、実際の `.sb3` の書出しと再読込を操作する。アプリやセキュリティ確認を差し替えず、内部VM APIでデータを投入しない。
 
 ## セットアップ
 
@@ -15,12 +15,12 @@ npm ci --ignore-scripts --no-audit --no-fund
 node scripts/prepublish.mjs
 cd ../turbowarp-extension-data-editor
 E2E_GUI_ROOT=/absolute/path/scratch-gui node scripts/site/build.mjs
-E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor
+E2E_GUI_ROOT=/absolute/path/scratch-gui E2E_PATH_PREFIX=/turbowarp-extension-data-editor/ pnpm test:e2e:block-editor
 ```
 
 `E2E_GUI_ROOT` はローカルbuildを配信するGUI checkoutの絶対パス。未指定・無効なパスは起動失敗にする。外部URLの検証には不要。レポートは呼出し元のcwdによらず共通リポジトリ配下へ保存する（公開版選択/配信待機CLIは共通ルートで実行）。
 
-対象ソース・固定依存と一致するビルドがあれば、E2Eだけを再実行できる。テスト専用HTTPサーバーは `127.0.0.1:8732/scratch-gui/` で起動し、終了時に停止する。別ポートは `E2E_PORT=8733` で指定する。他のサーバーは流用しない。
+対象ソース・固定依存と一致するビルドがあれば、E2Eだけを再実行できる。テスト専用HTTPサーバーは `127.0.0.1:8732/turbowarp-extension-data-editor/`（E2E_PATH_PREFIXで指定） で起動し、終了時に停止する。別ポートは `E2E_PORT=8733` で指定する。他のサーバーは流用しない。
 
 ```sh
 E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor --project=chromium-file-input
@@ -65,7 +65,7 @@ E2E_GUI_ROOT=/absolute/path/scratch-gui pnpm test:e2e:block-editor invalid-theme
 
 `summary.json`には予定／記録件数とテーマ別の成功・失敗・skip件数を出力し、GitHub summaryにもテーマとテスト名を示します。通常実行が6件で明色・暗色を各1件含むことを確認し、意図しないskip・未検出を完了扱いにしません。
 
-公開経路は共通側のpages/site-public workflowが所有し、GUI側に公開workflowを置きません。共通mainのworkflowとrunnerを同じ完全SHAで実行します。`main`にテストを追加しただけでは、旧runnerに固定された配信後・手動・週次E2Eへ反映されません。実際のPages配信後ジョブでこの2ケースの成功と4枚・JSONのartifactを確認し、Actions URLと両SHAを共通Issue #12へ記録して公開導入を完了とします。 npm版の製品ソースSHAとE2E runnerのSHAは区別します。このテストだけを追加するために製品versionや公開`coreRevision`を書き換えず、期待coreは配信された製品の実ソースに対応させます。
+公開経路は共通側のpages/site-public workflowが所有し、GUI側に公開workflowを置きません。共通mainのworkflowとrunnerを同じ完全SHAで実行します。共通側の公開workflowとrunnerのSHAを一致させます。実際のPages配信後ジョブでこの2ケースの成功と4枚・JSONのartifactを確認し、Actions URLと両SHAを共通Issue #12へ記録して公開導入を完了とします。 npm版の製品ソースSHAとE2E runnerのSHAは区別します。このテストだけを追加するために製品versionや公開`coreRevision`を書き換えず、期待coreは配信された製品の実ソースに対応させます。
 
 表示テストだけ切り戻す場合は新spec／fixtureと呼出し参照変更を対でrevertし、直前の確認済みrunnerへ戻します。既存の配信版照合・sb3往復・既定OFFテストを維持し、恒久skipや無条件retryで失敗を隠しません。製品のフラグ・スキーマ・保存形式は変更しません。
 
@@ -100,15 +100,13 @@ pnpm test:e2e:block-editor
 
 GUIの通常CI/Pagesは共通checkoutの `.github/actions/gui-checks` を呼び出す。インストール・ビルド・対象テスト・スコープ選択・ブラウザ・証跡保存はこのactionが所有する。公開版確認の実装は共通 `.github/workflows/turbowarp-public.yml`、GUI側はトリガーと固定SHAを持つ薄い呼出しだけにする。
 
-公開前の依存: 共通変更を先にcommit/pushし、その完全SHAへGUIの2つのcheckout ref、公開workflowのusesとrunner_revisionを全て更新する。旧版90d53b6には新action/workflowが存在しないため、GUIだけを旧固定値のまま公開しない。ローカル結果とActions実行結果は区別し、最新の公開・CI状況は関連Issueへ記録する。
+公開と運用は共通Issue #26で追跡します。GUIフォークの通常CIは上流構成を維持し、公開・E2E起動を置きません。
 
-
-- `CI`（`node.js.yml`）は変更パスを確認し、アプリ・依存・同梱サンプル・E2E・関連単体テスト・ビルド/CI設定の変更時に限定E2Eを実行する。新規ブランチや比較元が不明な場合は実行する。既存のアプリビルドを `ROOT=/scratch-gui/` で作り、`prepare-build.cjs` がPages用情報を追加する。E2E用の再コンパイルはしない。
-- Pages workflowはdevelopへのpush、またはdevelopからの手動起動で公開する。他branch/tagはbuildガードでskipし、旧workflowからの公開もgithub-pages環境のdevelop限定ルールで拒否する。[公開手順と切戻し](github-pages.md)を参照。公開用branchへの同期は不要。
-- Pages workflowはbuild・deploy成功後に `verify-public` を実行する。期待GUI SHAはイベントの `github.sha` と同じ配信コミット、core SHAはそのコミットのPages workflowから取得する。配信先への反映を最大90秒待ってから、同じ限定E2Eを実行する。checkoutだけをdevelopの別SHAへ固定しない。
-- 通常CIとPagesは独立している。Pages自身のbuild前テストと実sb3 E2Eを維持するが、通常CI全体の成功待ちは追加していない。通常CIの検証結果を確認してからdevelopへマージする。
-- `Verify published block editor`（`block-editor-public.yml`）は `workflow_dispatch` と毎週月曜02:17 UTC（11:17 JST）の定期実行にも対応する。手動でGUI SHAを省略した場合と定期実行では、GitHubの現在成功中のPages deploymentを期待値にする。定期実行はdefault branch上のworkflowが対象。アプリの再ビルドはしない。
-- 公開チェックは同時実行1件・実行中キャンセルなし、ジョブの上限15分。通常CIの上限は30分。配信途中の切替は版不一致として報告し、自動再実行で隠さない。
+- 共通pages.ymlはmainのpush/手動実行だけを許可。固定GUIソースを取得して共通のサイト処理で一度ビルドし、公開前E2E6件を実行します。
+- 公開には同一site SHAの通常CI全体・最新attempt成功と、固定GUI SHAの通常CI成功を要求します。公開直前にmain鮮度とGUI CIを再確認します。
+- 公開後はGUI/core/siteの3 SHAをソースのpinから照合し、反映を最大90秒待って同じE2E6件を実行します。配信build-infoを期待値の根拠にしません。
+- site-public.ymlは手動実行と月曜11:17 JSTの週次検証を所有します。成功した共通Pages deploymentのsite SHAからGUI/core pinsを解決し、アプリを再ビルドしません。
+- API障害・不一致・失敗は成功へ変換せず、既存公開を保持します。旧GUIサイトの検証記録は以下の履歴として残します。
 - 必要なGitHub権限は `contents: read` / 公開チェックの `deployments: read` と、既存deploy jobのPages公開権限のみ。Issueへの自動投稿は行わない。
 - summaryに結果・最後の検証段階・GUI/core SHA・経路・OS picker実行有無を出力する。HTML/JSONレポート、実sb3、失敗画面・trace、console/page/networkログ、配信待機ログを成功・失敗ともartifactへ保存し、7日間保持する。
 
