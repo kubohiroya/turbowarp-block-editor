@@ -4,10 +4,16 @@ import {resolve} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {fixtureFile, marker, probeFile, repository, scenarios, verifyDecision} from './assert-rerun-probe.mjs';
 
+export const weeklyCron = '37 2 * * 1';
+
 const positive = value => Number.isSafeInteger(value) && value > 0;
 export function configuration(env) {
     assert.equal(env.GITHUB_REPOSITORY, repository, 'Only the common test repository is allowed');
-    assert.equal(env.GITHUB_EVENT_NAME, 'workflow_dispatch', 'Live tests require manual dispatch');
+    assert.ok(['workflow_dispatch', 'schedule'].includes(env.GITHUB_EVENT_NAME), 'Unsupported test trigger');
+    if (env.GITHUB_EVENT_NAME === 'schedule') {
+        assert.equal(env.GITHUB_REF, 'refs/heads/main', 'Scheduled tests require the default main branch');
+        assert.equal(env.CI_SCHEDULE, weeklyCron, 'Unexpected weekly schedule');
+    }
     assert.match(env.GITHUB_SHA || '', /^[0-9a-f]{40}$/);
     assert.match(env.GITHUB_REF || '', /^refs\/heads\/[\w./-]+$/);
     assert.match(env.GITHUB_RUN_ID || '', /^[1-9]\d*$/);
@@ -15,7 +21,8 @@ export function configuration(env) {
     assert.ok(env.GH_TOKEN, 'GH_TOKEN is required');
     assert.ok(!env.GITHUB_API_URL || env.GITHUB_API_URL === 'https://api.github.com', 'Unexpected API host');
     return {sha: env.GITHUB_SHA, branch: env.GITHUB_REF.slice('refs/heads/'.length),
-        suite: `${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`, token: env.GH_TOKEN};
+        suite: `${env.GITHUB_RUN_ID}-${env.GITHUB_RUN_ATTEMPT}`, token: env.GH_TOKEN,
+        event: env.GITHUB_EVENT_NAME, schedule: env.GITHUB_EVENT_NAME === 'schedule' ? weeklyCron : undefined};
 }
 
 export function githubAPI(config, fetchImpl = fetch) {
@@ -58,7 +65,7 @@ export async function exerciseReruns(config, {api = githubAPI(config), now = Dat
     timeoutMs = 25 * 60_000, intervalMs = 5_000} = {}) {
     const deadline = now() + timeoutMs;
     const evidence = {status: 'running', repository, sha: config.sha, branch: config.branch,
-        suite: config.suite, probes: {}, pending: {}, mutations: []};
+        suite: config.suite, trigger: config.event, schedule: config.schedule, probes: {}, pending: {}, mutations: []};
     const checkpoint = () => record(structuredClone(evidence));
     const wait = async (fn, label) => {
         while (now() < deadline) {
@@ -239,7 +246,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     finally {
         if (!latest) save(result);
         if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY,
-            `## Latest CI attempt test: ${result.status}\n\n` +
+            `## Latest CI attempt test: ${result.status}\n\nTrigger: ${result.trigger || 'unverified'}\n\n` +
             (result.fixture ? `Fixture: https://github.com/${repository}/actions/runs/${result.fixture.id}\n\n` : '') +
             'The fixture and observers have no deployment credentials. See the evidence artifact and child runs.\n');
     }
