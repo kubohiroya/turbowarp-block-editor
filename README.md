@@ -4,6 +4,8 @@ TurboWarp の機能拡張ブロックに専用編集 UI を関連づける実験
 [共通基盤 #1](https://github.com/kubohiroya/turbowarp-block-editor/issues/1) と
 [GUI 接続 #1](https://github.com/kubohiroya/scratch-gui/issues/1) に対応します。
 
+日本語の利用手順・API・GUI接続・公開・検証記録は[ドキュメント一覧](docs/README.md)へ集約しています。
+
 ## 標準の JSON Schema エディター
 
 JSON/YAML を格納する文字列引数と JSON Schema を宣言すると、react-jsonschema-form がフォームを生成します。
@@ -46,7 +48,7 @@ JSON と同じ Schema で検証した後、指定形式で encode します。
 変更なしの保存はコメント・空白を含む元文字列を保持し、commit しません。
 変更がある保存はデータの意味を保持して再出力しますが、コメント・引用符・anchor・キー順の保持は保証しません。
 フォームで編集しない追加プロパティも、Schema が許可する限り保持します。
-GUI の webpack 4 では RJSF と同様に `yaml` の browser JS を Babel 変換対象に含めてください。
+GUIのwebpack 4接続では[互換配布物と設定API](docs/webpack4.md)を使い、RJSF/YAMLの変換を本パッケージ側で行います。
 
 ## API とトランザクション
 
@@ -103,7 +105,7 @@ pnpm test
 ## GUI で試す
 
 隣接する `../scratch-gui` が本パッケージを `file:../turbowarp-block-editor` で参照します。
-GUI の [起動・制約・検証手順](../scratch-gui/docs/block-editor.md) に従ってください。
+[GUIの起動・制約・検証手順](docs/block-editor.md) に従ってください。
 既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
 
 現在の GUI 適用範囲は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列です。
