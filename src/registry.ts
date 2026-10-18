@@ -8,6 +8,10 @@ import {EDITOR_API_VERSION} from './types.js';
 import type {BlockEditorHost, BlockReference, EditorDefinition, EditorDescriptor} from './types.js';
 import type {PreparedEditorDefinition} from './prepared-types.js';
 import {isPreparedEditor} from './prepared-save.js';
+import {isFixedInputEditor, captureFixedInputEditorDefinition} from './fixed-input-editor.js';
+import {captureFixedSnapshot} from './fixed-input-snapshot.js';
+import {supportsFixedInputEditing} from './fixed-input-types.js';
+import type {FixedInputEditorDefinition} from './fixed-input-types.js';
 
 export class EditorRegistry {
   #editors = new Map<string, EditorDefinition>();
@@ -15,6 +19,7 @@ export class EditorRegistry {
   #changes = new Set<() => void>();
 
   register(definition: EditorDefinition): () => void {
+    if (isFixedInputEditor(definition)) throw new TypeError('Fixed input editors require registerFixed().');
     if (isPreparedEditor(definition)) throw new TypeError('Prepared editors require registerPrepared().');
     return this.#register(definition);
   }
@@ -24,6 +29,10 @@ export class EditorRegistry {
       throw new TypeError('Expected a prepared source editor.');
     }
     return this.#register(definition);
+  }
+
+  registerFixed<C = null>(definition: FixedInputEditorDefinition<C>): () => void {
+    return this.#register(captureFixedInputEditorDefinition(definition));
   }
 
   #register(definition: EditorDefinition): () => void {
@@ -81,10 +90,25 @@ export class EditorRegistry {
     const capturedReference = captureReference(reference);
     const live = host.readBlock(capturedReference);
     if (!live) return undefined;
+    const entry = this.#opcodes.get(live.opcode);
+    if (!entry) {
+      // Preserve legacy snapshot validation even when no editor is registered.
+      captureSnapshot(live, capturedReference);
+      return undefined;
+    }
+    if (isFixedInputEditor(entry)) {
+      if (!supportsFixedInputEditing(host)) return undefined;
+      const fixed = host.fixedInputs!.readBlock(capturedReference, entry);
+      if (!fixed || fixed.opcode !== live.opcode) return undefined;
+      const snapshot = captureFixedSnapshot(fixed, capturedReference, entry);
+      return new EditorSession(entry, snapshot, host, () => this.#opcodes.get(snapshot.opcode) === entry, listener => {
+        this.#changes.add(listener);
+        return () => {this.#changes.delete(listener);};
+      });
+    }
     const snapshot = captureSnapshot(live, capturedReference);
-    const entry = this.#opcodes.get(snapshot.opcode);
-    return entry ? new EditorSession(entry, snapshot, host, isPreparedEditor(entry)
-      ? () => this.#opcodes.get(snapshot.opcode) === entry : undefined) : undefined;
+    return new EditorSession(entry, snapshot, host, isPreparedEditor(entry)
+      ? () => this.#opcodes.get(snapshot.opcode) === entry : undefined);
   }
 
   openDescendants(reference: BlockReference, host: BlockEditorHost, limits?: DescendantLimits): DescendantSession | undefined {
@@ -95,8 +119,12 @@ export class EditorRegistry {
     const live = port.readSubtree(capturedReference);
     if (!live) return undefined;
     const captured = captureSubtree(live, capturedReference, resolvedLimits);
-    if (!this.#opcodes.has(captured.snapshot.nodes[0]!.block.opcode)) return undefined;
-    return new DescendantSession(captured, port, opcode => this.#opcodes.get(opcode), listener => {
+    const root = this.#opcodes.get(captured.snapshot.nodes[0]!.block.opcode);
+    if (!root || isFixedInputEditor(root)) return undefined;
+    return new DescendantSession(captured, port, opcode => {
+      const entry = this.#opcodes.get(opcode);
+      return entry && !isFixedInputEditor(entry) ? entry : undefined;
+    }, listener => {
       this.#changes.add(listener);
       return () => { this.#changes.delete(listener); };
     }, resolvedLimits);

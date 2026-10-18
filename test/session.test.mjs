@@ -100,6 +100,18 @@ test('missing, unregistered and mismatched blocks do not create an editing sessi
   }), /invalid block snapshot/);
 });
 
+test('unregistered opcodes still validate the complete legacy snapshot', () => {
+  const f = fixture();f.unregister();
+  for (const mutate of [
+    snapshot => ({...snapshot, revision: ''}),
+    snapshot => ({...snapshot, arguments: {...snapshot.arguments, NAME: {kind: 'literal', value: Infinity}}}),
+    snapshot => ({...snapshot, arguments: {...snapshot.arguments, NAME: {kind: 'unsupported'}}})
+  ]) {
+    assert.throws(() => f.registry.open(reference, {...f.host, readBlock: () => mutate(f.snapshot())}), TypeError);
+  }
+  assert.equal(f.open(), undefined);
+});
+
 test('read, getDraft and setDraft never share draft references', () => {
   const external = {properties: '{}', nested: {names: ['opening']}};
   const f = fixture({read: () => external});

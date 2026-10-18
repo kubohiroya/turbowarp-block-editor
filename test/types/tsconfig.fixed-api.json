@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.fixed-pure.json",
+  "compilerOptions": {"types": ["react", "react-dom"]},
+  "files": ["fixed-api-consumer.ts"]
+}

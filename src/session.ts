@@ -2,6 +2,11 @@ import {captureReference, captureSnapshot, cloneJson, isLiteral, sameSnapshot} f
 import {BlockEditorConflictError} from './types.js';
 import {EditorView} from './view.js';
 import {isPreparedEditor, capturePreparedSave} from './prepared-save.js';
+import {isFixedInputEditor, captureFixedPreparedSave} from './fixed-input-editor.js';
+import {captureFixedSnapshot, sameFixedSnapshot} from './fixed-input-snapshot.js';
+import {supportsFixedInputEditing} from './fixed-input-types.js';
+import {snapshotJson} from './schema-json.js';
+import type {FixedBlockSnapshot, FixedHostCommitRequest, FixedInputEditorHost} from './fixed-input-types.js';
 import type {
   BlockEditorHost, BlockReference, BlockSnapshot, EditorDefinition, EditorViewContext, JsonObject,
   LiteralArgumentChange, SaveResult, SessionState, SessionStatus, ValidationIssue
@@ -17,15 +22,23 @@ export class EditorSession implements EditorViewContext {
   readonly #definition: EditorDefinition;
   readonly #snapshot: BlockSnapshot;
   readonly #host: BlockEditorHost;
+  readonly #fixedPort: FixedInputEditorHost | undefined;
   readonly #isRegistered: (() => boolean) | undefined;
+  readonly #subscribeRegistrationChanges: ((listener: () => void) => () => void) | undefined;
 
   /** Use EditorRegistry.open() to construct sessions from a captured host snapshot. */
-  constructor(definition: EditorDefinition, snapshot: BlockSnapshot, host: BlockEditorHost, isRegistered?: () => boolean) {
+  constructor(definition: EditorDefinition, snapshot: BlockSnapshot, host: BlockEditorHost, isRegistered?: () => boolean, subscribeRegistrationChanges?: (listener: () => void) => () => void) {
     this.#isRegistered = isRegistered;
+    this.#subscribeRegistrationChanges = subscribeRegistrationChanges;
     this.#definition = definition;
-    this.#snapshot = captureSnapshot(snapshot, captureReference(snapshot));
+    this.#snapshot = isFixedInputEditor(definition)
+      ? captureFixedSnapshot(snapshot as FixedBlockSnapshot, captureReference(snapshot), definition)
+      : captureSnapshot(snapshot, captureReference(snapshot));
     this.#host = host;
-    this.#draft = this.#copyDraft(definition.read(this.#snapshot));
+    this.#fixedPort = isFixedInputEditor(definition) && supportsFixedInputEditing(host) ? host.fixedInputs : undefined;
+    if (isFixedInputEditor(definition) && !supportsFixedInputEditing(host)) throw new TypeError('Fixed input editors require a compatible host.');
+    this.#draft = this.#copyDraft(isFixedInputEditor(definition)
+      ? definition.readFixed(this.#snapshot as FixedBlockSnapshot) : definition.read(this.#snapshot));
   }
 
   /** Stable instance identity remains available after the session closes. */
@@ -78,6 +91,7 @@ export class EditorSession implements EditorViewContext {
     this.#notify();
     try {
       if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The source editor registration expired.');
+      if (isFixedInputEditor(this.#definition)) return await this.#saveFixed();
       const prepared = isPreparedEditor(this.#definition)
         ? capturePreparedSave(this.#definition, cloneJson(this.#draft), this.#snapshot) : undefined;
       const issues = prepared ? (prepared.kind === 'invalid' ? prepared.issues : [])
@@ -114,6 +128,45 @@ export class EditorSession implements EditorViewContext {
     }
   }
 
+  async #saveFixed(): Promise<SaveResult> {
+    const definition = this.#definition;
+    if (!isFixedInputEditor(definition)) throw new TypeError('Fixed input capability is unavailable.');
+    if (!supportsFixedInputEditing(this.#host) || this.#host.fixedInputs !== this.#fixedPort) throw new BlockEditorConflictError('The fixed input capability changed.');
+    const snapshot = this.#snapshot as FixedBlockSnapshot;
+    const prepared = captureFixedPreparedSave(definition, this.#copyDraft(this.#draft), snapshot);
+    if (prepared.kind === 'invalid') {
+      this.#issues = this.#copyIssues(prepared.issues);
+      return {status: 'invalid', issues: this.#issues};
+    }
+    const changes = this.#prepareChanges(prepared.changes);
+    const port = this.#host.fixedInputs!;
+    if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The fixed editor registration expired.');
+    const current = port.readBlock(snapshot, definition);
+    if (!current) throw new BlockEditorConflictError();
+    try {
+      if (!sameFixedSnapshot(snapshot, captureFixedSnapshot(current, snapshot, definition))) throw new BlockEditorConflictError();
+    } catch {throw new BlockEditorConflictError();}
+    if (!supportsFixedInputEditing(this.#host) || this.#host.fixedInputs !== port ||
+        (this.#isRegistered && !this.#isRegistered())) throw new BlockEditorConflictError('The fixed editor registration expired.');
+    if (changes.length > 0) {
+      const controller = new AbortController();
+      const context = prepared.context as unknown as FixedHostCommitRequest['context'];
+      const unsubscribe = this.#subscribeRegistrationChanges?.(() => {
+        if (this.#isRegistered && !this.#isRegistered()) controller.abort(new BlockEditorConflictError('The fixed editor registration expired.'));
+      });
+      try {
+        if (this.#isRegistered && !this.#isRegistered()) throw new BlockEditorConflictError('The fixed editor registration expired.');
+        await port.commit(Object.freeze({expected: snapshot, changes, context, signal: controller.signal}));
+        if (controller.signal.aborted) throw new BlockEditorConflictError('The fixed editor registration expired.');
+      } catch (error) {
+        if (controller.signal.aborted) throw new BlockEditorConflictError('The fixed editor registration expired.');
+        throw error;
+      } finally {unsubscribe?.();}
+    }
+    this.#finish('saved');
+    return {status: 'saved', changed: changes.length > 0};
+  }
+
   /** Closing is refused while saving; the host must keep the modal open. */
   cancel(): boolean {
     if (this.#status !== 'editing') return false;
@@ -142,12 +195,20 @@ export class EditorSession implements EditorViewContext {
       if (!slot || slot.kind !== 'literal') {
         throw new TypeError('Only existing literal arguments can be changed.');
       }
-      if (slot.value !== change.value) changes.push(Object.freeze({...change}));
+      if (isFixedInputEditor(this.#definition)) {
+        const metadata = (this.#snapshot as FixedBlockSnapshot).fixedContext.inputs[change.argument];
+        if (!metadata || metadata.role !== 'editable' || (metadata.source !== 'field' && metadata.source !== 'shadow')) throw new TypeError('Fixed patches require editable literal fields.');
+        if (!Object.is(slot.value, change.value)) {
+          if (this.#definition.dependencies.some(group => group.selector === change.argument || group.dependents.includes(change.argument))) throw new TypeError('Fixed dependency validation is unavailable.');
+          changes.push(Object.freeze({argument: change.argument, value: change.value}));
+        }
+      } else if (slot.value !== change.value) changes.push(Object.freeze({...change}));
     }
     return Object.freeze(changes);
   }
 
   #copyIssues(issues: readonly ValidationIssue[]): readonly ValidationIssue[] {
+    if (isFixedInputEditor(this.#definition)) issues = snapshotJson(issues) as unknown as readonly ValidationIssue[];
     if (!Array.isArray(issues)) throw new TypeError('Expected a validation issue array.');
     return Object.freeze(issues.map(issue => {
       if (!issue || typeof issue.message !== 'string' ||
@@ -162,7 +223,13 @@ export class EditorSession implements EditorViewContext {
     if (!draft || typeof draft !== 'object' || Array.isArray(draft)) {
       throw new TypeError('The editor draft must be a JSON object.');
     }
-    return cloneJson(draft);
+    if (!isFixedInputEditor(this.#definition)) return cloneJson(draft);
+    try {return snapshotJson(draft) as JsonObject;}
+    catch (error) {
+      try {void Promise.prototype.then.call(draft as unknown as Promise<unknown>, () => undefined, () => undefined);}
+      catch { /* Synchronous fixed drafts never inspect arbitrary thenables. */ }
+      throw error;
+    }
   }
 
   #assertOpen(): void {

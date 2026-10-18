@@ -1,6 +1,7 @@
 import type {ValidationIssue} from './schema-types.js';
 export type {ValidationIssue} from './schema-types.js';
 import type {DescendantEditorHost} from './descendant-types.js';
+import type {FixedInputEditorHost} from './fixed-input-types.js';
 
 export const EDITOR_API_VERSION = 1 as const;
 
@@ -37,6 +38,8 @@ export interface CommitRequest {
 }
 
 export interface BlockEditorHost {
+  /** Optional fixed-field capability; legacy hosts do not need this port. */
+  readonly fixedInputs?: FixedInputEditorHost;
   /** Optional additional capability; the single-block contract remains unchanged. */
   readonly descendants?: DescendantEditorHost;
   /** Return null for missing, inactive or non-editable blocks. Never evaluate reporters. */
