@@ -8,6 +8,7 @@ import type {RJSFSchema, UiSchema} from '@rjsf/utils';
 import {cloneJson} from './data.js';
 import {decodeSource, encodeSource, sameData} from './codec.js';
 import type {SourceFormat} from './codec.js';
+import {EditorRegistry} from './registry.js';
 import {EDITOR_API_VERSION} from './types.js';
 import type {
   BlockSnapshot, EditorDefinition, JsonObject, JsonValue, ValidationIssue
@@ -39,6 +40,47 @@ export interface SchemaEditorOptions {
   validateData?(
     data: JsonValue, snapshot: BlockSnapshot
   ): readonly ValidationIssue[] | Promise<readonly ValidationIssue[]>;
+}
+
+export interface BlockEditorRegistrationAPI {
+  readonly apiVersion: typeof EDITOR_API_VERSION;
+  register(definition: EditorDefinition | SchemaEditorOptions): () => void;
+  registerSchema(definition: SchemaEditorOptions): () => void;
+}
+export interface BlockEditorService {
+  readonly registry: EditorRegistry;
+  readonly api: BlockEditorRegistrationAPI;
+  subscribe(listener: () => void): () => void;
+}
+
+/** A host owns the service's lifetime; this module never stores VM or workspace instances. */
+export function createBlockEditorService(): BlockEditorService {
+  const registry = new EditorRegistry();
+  const listeners = new Set<() => void>();
+  const notify = () => { for (const listener of [...listeners]) listener(); };
+  const api: BlockEditorRegistrationAPI = Object.freeze({
+    apiVersion: EDITOR_API_VERSION,
+    register: (definition: EditorDefinition | SchemaEditorOptions) => {
+      const custom = definition as EditorDefinition;
+      const editor = !custom.mount && Object.hasOwn(definition, 'schema')
+        ? createSchemaEditor(definition as SchemaEditorOptions) : custom;
+      if (typeof editor.mount !== 'function') throw new TypeError('A block editor must provide mount().');
+      const remove = registry.register(editor);
+      notify();
+      let active = true;
+      return () => {
+        if (!active) return;
+        active = false;
+        remove();
+        notify();
+      };
+    },
+    registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition))
+  });
+  return {registry, api, subscribe: listener => {
+    listeners.add(listener);
+    return () => { listeners.delete(listener); };
+  }};
 }
 
 /** Build an editor with JSON/YAML serialization, schema validation and the standard RJSF body. */

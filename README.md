@@ -53,6 +53,9 @@ GUI の webpack 4 では RJSF と同様に `yaml` の browser JS を Babel 変�
 ルートの `EditorRegistry` / `EditorSession` は React / Blockly に依存しません。
 `@kubohiroya/turbowarp-block-editor/rjsf` の `createSchemaEditor()` が標準フォームを提供します。
 通常 DOM や独自 React UI の `mount()` を持つ定義も登録できます。
+`/rjsf` の `createBlockEditorService()` がSchema検出・登録/解除・通知を提供します。
+`/react` の `BlockEditorDialog` は保存/キャンセル・エラー・階層UIを提供し、ホストのModal・翻訳・テーマを注入します。
+CSSは `/react/styles.css` をホストのCSS Modules経由で読み込みます。
 
 開始時のスナップショットと独立した JSON の下書きを持ち、キャンセルでは変更を破棄します。
 保存は検証、引数の許可リスト、reporter 保護、競合確認を通し、ホストへ1回だけ変更を要求します。
@@ -60,6 +63,14 @@ GUI ホストは画面と VM を同期し、保存を Undo/Redo 各1回にまと
 `session.reference` で対象の target / block を識別できます。本文の unmount は下書きとエラーを保持し、再マウントできます。
 解除済みビューからの更新を拒否し、ビューの購読を解放します。標準フォームのフィールド ID も各表示で分離します。
 詳しくは [API とホスト契約](docs/api.md) を参照してください。
+
+## TurboWarp 接続
+
+`/turbowarp` の `attachTurboWarpBlockEditors()` にホストのScratchBlocks / VM / workspace、
+登録サービスと画面コールバックを渡すと、アイコン装飾・セッション起動・VM同期・一括保存を接続します。
+`enabled` / `descendants` は省略時OFF、戻り値は `refresh()` / 冪等な `dispose()` です。
+GUIには起動時フラグ・ライフサイクル・Modal/翻訳/テーマの接続を残します。
+詳細は [TurboWarp アダプターAPI](docs/turbowarp-adapter.md) を参照してください。
 
 ## 子孫をまとめる階層セッション
 

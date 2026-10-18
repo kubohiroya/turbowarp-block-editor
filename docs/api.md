@@ -51,7 +51,7 @@
 
 セッション自身の `subscribe()` はビューとは独立し、手動の解除またはセッション終了まで有効です。本文を外してもホストは保存状態を監視でき、保存・キャンセル・dispose はセッション単位で実行します。複数セッションを同時に作成でき、GUI の「モーダルは1つ」という表示方針をフォーム API の制約にはしません。
 
-標準モーダルは scratch-gui の既存 Modal / ReactModal を利用します。GUI はタイトル、エラー、下部の保存・キャンセル、フォーカストラップと復帰を担当します。Escape、背景クリック、閉じるはすべて `cancel()` へ接続します。`saving` の間は `cancel()` / `dispose()` が `false` を返すため、終了操作を抑止します。target の消失などはホストが commit 前に確認し、失敗後に安全に終了します。
+標準ダイアログは共通側の `/react` に置き、タイトル・エラー・下部の保存/キャンセル・本文と階層の表示を担当します。scratch-gui は既存 Modal / ReactModal、翻訳済み文言、テーマを注入し、フォーカストラップと復帰を担当します。Escape、背景クリック、閉じるはすべて `cancel()` へ接続します。`saving` の間は `cancel()` / `dispose()` が `false` を返すため、終了操作を抑止します。target の消失などはホストが commit 前に確認し、失敗後に安全に終了します。
 
 既存モーダルを選んだ理由は、GUI の React 16.14、フォーカス管理、テーマと既存の経路を共有できるためです。Radix Dialog の追加や React 本体の更新を初版の条件にしません。
 
@@ -85,6 +85,38 @@ draft-07 を基本とし、未解決の外部参照や不正な schema は登録
 
 標準フォームは React / ReactDOM 16.14・17・18 を peer とし、GUI と同じ React を使用します。
 `uiSchema` に widget 関数は渡せません。任意の UI コードが必要なら独自 `mount` を利用します。
+
+## ホストから使う登録サービスと React ダイアログ
+
+`/rjsf` の `createBlockEditorService()` は `{registry, api, subscribe}` を返します。
+`api` は凍結された `apiVersion: 1` / `register()` / `registerSchema()` です。
+`register()` は独自 `mount` がある場合はそれを使用し、ない場合に `schema` を標準フォームへ変換します。
+登録・解除の成功で購読先へ通知し、解除関数は冪等です。不正な定義・重複登録は例外となります。
+サービスはVM/workspaceを保持しません。GUIがVMごとのWeakMapで寿命を管理します。
+ルート入口はReact/Blockly非依存のままです。標準フォームを使わない利用者は引き続き `EditorRegistry` を直接使用できます。
+
+`/react` の `BlockEditorDialog` に以下を渡します。
+
+- `session`: 単一または階層セッション。本文mount契約は従来どおりです。
+- `ModalComponent`: `id`, `className`, `contentLabel`, `onRequestClose`, `children` を受けるホストのModal。
+  portal・フォーカストラップ/復帰・Escape/背景/閉じるボタンを所有し、終了操作を `onRequestClose` へ渡します。
+- `messages`: title / saving / cancel / save / saveAll / structureError / conflict / failed / structuralNode の翻訳済み文字列。
+- `styles`: `/react/styles.css` をCSS Modulesで読み込んだcamelCaseのクラス名対応表。
+- 任意の `className`: ホストテーマを設定するクラス。任意の `nodeLabels` / `nodeAppearances` は表示専用のメタデータ。
+- `onClose`: ホスト側のModal状態を閉じる処理。任意の `onError` はビュー例外の報告先。
+
+CSSはJS入口から自動importしません。ホストが `/react/styles.css` を読み込み、CSS ModulesのcamelCaseを有効にして渡します。
+テーマは `--block-editor-background`, `--block-editor-text`, `--block-editor-input`,
+`--block-editor-button`, `--block-editor-border`, `--block-editor-radius` をModalのクラスへ設定します。
+省略時は明るい背景の既定値を使用します。GUIの翻訳/Redux/テーマモジュールを共通側からimportしません。
+RJSFの項目別invalid表示とARIA補完も共通UIが所有し、validへの修正や終了で属性/監視を復元します。
+GUI developのinvalid強調を維持し、配列並べ替え、グループ制約、階層の折りたたみも既存テストで確認します。
+エラー色はホストの `--block-editor-error-border`, `--block-editor-error-text`,
+`--block-editor-error-tint` を使用し、省略時は明色の既定値を使います。
+ReactとReactDOMはホストの同一インスタンスを共有してください。
+webpack 4ではpackage exportsに対応していないため `/rjsf`, `/react`, `/react/styles.css` のaliasが必要です。
+TurboWarp接続は `/turbowarp` の [アダプターAPI](turbowarp-adapter.md) に集約しています。
+互換配布物の整備とE2E本体の移管は後続です。
 
 ## API v1 と次版の境界
 

@@ -4,7 +4,7 @@
   "private": true,
   "description": "Framework-independent editor sessions for TurboWarp extension blocks",
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": ["**/*.css"],
   "main": "./dist/index.js",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
@@ -23,6 +23,15 @@
     "./rjsf": {
       "types": "./dist/rjsf.d.ts",
       "import": "./dist/rjsf.js"
+    },
+    "./react": {
+      "types": "./dist/react.d.ts",
+      "import": "./dist/react.js"
+    },
+    "./react/styles.css": "./dist/react.css",
+    "./turbowarp": {
+      "types": "./dist/turbowarp.d.ts",
+      "import": "./dist/turbowarp.js"
     }
   },
   "files": [
@@ -36,7 +45,7 @@
   "packageManager": "pnpm@11.18.0",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "build": "tsc --project tsconfig.json",
+    "build": "tsc --project tsconfig.json && node scripts/copy-react-css.mjs",
     "test": "pnpm build && node --test test/*.test.mjs"
   },
   "devDependencies": {
