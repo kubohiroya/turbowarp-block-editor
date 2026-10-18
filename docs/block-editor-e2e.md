@@ -75,7 +75,9 @@ GUIの通常CI/Pagesは共通checkoutの `.github/actions/gui-checks` を呼び�
 
 
 - `CI`（`node.js.yml`）は変更パスを確認し、アプリ・依存・同梱サンプル・E2E・関連単体テスト・ビルド/CI設定の変更時に限定E2Eを実行する。新規ブランチや比較元が不明な場合は実行する。既存のアプリビルドを `ROOT=/scratch-gui/` で作り、`prepare-build.cjs` がPages用情報を追加する。E2E用の再コンパイルはしない。
-- Pages workflowはbuild・deploy成功後に `verify-public` を実行する。期待GUI SHAは配信したコミット、core SHAはそのコミットのPages workflowから取得する。配信先への反映を最大90秒待ってから、同じ限定E2Eを実行する。
+- Pages workflowはdevelopへのpush、またはdevelopからの手動起動で公開する。他branch/tagはbuildガードでskipし、旧workflowからの公開もgithub-pages環境のdevelop限定ルールで拒否する。[公開手順と切戻し](github-pages.md)を参照。公開用branchへの同期は不要。
+- Pages workflowはbuild・deploy成功後に `verify-public` を実行する。期待GUI SHAはイベントの `github.sha` と同じ配信コミット、core SHAはそのコミットのPages workflowから取得する。配信先への反映を最大90秒待ってから、同じ限定E2Eを実行する。checkoutだけをdevelopの別SHAへ固定しない。
+- 通常CIとPagesは独立している。Pages自身のbuild前テストと実sb3 E2Eを維持するが、通常CI全体の成功待ちは追加していない。通常CIの検証結果を確認してからdevelopへマージする。
 - `Verify published block editor`（`block-editor-public.yml`）は `workflow_dispatch` と毎週月曜02:17 UTC（11:17 JST）の定期実行にも対応する。手動でGUI SHAを省略した場合と定期実行では、GitHubの現在成功中のPages deploymentを期待値にする。定期実行はdefault branch上のworkflowが対象。アプリの再ビルドはしない。
 - 公開チェックは同時実行1件・実行中キャンセルなし、ジョブの上限15分。通常CIの上限は30分。配信途中の切替は版不一致として報告し、自動再実行で隠さない。
 - 必要なGitHub権限は `contents: read` / 公開チェックの `deployments: read` と、既存deploy jobのPages公開権限のみ。Issueへの自動投稿は行わない。
