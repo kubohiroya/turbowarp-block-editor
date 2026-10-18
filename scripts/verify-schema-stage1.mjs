@@ -14,7 +14,7 @@ async function binding(repo) {
   await writeFile(file, `export * from '${name}${entry}';\n`);
   return import(pathToFileURL(file));
 }
-const [core, aframe, scene, runtime, camera, calibration, motion, placement, examples] =
+const [core, aframe, scene, runtime, camera, calibration, motion, placement] =
   await Promise.all([
     binding('editor'),
     binding('aframe'),
@@ -24,7 +24,6 @@ const [core, aframe, scene, runtime, camera, calibration, motion, placement, exa
     binding('camera-calibration'),
     binding('realtime-motion-capture'),
     binding('time-space-sync'),
-    binding('extension-template'),
   ]);
 const context = {
   consumerId: 'stage1-isolated',
@@ -207,15 +206,8 @@ for (const kind of ['reference', 'observation']) {
       : placement.validatePlacementObservationInput,
   );
 }
-for (const kind of ['scene', 'note']) {
-  const source = await text(kind + '-example.' + (kind === 'scene' ? 'json' : 'yaml')),
-    decoded = examples.decodeExampleSource(source, kind);
-  assert.equal(decoded.source, source);
-  check(kind + '-example', examples.exampleSchemaBundles[kind], decoded.data);
-  assert.equal(examples.validateExampleSource(source, kind, context).result.kind, 'valid');
-}
-assert.equal(rows.length, 16);
-assert.equal(new Set(rows.map((row) => row.contract)).size, 16);
+assert.equal(rows.length, 14);
+assert.equal(new Set(rows.map((row) => row.contract)).size, 14);
 
 for (const [validate, source, args] of [
   [aframe.validateTemplateSource, '{private malformed', []],
@@ -223,8 +215,6 @@ for (const [validate, source, args] of [
   [calibration.validateCalibrationSource, '{private malformed', []],
   [placement.validatePlacementSource, '{private malformed', ['reference']],
   [runtime.validateSceneSource, '{private malformed', []],
-  [examples.validateExampleSource, '{private malformed', ['scene']],
-  [examples.validateExampleSource, '{private malformed', ['note']],
 ]) {
   const result = validate(source, ...args, context);
   assert.equal(result.source, source);assert.equal(result.result.kind, 'invalid');
@@ -236,8 +226,6 @@ const unsafeContext = Object.defineProperty({...context}, 'consumerId', {enumera
   get() {contextReads++;throw Error('private-context');}});
 for (const [validate, args] of [
   [runtime.validateSceneSource, []],
-  [examples.validateExampleSource, ['scene']],
-  [examples.validateExampleSource, ['note']],
 ]) for (const invalidContext of [unsafeContext, null, undefined]) {
   const source = '{private malformed', result = validate(source, ...args, invalidContext);
   assert.equal(result.source, source);
@@ -252,7 +240,7 @@ assert.equal(contextReads, 0);
 
 console.log(
   JSON.stringify(
-    { contracts: rows.length, packageCount: 9, sourceImports: false, results: rows,
+    { contracts: rows.length, packageCount: 8, sourceImports: false, results: rows,
       reviewRegressions: {legacyRosKeyCompatibility: true, calibrationDiagnosticVariants: calibrationVariants,
         malformedSourceContextGetterReads: contextReads, emptySceneContextFree: true} },
     null,

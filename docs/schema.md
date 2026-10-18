@@ -28,7 +28,7 @@ snapshotは最大100,000訪問値・深さ128に制限し、超過は`limit-exce
 
 RJSF v5用には正本を変えないprivateな表示Schemaを作る。閉じたresource graphのID/anchor/refを解決し、wrapper内のfragment pointerへ展開する。private表示側で不要になったID宣言を除くが、正本・検証制約は変更しない。検証の正本は常に元bundleのengineで、RJSFへextraErrorsを渡す。JSON Pointerの特殊キーを保持し、共通field-errorsのARIA表示・訂正・解除へ接続する。
 
-2020-12 prefixItems、dynamic/recursive ref、RJSFが展開を終了できないobject再帰は、フォーム登録時に明示的に拒否する。配列items経由の再帰と両方言の同梱refは合成フォームで確認する。これらの表示制限はheadless engineの受理範囲を狭めない。owner16契約の実フォームは段階2で個別に検証する。
+2020-12 prefixItems、dynamic/recursive ref、RJSFが展開を終了できないobject再帰は、フォーム登録時に明示的に拒否する。配列items経由の再帰と両方言の同梱refは合成フォームで確認する。これらの表示制限はheadless engineの受理範囲を狭めない。現行14本番契約の実フォームと段階2で新規予定の9固定契約は、段階2の具体計画で区別して検証する。旧16契約には撤去したTemplateサンプル2件が含まれる。[現行の再検証手順](template-fixture-separation.ja.md#current-verification)に従い、Templateの旧入口を検証対象にしない。
 
 この工程は拡張へのeditor登録、GUI依存更新、binding、候補UIを追加しない。新APIを呼ばない既存利用者の挙動は維持する。
 

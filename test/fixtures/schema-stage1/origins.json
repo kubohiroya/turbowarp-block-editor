@@ -36,18 +36,6 @@
     "sha256": "bd83f1df612f3d2dabf5b897e14575df0a49a1bf74b8edd73ad46aa288eb066d"
   },
   {
-    "file": "scene-example.json",
-    "repository": "turbowarp-extension-template",
-    "path": "tests/fixtures/scene.json",
-    "sha256": "37f624d5d1e7712ba7146746304cdb0785dbb900301f8822431553281de8654e"
-  },
-  {
-    "file": "note-example.yaml",
-    "repository": "turbowarp-extension-template",
-    "path": "tests/fixtures/note.yaml",
-    "sha256": "6a18c20fac2b64829833251b0daa5d06ba597d007a2727bca221c32e2336e38a"
-  },
-  {
     "file": "session-policy.json",
     "repository": "turbowarp-realtime-motion-capture",
     "path": "tests/fixtures/protocol/invalid/session-policy-with-credential.json",
