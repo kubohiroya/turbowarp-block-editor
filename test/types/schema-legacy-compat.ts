@@ -61,3 +61,13 @@ export const augmentedNew: SchemaIssue = augmented;
 export const tag: string | undefined = augmentedNew.compatibilityTag;
 // @ts-expect-error New schema types are restricted to the schema subpath.
 import type {SchemaBundle} from '@kubohiroya/turbowarp-extension-data-editor';
+
+import {createSchemaBundleEditor} from '@kubohiroya/turbowarp-extension-data-editor/rjsf';
+import type {SchemaBundleEditorOptions} from '@kubohiroya/turbowarp-extension-data-editor/rjsf';
+import {bundle, context, owner} from './schema-pure-consumer.js';
+export const bundleOptions: SchemaBundleEditorOptions<{delegate: boolean; nested?: {modes: string[]}; pair: [number, string?]}> = {
+  apiVersion: version, extensionId: 'story', editorId: 'bundle', opcodes: ['story_scene'], argument: 'PROPERTIES',
+  schemaBundle: bundle, validationContext: () => context, ownerValidate: owner
+};
+export const bundleEditor = createSchemaBundleEditor(bundleOptions);
+api.registerSchemaBundle(bundleOptions);

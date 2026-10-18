@@ -5,6 +5,10 @@ import * as RjsfUtils from '@rjsf/utils';
 import * as RjsfAjv from '@rjsf/validator-ajv8';
 import type {FormProps, IChangeEvent} from '@rjsf/core';
 import type {RJSFSchema, UiSchema} from '@rjsf/utils';
+import {Ajv2020} from 'ajv/dist/2020.js';
+import {compileSchemaBundle, validateSchemaInput, toValidationIssues} from './schema.js';
+import type {SchemaBundle, SchemaValidationContext, SyncOwnerValidator} from './schema-types.js';
+import {schemaView, fieldErrors} from './schema-view.js';
 import {cloneJson} from './data.js';
 import {decodeSource, encodeSource, sameData} from './codec.js';
 import type {SourceFormat} from './codec.js';
@@ -42,10 +46,35 @@ export interface SchemaEditorOptions {
   ): readonly ValidationIssue[] | Promise<readonly ValidationIssue[]>;
 }
 
+/** Explicit bundle opt-in; the provider supplies fresh immutable validation inputs per call. */
+export interface SchemaBundleEditorOptions<C = unknown> extends Omit<SchemaEditorOptions, 'schema'> {
+  readonly schemaBundle: SchemaBundle;
+  readonly validationContext: () => SchemaValidationContext<C>;
+  readonly ownerValidate?: SyncOwnerValidator<C>;
+}
+
+export function createSchemaBundleEditor<C>(options: SchemaBundleEditorOptions<C>): EditorDefinition {
+  const result = compileSchemaBundle(options.schemaBundle);
+  if (result.kind !== 'compiled') throw new TypeError(`Schema bundle compilation failed: ${result.diagnostics[0].code}`);
+  const schema = schemaView(options.schemaBundle);
+  const provider = options.validationContext;
+  const ownerValidate = options.ownerValidate;
+  const issuesFor = (data: JsonValue): readonly ValidationIssue[] => {
+    let context: SchemaValidationContext<C>;
+    try {context = provider();} catch {return [{message: 'Validation could not complete: owner-context-invalid.'}];}
+    const validation = validateSchemaInput(result.validator, data, {context, ...(ownerValidate !== undefined ? {ownerValidate} : {})});
+    if (validation.kind === 'valid') return [];
+    if (validation.kind === 'execution-error') return validation.diagnostics.map(d => ({message: `Validation could not complete: ${d.code}.`}));
+    return toValidationIssues(validation.diagnostics);
+  };
+  return createSchemaEditorImpl({...options, schema}, {issuesFor, dialect: result.validator.dialect});
+}
+
 export interface BlockEditorRegistrationAPI {
   readonly apiVersion: typeof EDITOR_API_VERSION;
   register(definition: EditorDefinition | SchemaEditorOptions): () => void;
   registerSchema(definition: SchemaEditorOptions): () => void;
+  registerSchemaBundle<C>(definition: SchemaBundleEditorOptions<C>): () => void;
 }
 export interface BlockEditorService {
   readonly registry: EditorRegistry;
@@ -75,7 +104,8 @@ export function createBlockEditorService(): BlockEditorService {
         notify();
       };
     },
-    registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition))
+    registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition)),
+    registerSchemaBundle: <C,>(definition: SchemaBundleEditorOptions<C>) => api.register(createSchemaBundleEditor(definition))
   });
   return {registry, api, subscribe: listener => {
     listeners.add(listener);
@@ -85,6 +115,12 @@ export function createBlockEditorService(): BlockEditorService {
 
 /** Build an editor with JSON/YAML serialization, schema validation and the standard RJSF body. */
 export function createSchemaEditor(options: SchemaEditorOptions): EditorDefinition {
+  return createSchemaEditorImpl(options);
+}
+function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
+  readonly issuesFor: (data: JsonValue) => readonly ValidationIssue[];
+  readonly dialect: SchemaBundle['dialect'];
+}): EditorDefinition {
   if (options.apiVersion !== EDITOR_API_VERSION || typeof options.argument !== 'string' || !options.argument) {
     throw new TypeError('A supported API version and JSON argument name are required.');
   }
@@ -95,19 +131,20 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
   const uiSchema = options.uiSchema ? cloneJson(options.uiSchema) as UiSchema<unknown> : {};
   const validateData = options.validateData;
   const validator = customizeValidator<unknown>({
+    ...(bundle?.dialect === '2020-12' ? {AjvClass: Ajv2020} : {}),
     ajvOptionsOverrides: {allErrors: true, coerceTypes: false, useDefaults: false, removeAdditional: false}
   });
   const compilation = validator.rawValidation(schema);
   if (compilation.validationError) {
     throw new TypeError(`Invalid or unsupported JSON Schema: ${compilation.validationError.message}`);
   }
-  const issuesFor = (data: JsonValue): readonly ValidationIssue[] => {
+  const issuesFor = bundle?.issuesFor ?? ((data: JsonValue): readonly ValidationIssue[] => {
     const result = validator.validateFormData(data, schema, undefined, undefined, uiSchema);
     return result.errors.map(error => ({
       message: error.stack || error.message || 'Invalid value.',
       ...(error.property === undefined ? {} : {path: error.property})
     }));
-  };
+  });
   // RJSF uses undefined for cleared controls; persist these as omitted properties (or null at the root).
   const formValue = (value: unknown): JsonValue => JSON.parse(JSON.stringify(value ?? null)) as JsonValue;
   const dataFor = (draft: JsonObject): JsonValue => {
@@ -126,7 +163,7 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
       }
       const data = decodeSource(slot.value, format);
       // Initialize the session draft once; remounting must not reset edits or errors.
-      return {data: formValue(getDefaultFormState<unknown>(validator, schema, data, schema))};
+      return {data: bundle ? data : formValue(getDefaultFormState<unknown>(validator, schema, data, schema))};
     },
     validate: (draft, snapshot) => {
       const data = dataFor(draft);
@@ -165,7 +202,8 @@ export function createSchemaEditor(options: SchemaEditorOptions): EditorDefiniti
             constAsDefaults: 'never' as const
           },
           tagName: 'div' as const,
-          liveValidate: true,
+          liveValidate: !bundle,
+          ...(bundle ? {noValidate: true, extraErrors: fieldErrors(state.issues)} : {}),
           showErrorList: false as const,
           disabled: state.status !== 'editing',
           onChange: (event: IChangeEvent<unknown>) => {

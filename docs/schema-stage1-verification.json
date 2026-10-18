@@ -1,7 +1,7 @@
 {
-  "stage": "S1-2",
-  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/19",
-  "base_commit": "33778a6",
+  "stage": "S1-3",
+  "issue": "https://github.com/kubohiroya/turbowarp-extension-data-editor/issues/20",
+  "base_commit": "c41b211",
   "node": "26.7.0",
   "typescript": "6.0.3",
   "dependency_versions": {
@@ -13,12 +13,18 @@
     "build_with_webpack4_and_build_info": "passed",
     "pure_consumer_skipLibCheck_false": "passed",
     "legacy_consumer_skipLibCheck_true": "passed-with-documented-existing-declaration-limitation",
-    "selected_tests": 100,
-    "selected_tests_passed": 100,
+    "selected_tests": 113,
+    "selected_tests_passed": 113,
     "engine_boundary_cases": 14,
     "snapshot_node_and_depth_boundaries": "passed",
     "no_peer_or_DOM_schema_import": "passed",
-    "browser_bundle_and_import": "passed"
+    "browser_bundle_and_import": "passed",
+    "owner_composition_cases": 5,
+    "bundle_form_cases": 7,
+    "RJSF_display_limitations": [
+      "prefixItems/dynamicRef/recursiveRef are rejected explicitly",
+      "eager object recursion rejected; array-items recursion supported"
+    ]
   },
   "scope": {
     "existing_entries_preserved": [
@@ -32,10 +38,11 @@
     ],
     "schema_runtime_exports": [
       "compileSchemaBundle",
-      "toValidationIssues"
+      "toValidationIssues",
+      "validateSchemaInput"
     ],
     "owner_adapters_implemented": false,
-    "new_RJSF_path_implemented": false,
+    "new_RJSF_path_implemented": true,
     "network_schema_loading": false
   }
 }

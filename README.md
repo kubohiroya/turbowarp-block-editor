@@ -137,3 +137,5 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 `toValidationIssues()`は入力診断を既存の`ValidationIssue`へ変換し、JSON Pointerのpath・順序・件数を維持した凍結結果を返します。不正な診断やcompile/execution診断はTypeErrorで拒否します。既存RJSFのpathや保存時専用の非同期`validateData`の契約は変わりません。
 
 `compileSchemaBundle()`はdraft-07/2020-12と同梱resourceからオフラインの同期validatorを生成します。Schemaと入力を変更せず、構造化診断を返します。[pure検証API](docs/schema.md)を参照してください。同期owner合成と新しいRJSF経路は後続段階です。既存公開入口・webpack4/build-info・CSS buildを維持しています。
+
+同期owner検証には`/schema`の`validateSchemaInput`を利用できます。明示bundleフォームは`/rjsf`の`createSchemaBundleEditor` / `registerSchemaBundle`で登録します。context providerは呼出しごとに時刻・設定を渡します。表示上の対応範囲と既存APIの扱いは[Schema基盤](docs/schema.md)を参照してください。

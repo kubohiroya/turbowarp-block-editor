@@ -2,6 +2,7 @@ import type {InputDiagnostic, ValidationIssue} from './schema-types.js';
 
 export type * from './schema-types.js';
 export {compileSchemaBundle} from './schema-engine.js';
+export {validateSchemaInput} from './schema-compose.js';
 
 const messages = {
   'input-format-invalid': 'Input format is invalid.',

@@ -1,4 +1,4 @@
-import {compileSchemaBundle, toValidationIssues} from '@kubohiroya/turbowarp-extension-data-editor/schema';
+import {compileSchemaBundle, toValidationIssues, validateSchemaInput} from '@kubohiroya/turbowarp-extension-data-editor/schema';
 import type {
   ValidationIssue, NonEmpty, JsonPointer, SchemaDialect, SchemaJsonValue, SchemaJsonObject,
   SchemaDocument, JsonSettings, SchemaIdentity, SchemaSourceReference, SchemaProvenance,
@@ -65,10 +65,6 @@ export const owner: SyncOwnerValidator<Settings> = (_data, context) =>
   context.settings.delegate ? {kind: 'valid', issues: []} : ownerInvalid;
 export const nullSettings: SchemaValidationContext = {consumerId: 'consumer', nowMs: 0, settings: null};
 
-// This signature describes the later composition API; S1-1 must not export its implementation.
-declare function validateSchemaInput<C>(compiled: CompiledSchema, data: SchemaJsonValue, options: {
-  readonly context: SchemaValidationContext<C>; readonly ownerValidate?: SyncOwnerValidator<C>;
-}): SchemaInputValidationResult;
 export const inferred = validateSchemaInput(compiled, object, {context, ownerValidate: owner});
 export const explicit = validateSchemaInput<Settings>(compiled, object, {context, ownerValidate: owner});
 export const inline = validateSchemaInput(compiled, object, {
@@ -137,5 +133,3 @@ export const undefinedTuple: SchemaValidationContext<Settings> = {consumerId: 'c
 // @ts-expect-error Generic inference must not admit functions into settings.
 validateSchemaInput(compiled, object, {context: {consumerId: 'c', nowMs: 0, settings: {f: () => 1}}});
 export const checkedBundle: SchemaCompileResult = compileSchemaBundle(bundle);
-// @ts-expect-error The composition implementation is not exported in S1-1.
-import {validateSchemaInput as unpublishedComposition} from '@kubohiroya/turbowarp-extension-data-editor/schema';

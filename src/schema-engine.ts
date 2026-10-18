@@ -26,7 +26,7 @@ const ownString = (value: object, name: string): string | undefined => {
   return descriptor && 'value' in descriptor && typeof descriptor.value === 'string' ? descriptor.value : undefined;
 };
 const freezeIdentity = (identity: SchemaIdentity): SchemaIdentity => Object.freeze({...identity});
-function scopeFor(value: unknown): SchemaDiagnosticScope {
+export function scopeFor(value: unknown): SchemaDiagnosticScope {
   const fallback = freezeIdentity({ownerId: 'unknown', contractId: 'unknown', revision: 'unknown', variantId: 'default'});
   try {
     if (!isJsonRecord(value)) return Object.freeze({identity: fallback});
@@ -86,8 +86,9 @@ function validateArtifacts(bundle: SchemaBundle): void {
   }
 }
 
-function prepare(bundle: SchemaBundle, ajv: Ajv | Ajv2020): {root: string; resources: {uri: string; document: SchemaDocument}[]} {
+export function prepare(bundle: SchemaBundle, ajv: Ajv | Ajv2020) {
   const registry = new Map<string, string>();
+  const nodes: {node: Record<string, unknown>; base: string}[] = [];
   const register = (id: string, location: string) => {
     const key = normalizeUri(id), previous = registry.get(key);
     if (previous !== undefined && previous !== location) fail('resource-id-conflict');
@@ -110,6 +111,7 @@ function prepare(bundle: SchemaBundle, ajv: Ajv | Ajv2020): {root: string; resou
       register(base, location);node.$id = base;
     }
     for (const key of ['$anchor', '$dynamicAnchor']) if (typeof node[key] === 'string') register(`${base.replace(/#.*$/, '')}#${node[key]}`, location);
+    nodes.push({node, base});
     if (node.$async === true) fail('schema-invalid');
     if (typeof node.format === 'string' && !ajv.formats[node.format]) fail('schema-invalid');
     for (const key of maps) if (isJsonRecord(node[key])) {
@@ -130,7 +132,23 @@ function prepare(bundle: SchemaBundle, ajv: Ajv | Ajv2020): {root: string; resou
     register(uri, `${index}`);walk(resource.document, uri, `${index}`);
     resources.push({uri, document: resource.document as SchemaDocument});
   }
-  return {root: resources[0]!.uri, resources};
+  // Use retrieval-URI pointers in private refs so Ajv emits unambiguous pointer diagnostics,
+  // including refs originally written as relative resource names or anchors.
+  for (const {node, base} of nodes) if (typeof node.$ref === 'string') {
+    const absolute = normalizeUri(resolve(base, node.$ref));
+    let location = registry.get(absolute);
+    if (location === undefined) {
+      const hash = absolute.indexOf('#');
+      const resource = registry.get(hash < 0 ? absolute : absolute.slice(0, hash));
+      const fragment = hash < 0 ? '' : decodeURIComponent(absolute.slice(hash + 1));
+      if (resource !== undefined && (fragment === '' || fragment.startsWith('/'))) location = resource + fragment;
+    }
+    if (location !== undefined) {
+      const slash = location.indexOf('/'), index = Number(slash < 0 ? location : location.slice(0, slash));
+      node.$ref = resources[index]!.uri + '#' + encodeURIComponent(slash < 0 ? '' : location.slice(slash)).replace(/%2F/g, '/');
+    } else node.$ref = absolute.includes('#') ? absolute : absolute + '#';
+  }
+  return {root: resources[0]!.uri, resources, registry, nodes};
 }
 
 function structuralDiagnostics(errors: readonly ErrorObject[], scope: SchemaDiagnosticScope, rootUri: string): readonly InputDiagnostic[] {
