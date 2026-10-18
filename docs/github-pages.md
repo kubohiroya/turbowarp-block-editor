@@ -24,7 +24,7 @@ URL の直接読込は上流が未信頼URLに sandbox を強制するため、�
 
 ## ビルドと依存
 
-共通APIの固定SHAはscratch-guiの `.github/workflows/pages.yml` のcheckout設定で管理します。通常CIと公開版E2Eも同じ完全SHAへ揃えます。[webpack設定API](webpack4.md)と[共通E2E・CI手順](block-editor-e2e.md)を参照してください。
+共通APIの固定SHAはscratch-guiの `.github/workflows/pages.yml` のcheckout設定で管理します。通常CIのbuild用checkoutもこのcore SHAへ揃えます。公開E2E runnerとCIゲートは検証ツールとして独立した完全SHAへ固定し、それぞれのworkflow参照とrunner_revisionを一致させます。[webpack設定API](webpack4.md)と[共通E2E・CI手順](block-editor-e2e.md)を参照してください。
 `build:pages` はインストールされた共通APIの `/build-info` から公開元の完全SHAを取得し、`build-info.json` と日英クレジットのソースリンクに使います。依存先にGit checkoutは不要です。metadataが欠落・不正な場合は失敗させ、GUIのSHAを代用しません。
 Actionsは検証手順を所有する共通リポジトリを別途checkoutし、pnpm 11.18.0とNode 22で検証します。GUIはnpm配布物を利用し、そのmetadataのSHAとworkflowの固定SHAが一致することを確認します。
 GUI は npm ci、既存のアセット生成、限定テストの後に `npm run build:pages` を実行します。
@@ -56,7 +56,7 @@ GitHub Pagesの配信元はGitHub Actionsを維持します。`github-pages` 環
 
 公開jobだけが `pages: write` と `id-token: write` を持ちます。build・deploy・公開後E2Eを同じworkflowで順番に実行し、concurrencyの `cancel-in-progress: false` を維持します。これは実行中の公開を維持する設定で、すべてのpending runの実行や最新commitだけの公開を保証するものではありません。
 
-通常CIは独立したworkflowで、Pagesはその全体の完了を待ちません。Pages自身の関連テスト・build・実sb3 E2Eが成功してからdeployしますが、通常CIのaddonテスト成功までを公開条件にはしていません。PRの必要CIを確認してからdevelopへマージしてください。branch保護やCI全体をdeploy条件にする構成は別途管理します。
+通常CIは独立したworkflowのまま実行します。Pagesはbuildの後に共通の[通常CI成功ゲート](ci-success-gate.md)を呼び、同一SHAのdevelop push CI全体が成功した場合だけdeployします。自動・手動とも同じ条件です。ゲート失敗時はdeployと公開後E2Eをskipし、既存の公開物を保持します。CI待機後にも既存のdevelop鮮度チェックを行います。PRのCI成功だけでは公開しません。
 検証対象は今回の公開経路と変更部分です。この公開は実験版で、安定版リリースのフル検証を完了したものではありません。
 
 ## ロールバック

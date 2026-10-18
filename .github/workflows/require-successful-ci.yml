@@ -1,0 +1,60 @@
+name: Require a successful normal CI workflow
+on:
+  workflow_call:
+    inputs:
+      runner_revision:
+        type: string
+        required: true
+      expected_revision:
+        type: string
+        required: true
+      workflow_file:
+        type: string
+        default: node.js.yml
+      branch:
+        type: string
+        default: develop
+      event:
+        type: string
+        default: push
+permissions:
+  contents: read
+  actions: read
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    defaults:
+      run:
+        working-directory: ci-gate-tools
+    steps:
+      - name: Require an immutable tooling revision
+        env:
+          RUNNER_REVISION: ${{ inputs.runner_revision }}
+        working-directory: .
+        run: node -e 'if (!/^[0-9a-f]{40}$/.test(process.env.RUNNER_REVISION)) process.exit(1)'
+      - uses: actions/checkout@v4
+        with:
+          repository: kubohiroya/turbowarp-extension-data-editor
+          ref: ${{ inputs.runner_revision }}
+          path: ci-gate-tools
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require the latest matching normal CI to succeed
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_REVISION: ${{ inputs.expected_revision }}
+          CI_WORKFLOW_FILE: ${{ inputs.workflow_file }}
+          CI_BRANCH: ${{ inputs.branch }}
+          CI_EVENT: ${{ inputs.event }}
+        run: node scripts/ci/require-successful-ci.mjs
+      - name: Preserve the CI decision
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: normal-ci-gate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ci-gate-tools/test-results/ci-gate/
+          retention-days: 7
+          if-no-files-found: warn
