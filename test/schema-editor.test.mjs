@@ -166,11 +166,16 @@ test('array item menus defer deletion, dismiss safely, and retain add/reorder/co
   assert.equal(document.activeElement, container.querySelector('[role="menuitem"]'));
   const escape = new dom.window.KeyboardEvent('keydown', {key: 'Escape', bubbles: true});
   let escaped = false;
+  let hostEscapes = 0;
   const onEscape = () => { escaped = true; };
+  const onHostEscape = event => { if (event.key === 'Escape') hostEscapes++; };
   window.addEventListener('keydown', onEscape);
+  document.addEventListener('keydown', onHostEscape);
   t.after(() => window.removeEventListener('keydown', onEscape));
+  t.after(() => document.removeEventListener('keydown', onHostEscape));
   await act(async () => { container.querySelector('[role="menuitem"]').dispatchEvent(escape); });
   assert.equal(escaped, false);
+  assert.equal(hostEscapes, 0);
   assert.equal(container.querySelector('[role="menu"]'), null);
   assert.equal(document.activeElement, menu());
   await act(async () => { Simulate.keyDown(menu(), {key: 'ArrowDown'}); });

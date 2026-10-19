@@ -64,14 +64,27 @@ export function ItemMenu({disabled, onClick}: Pick<IconButtonProps, 'disabled' |
     const closeOutside = (event: MouseEvent) => {
       if (!container.current?.contains(event.target as Node)) setOpen(false);
     };
+    // RJSF and its host modal have separate React roots. Stop Escape before either root delegates it.
+    const keepEscapeInMenu = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape' || event.isComposing || event.keyCode === 229) return;
+      event.preventDefault();
+      event.stopPropagation();
+      setOpen(false);
+      trigger.current?.focus();
+    };
+    const menu = container.current;
+    menu?.addEventListener('keydown', keepEscapeInMenu);
     document.addEventListener('mousedown', closeOutside);
-    return () => document.removeEventListener('mousedown', closeOutside);
+    return () => {
+      menu?.removeEventListener('keydown', keepEscapeInMenu);
+      document.removeEventListener('mousedown', closeOutside);
+    };
   }, [open]);
   React.useEffect(() => { if (disabled) setOpen(false); }, [disabled]);
   return <div data-block-editor-item-menu="" ref={container} onBlur={event => {
     if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setOpen(false);
   }} onKeyDown={event => {
-    if (event.key === 'Escape' && open) {
+    if (event.key === 'Escape' && open && !event.nativeEvent.isComposing && event.keyCode !== 229) {
       event.preventDefault();
       event.stopPropagation();
       setOpen(false);
