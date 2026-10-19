@@ -101,6 +101,7 @@ draft-07 を基本とし、未解決の外部参照や不正な schema は登録
 - `ModalComponent`: `id`, `className`, `contentLabel`, `onRequestClose`, `children` を受けるホストのModal。
   portal・フォーカストラップ/復帰・Escape/背景/閉じるボタンを所有し、終了操作を `onRequestClose` へ渡します。
   根ブロックのアイコンがある場合は `headerImage` も渡します。
+  `headerClassName` を見出しのコンテナへ設定すると、アイコン寸法と長い見出しの折り返しを制御します。
 - `messages`: title / saving / cancel / save / saveAll / structureError / conflict / failed / structuralNode の翻訳済み文字列。
 - `styles`: `/react/styles.css` をCSS Modulesで読み込んだcamelCaseのクラス名対応表。
 - 任意の `className`: ホストテーマを設定するクラス。任意の `nodeLabels` / `nodeAppearances` は表示専用のメタデータ。

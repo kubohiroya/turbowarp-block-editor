@@ -8,6 +8,31 @@
     width: min(900px, calc(100vw - 32px));
 }
 
+.modal-content .header {
+    height: auto;
+    min-height: 3.5rem;
+    align-items: center;
+}
+
+.modal-content .header > div:first-child {
+    flex: 1 1 0;
+    min-width: 0;
+    margin: 0;
+    overflow-wrap: anywhere;
+    text-align: center;
+}
+
+.modal-content .header > div:last-child {
+    flex: 0 0 auto;
+}
+
+.modal-content .header img {
+    flex-shrink: 0;
+    width: 1.75rem;
+    height: 1.75rem;
+    object-fit: contain;
+}
+
 .tree {
     min-width: 0;
 }
