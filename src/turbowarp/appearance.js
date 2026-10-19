@@ -1,13 +1,28 @@
 // Presentation metadata stays outside snapshots, drafts and saved project data.
-const readBlockEditorAppearance = (block, ScratchBlocks) => {
+const readBlockEditorAppearance = (block, ScratchBlocks, editableArguments) => {
     const appearance = {};
     if (!block) return appearance;
     try {
-        // Use the block's own labels, without reading JSON or other values from connected inputs.
+        // Registered editor inputs contain the document; other literal inputs identify the block.
         const name = block.inputList.filter(input => input.type !== ScratchBlocks.NEXT_STATEMENT)
-            .map(input => input.fieldRow.filter(field => !(field instanceof ScratchBlocks.FieldImage))
-                .map(field => field.getText())
-                .join(' '))
+            .map(input => {
+                const label = input.fieldRow.filter(field => !(field instanceof ScratchBlocks.FieldImage))
+                    .map(field => field.getText()).join(' ');
+                if (!editableArguments || editableArguments.includes(input.name) ||
+                    input.type !== ScratchBlocks.INPUT_VALUE) return label;
+                try {
+                    const child = input.connection && input.connection.targetBlock();
+                    // Read only literal shadows, never evaluate or traverse reporter expressions.
+                    if (!child || !child.isShadow() || child.inputList.some(part => part.connection)) return label;
+                    const value = child.inputList.flatMap(part => part.fieldRow)
+                        .filter(field => !(field instanceof ScratchBlocks.FieldImage))
+                        .map(field => field.getText()).join(' ').replace(/\s+/g, ' ').trim();
+                    return value ? `${label} (${value})` : label;
+                } catch (error) {
+                    // An unavailable identifier must not discard the block's own labels.
+                    return label;
+                }
+            })
             .join(' ')
             .replace(/\s+/g, ' ')
             .trim();

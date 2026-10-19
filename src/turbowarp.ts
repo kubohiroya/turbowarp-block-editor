@@ -92,8 +92,11 @@ export function bindBlockEditorIcon(options: {
 }): () => void {
   return bindIcon(options);
 }
-export function readBlockEditorAppearance(block: object | null, ScratchBlocks: object): TurboWarpNodeAppearance {
-  return readAppearance(block, ScratchBlocks);
+/** Supply editor arguments to include other literal inputs as parenthesized identifiers. */
+export function readBlockEditorAppearance(
+  block: object | null, ScratchBlocks: object, editableArguments?: readonly string[]
+): TurboWarpNodeAppearance {
+  return readAppearance(block, ScratchBlocks, editableArguments);
 }
 export function createBlockEditorErrorSession(reference: BlockReference, error: unknown): BlockEditorFailureSession {
   return createErrorSession(reference, error) as BlockEditorFailureSession;

@@ -85,13 +85,15 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
                 openingFixedDeclaration = fixedDeclaration(service.registry, openingSnapshot) || null;
                 const labels = {};
                 const appearances = Object.create(null);
-                const rootAppearance = readBlockEditorAppearance(block, ScratchBlocks);
+                const rootAppearance = readBlockEditorAppearance(block, ScratchBlocks,
+                    service.registry.resolve(block.type)?.editableArguments);
                 appearances[reference.blockId] = rootAppearance;
                 labels[reference.blockId] = rootAppearance.name || block.type;
                 if (typeof session.getNodes === 'function') {
                     for (const node of session.getNodes()) {
                         const source = workspace.getBlockById(node.reference.blockId);
-                        const appearance = readBlockEditorAppearance(source, ScratchBlocks);
+                        const appearance = readBlockEditorAppearance(source, ScratchBlocks,
+                            service.registry.resolve(node.opcode)?.editableArguments);
                         appearances[node.reference.blockId] = appearance;
                         labels[node.reference.blockId] = appearance.name || node.opcode;
                     }
