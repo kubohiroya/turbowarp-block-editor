@@ -2,11 +2,11 @@ const fs = require('node:fs/promises');
 const {createHash} = require('node:crypto');
 const JSZip = require('@turbowarp/jszip');
 const {selectNativeProject} = require('./native-picker.cjs');
-const {test, expect} = require('./fixtures.cjs');
+const {test, expect, editorDialog} = require('./fixtures.cjs');
 
 const savedValue = {duration: 9, label: '最新版「秋」 & "scene"'};
 const iconSelector = '[data-block-editor-icon]';
-const modal = page => page.getByRole('dialog', {name: 'ブロックを編集', exact: true});
+const modal = editorDialog;
 const label = page => modal(page).getByRole('textbox', {name: 'Scene label*', exact: true});
 const duration = page => modal(page).getByRole('spinbutton', {name: 'Duration (seconds)*', exact: true});
 const save = page => modal(page).getByRole('button', {name: '保存', exact: true});
@@ -53,6 +53,7 @@ const loadSample = async (page, baseURL) => {
 const openEditor = async page => {
     await page.getByRole('button', {name: 'ブロックを編集', exact: true}).click();
     await expect(modal(page)).toBeVisible();
+    await expect(modal(page)).toHaveAccessibleName(/scene properties.*を編集$/);
 };
 
 const expectValue = async (page, value) => {

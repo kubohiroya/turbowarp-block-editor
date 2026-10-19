@@ -51,6 +51,7 @@ export interface EditorModalProps {
   readonly className: string;
   readonly contentLabel: string;
   readonly headerImage?: string;
+  readonly headerClassName?: string | undefined;
   readonly onRequestClose: () => void;
   readonly children?: React.ReactNode;
 }
@@ -255,7 +256,7 @@ export class BlockEditorDialog extends React.Component<BlockEditorDialogProps, D
         `${name}: ${messages.title}` : messages.title;
     return <ModalComponent className={`${styles.modalContent || ''} ${hierarchy ? styles.hierarchyModal : ''} ${
       this.props.className || ''}`} contentLabel={title} {...(appearance?.iconURI ? {headerImage: appearance.iconURI} : {})}
-      id="blockEditorModal" onRequestClose={this.handleClose}>
+      headerClassName={styles.header} id="blockEditorModal" onRequestClose={this.handleClose}>
       <div aria-busy={saving} className={styles.body}
         onCompositionStart={() => { this.composing = true; }} onCompositionEnd={() => { this.composing = false; }}
         onKeyDownCapture={event => {

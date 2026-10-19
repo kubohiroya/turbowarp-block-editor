@@ -32,11 +32,12 @@ test('dialog titles identify the edited block and pass its icon to the host moda
     t.after(() => container.remove());
     const Modal = props => { modalProps = props; return React.createElement('div', null, props.children); };
     await act(async () => { ReactDOM.render(React.createElement(BlockEditorDialog, {
-      session, ModalComponent: Modal, messages: {...messages, title}, styles: {}, onClose: () => {},
+      session, ModalComponent: Modal, messages: {...messages, title}, styles: {header: 'editor-header'}, onClose: () => {},
       nodeAppearances: {root: {name: 'データを設定', iconURI: 'data:image/svg+xml,icon'}}
     }), container); });
     assert.equal(modalProps.contentLabel, expected);
     assert.equal(modalProps.headerImage, 'data:image/svg+xml,icon');
+    assert.equal(modalProps.headerClassName, 'editor-header');
     await act(async () => { ReactDOM.unmountComponentAtNode(container); });
   }
 });
