@@ -48,12 +48,16 @@ function nativeBridge(t, {fixedInputs = true, descendants = false, reporter = fa
   icon.setTooltip = value => {icon.imageElement_.tooltip = value;};
   B.hideChaff = () => {};
   let session;
+  let appearances;
   const listeners = new Set();
   const service = {registry: f.registry, subscribe: listener => {listeners.add(listener);return () => listeners.delete(listener);}};
   const bridge = attachTurboWarpBlockEditors({enabled: true, fixedInputs, descendants, ScratchBlocks: B, workspace, vm: f.vm,
-    service, label: 'Edit', canOpen: () => true, onOpen: value => {session = value;}, onError: error => {throw error;}});
+    service, label: 'Edit', canOpen: () => true, onOpen: (value, labels, metadata) => {
+      session = value;appearances = metadata;
+    }, onError: error => {throw error;}});
   t.after(() => {bridge.dispose();f.close();});
-  return {...f, bridge, icon, session: () => session, registrationChanged: () => {for (const listener of listeners) listener();},
+  return {...f, bridge, icon, session: () => session, appearances: () => appearances,
+    registrationChanged: () => {for (const listener of listeners) listener();},
     open: () => icon.fieldGroup_.dispatchEvent(new dom.window.KeyboardEvent('keydown', {key: 'Enter', bubbles: true, cancelable: true}))};
 }
 
@@ -68,6 +72,13 @@ test('native bridge opens fixed readonly reporters as a single session beside de
 test('fixed opt-in OFF blocks opening without removing legacy decoration behavior', {skip: !nativeAvailable}, t => {
   const f = nativeBridge(t, {fixedInputs: false});
   f.open();assert.equal(f.session(), undefined);assert.equal(f.dirty(), 0);
+});
+
+test('native bridge includes readonly identifiers and excludes registered editor values from labels', {skip: !nativeAvailable}, t => {
+  const f = nativeBridge(t);const before = f.state();
+  f.open();
+  assert.equal(f.appearances()[f.block.id].name, 'first (ready)');
+  assert.deepEqual(f.state(), before);
 });
 
 test('native bridge target changes and registration removal discard fixed sessions', {skip: !nativeAvailable}, t => {

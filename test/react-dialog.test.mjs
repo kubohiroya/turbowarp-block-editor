@@ -20,9 +20,11 @@ const messages = {title: 'ブロックを編集', saving: '保存中', cancel: '
   saveAll: 'すべて保存', structureError: '構造エラー', conflict: '競合', failed: '失敗', structuralNode: '構造'};
 
 test('dialog titles identify the edited block and pass its icon to the host modal', async t => {
-  for (const [title, expected] of [
+  for (const [title, expected, name = 'データを設定'] of [
     ['ブロックを編集', 'データを設定を編集'], ['Edit block', 'Edit データを設定'],
-    ['{name}の編集', 'データを設定の編集']
+    ['{name}の編集', 'データを設定の編集'],
+    ['ブロックを編集', 'asset (Turtle) = JSONを編集', 'asset (Turtle) = JSON'],
+    ['Edit block', 'Edit asset (Turtle) = JSON', 'asset (Turtle) = JSON']
   ]) {
     let modalProps;
     const session = {reference: {blockId: 'root'},
@@ -33,7 +35,7 @@ test('dialog titles identify the edited block and pass its icon to the host moda
     const Modal = props => { modalProps = props; return React.createElement('div', null, props.children); };
     await act(async () => { ReactDOM.render(React.createElement(BlockEditorDialog, {
       session, ModalComponent: Modal, messages: {...messages, title}, styles: {header: 'editor-header'}, onClose: () => {},
-      nodeAppearances: {root: {name: 'データを設定', iconURI: 'data:image/svg+xml,icon'}}
+      nodeAppearances: {root: {name, iconURI: 'data:image/svg+xml,icon'}}
     }), container); });
     assert.equal(modalProps.contentLabel, expected);
     assert.equal(modalProps.headerImage, 'data:image/svg+xml,icon');
