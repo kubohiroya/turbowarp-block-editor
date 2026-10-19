@@ -16,6 +16,7 @@ export interface DialogSessionState {
   readonly error: unknown;
 }
 export interface DialogSession {
+  readonly reference?: {readonly blockId: string};
   getState(): DialogSessionState;
   getFixedInputView?(): unknown;
   subscribe(listener: () => void): () => void;
@@ -49,6 +50,7 @@ export interface EditorModalProps {
   readonly id: string;
   readonly className: string;
   readonly contentLabel: string;
+  readonly headerImage?: string;
   readonly onRequestClose: () => void;
   readonly children?: React.ReactNode;
 }
@@ -244,8 +246,16 @@ export class BlockEditorDialog extends React.Component<BlockEditorDialogProps, D
     if (session.getFixedInputView && (this.state.status === 'editing' || saving)) {
       try {fixed = Boolean(session.getFixedInputView());} catch {fixed = true;}
     }
+    const root = session.getNodes?.().find(node => node.inputPath.length === 0);
+    const rootId = session.reference?.blockId || root?.reference.blockId;
+    const appearance = rootId ? this.props.nodeAppearances?.[rootId] : undefined;
+    const name = appearance?.name || (rootId ? this.props.nodeLabels?.[rootId] : undefined) || root?.opcode;
+    const title = name ? messages.title.includes('{name}') ? messages.title.replace('{name}', () => name) :
+      /ブロック|block/i.test(messages.title) ? messages.title.replace(/ブロック|block/i, () => name) :
+        `${name}: ${messages.title}` : messages.title;
     return <ModalComponent className={`${styles.modalContent || ''} ${hierarchy ? styles.hierarchyModal : ''} ${
-      this.props.className || ''}`} contentLabel={messages.title} id="blockEditorModal" onRequestClose={this.handleClose}>
+      this.props.className || ''}`} contentLabel={title} {...(appearance?.iconURI ? {headerImage: appearance.iconURI} : {})}
+      id="blockEditorModal" onRequestClose={this.handleClose}>
       <div aria-busy={saving} className={styles.body}
         onCompositionStart={() => { this.composing = true; }} onCompositionEnd={() => { this.composing = false; }}
         onKeyDownCapture={event => {

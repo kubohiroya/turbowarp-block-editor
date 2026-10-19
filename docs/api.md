@@ -100,12 +100,18 @@ draft-07 を基本とし、未解決の外部参照や不正な schema は登録
 - `session`: 単一または階層セッション。本文mount契約は従来どおりです。
 - `ModalComponent`: `id`, `className`, `contentLabel`, `onRequestClose`, `children` を受けるホストのModal。
   portal・フォーカストラップ/復帰・Escape/背景/閉じるボタンを所有し、終了操作を `onRequestClose` へ渡します。
+  根ブロックのアイコンがある場合は `headerImage` も渡します。
 - `messages`: title / saving / cancel / save / saveAll / structureError / conflict / failed / structuralNode の翻訳済み文字列。
 - `styles`: `/react/styles.css` をCSS Modulesで読み込んだcamelCaseのクラス名対応表。
 - 任意の `className`: ホストテーマを設定するクラス。任意の `nodeLabels` / `nodeAppearances` は表示専用のメタデータ。
 - `onClose`: ホスト側のModal状態を閉じる処理。任意の `onError` はビュー例外の報告先。
 
 CSSはJS入口から自動importしません。ホストが `/react/styles.css` を読み込み、CSS ModulesのcamelCaseを有効にして渡します。
+見出しは根ブロックの `nodeAppearances.name` または `nodeLabels` を使用します。
+`messages.title` に `{name}` があれば置換し、従来の「ブロックを編集」/「Edit block」も名前を含む見出しへ置換します。
+表示用メタデータがない場合は従来の見出しを維持します。
+標準フォームの追加項目は番号と薄い枠を持ち、key-valueは「キー」「値」のラベルと入力欄を横並びにした2行で表示します。
+項目の削除は「…」メニューの「🗑️この項目を削除」から行い、追加は「➕項目を追加」ボタンで行います。
 テーマは `--block-editor-background`, `--block-editor-text`, `--block-editor-input`,
 `--block-editor-button`, `--block-editor-border`, `--block-editor-radius` をModalのクラスへ設定します。
 省略時は明るい背景の既定値を使用します。GUIの翻訳/Redux/テーマモジュールを共通側からimportしません。

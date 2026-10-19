@@ -85,6 +85,9 @@ const createBlockEditorBridge = ({ScratchBlocks, workspace, vm, service, label, 
                 openingFixedDeclaration = fixedDeclaration(service.registry, openingSnapshot) || null;
                 const labels = {};
                 const appearances = Object.create(null);
+                const rootAppearance = readBlockEditorAppearance(block, ScratchBlocks);
+                appearances[reference.blockId] = rootAppearance;
+                labels[reference.blockId] = rootAppearance.name || block.type;
                 if (typeof session.getNodes === 'function') {
                     for (const node of session.getNodes()) {
                         const source = workspace.getBlockById(node.reference.blockId);

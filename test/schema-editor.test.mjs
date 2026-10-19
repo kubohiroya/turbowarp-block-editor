@@ -144,6 +144,124 @@ test('schema defaults affect only the draft until the user saves', async t => {
   assert.equal(f.block.arguments.PROPERTIES.value, '{"duration":2}');
 });
 
+test('array item menus defer deletion, dismiss safely, and retain add/reorder/copy behavior', async t => {
+  const itemSchema = {type: 'object', properties: {
+    key: {type: 'string'}, value: {type: 'string'}
+  }, required: ['key', 'value']};
+  const original = [{key: 'first', value: 'one'}, {key: 'second', value: 'two'}];
+  const f = fixture({schema: {type: 'array', items: itemSchema},
+    uiSchema: {'ui:options': {copyable: true}}}, JSON.stringify(original));
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { act(() => { f.session.dispose(); }); container.remove(); });
+  await act(async () => { f.session.mount(container); });
+  const headings = () => [...container.querySelectorAll('[data-block-editor-item-heading] > span')]
+    .map(element => element.textContent);
+  const menu = () => container.querySelector('[aria-haspopup="menu"]');
+  assert.deepEqual(headings(), ['・項目1', '・項目2']);
+  assert.equal(container.querySelector('[data-block-editor-add-item]').textContent, '➕項目を追加');
+  await act(async () => { Simulate.click(menu()); });
+  assert.deepEqual(f.session.getDraft().data, original);
+  assert.equal(menu().getAttribute('aria-expanded'), 'true');
+  assert.equal(document.activeElement, container.querySelector('[role="menuitem"]'));
+  const escape = new dom.window.KeyboardEvent('keydown', {key: 'Escape', bubbles: true});
+  let escaped = false;
+  const onEscape = () => { escaped = true; };
+  window.addEventListener('keydown', onEscape);
+  t.after(() => window.removeEventListener('keydown', onEscape));
+  await act(async () => { container.querySelector('[role="menuitem"]').dispatchEvent(escape); });
+  assert.equal(escaped, false);
+  assert.equal(container.querySelector('[role="menu"]'), null);
+  assert.equal(document.activeElement, menu());
+  await act(async () => { Simulate.keyDown(menu(), {key: 'ArrowDown'}); });
+  assert.ok(container.querySelector('[role="menu"]'));
+  await act(async () => { document.body.dispatchEvent(new dom.window.MouseEvent('mousedown', {bubbles: true})); });
+  assert.equal(container.querySelector('[role="menu"]'), null);
+  assert.deepEqual(f.session.getDraft().data, original);
+  await act(async () => { Simulate.click(container.querySelector('[aria-label="項目を下へ移動"]')); });
+  assert.deepEqual(f.session.getDraft().data, [original[1], original[0]]);
+  await act(async () => { Simulate.click([...container.querySelectorAll('button')].find(b => b.textContent === '項目を複製')); });
+  assert.deepEqual(f.session.getDraft().data, [original[1], original[1], original[0]]);
+  await act(async () => { Simulate.click(menu()); });
+  assert.equal(container.querySelector('[role="menuitem"]').textContent, '🗑️この項目を削除');
+  await act(async () => { Simulate.click(container.querySelector('[role="menuitem"]')); });
+  assert.deepEqual(f.session.getDraft().data, [original[1], original[0]]);
+  assert.deepEqual(headings(), ['・項目1', '・項目2']);
+  await act(async () => { Simulate.click(container.querySelector('[data-block-editor-add-item]')); });
+  assert.equal(f.session.getDraft().data.length, 3);
+  assert.deepEqual(headings(), ['・項目1', '・項目2', '・項目3']);
+  assert.equal(f.committed(), 0);
+  assert.equal(f.block.arguments.PROPERTIES.value, JSON.stringify(original));
+});
+
+test('additional key/value properties have numbered forms and delete only through their menu', async t => {
+  const f = fixture({schema: {type: 'object', additionalProperties: {type: 'string'}}},
+    '{"first":"one","second":"two"}');
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { act(() => { f.session.dispose(); }); container.remove(); });
+  await act(async () => { f.session.mount(container); });
+  assert.equal(container.querySelectorAll('[data-block-editor-item]').length, 2);
+  assert.deepEqual([...container.querySelectorAll('[data-block-editor-item-heading] > span')]
+    .map(element => element.textContent), ['・項目1', '・項目2']);
+  assert.deepEqual([...container.querySelectorAll('[data-block-editor-item] label')]
+    .map(element => element.textContent), ['キー', '値', 'キー', '値']);
+  const key = container.querySelector('input[id$="-key"]');
+  key.value = 'renamed';
+  await act(async () => { Simulate.blur(key, {target: key}); });
+  assert.deepEqual(f.session.getDraft().data, {renamed: 'one', second: 'two'});
+  assert.deepEqual([...container.querySelectorAll('[data-block-editor-item] label')]
+    .map(element => element.textContent), ['キー', '値', 'キー', '値']);
+  await act(async () => { Simulate.click(container.querySelector('[aria-haspopup="menu"]')); });
+  assert.equal(Object.keys(f.session.getDraft().data).length, 2);
+  await act(async () => { Simulate.click(container.querySelector('[role="menuitem"]')); });
+  assert.deepEqual(f.session.getDraft().data, {second: 'two'});
+  assert.equal(container.querySelector('[data-block-editor-item-heading] > span').textContent, '・項目1');
+  assert.equal(f.committed(), 0);
+  await act(async () => { assert.equal((await f.session.save()).status, 'saved'); });
+  assert.equal(f.committed(), 1);
+  assert.deepEqual(JSON.parse(f.block.arguments.PROPERTIES.value), {second: 'two'});
+});
+
+test('array templates honor readonly, removal and add limits', async t => {
+  for (const options of [
+    {uiSchema: {'ui:readonly': true}},
+    {uiSchema: {'ui:options': {removable: false, addable: false}}},
+    {schema: {type: 'array', maxItems: 1, items: [{type: 'string'}], additionalItems: false}}
+  ]) {
+    const f = fixture({schema: {type: 'array', items: {type: 'string'}}, ...options}, '["keep"]');
+    const container = document.createElement('div');
+    document.body.appendChild(container);
+    t.after(() => { act(() => { f.session.dispose(); }); container.remove(); });
+    await act(async () => { f.session.mount(container); });
+    const trigger = container.querySelector('[aria-haspopup="menu"]');
+    const add = container.querySelector('[data-block-editor-add-item]');
+    assert.ok(!trigger || trigger.disabled);
+    assert.ok(!add || add.disabled);
+    assert.deepEqual(f.session.getDraft().data, ['keep']);
+  }
+});
+
+test('key/value labels stay fixed while editing the shortcut key and action', async t => {
+  const f = fixture({schema: {type: 'object', additionalProperties: {type: 'string'}}},
+    '{"ArrowRight":"rehearsal.skipAction"}');
+  const container = document.createElement('div');
+  document.body.appendChild(container);
+  t.after(() => { act(() => { f.session.dispose(); }); container.remove(); });
+  await act(async () => { f.session.mount(container); });
+  const rows = [...container.querySelectorAll('[data-block-editor-pair-row]')];
+  assert.deepEqual(rows.map(row => row.querySelector('label').textContent), ['キー', '値']);
+  assert.deepEqual(rows.map(row => row.querySelector('input').value), ['ArrowRight', 'rehearsal.skipAction']);
+  for (const row of rows) assert.equal(row.querySelector('label').htmlFor, row.querySelector('input').id);
+  await act(async () => { Simulate.change(rows[1].querySelector('input'), {target: {value: 'rehearsal.backAction'}}); });
+  assert.deepEqual(f.session.getDraft().data, {ArrowRight: 'rehearsal.backAction'});
+  const key = rows[0].querySelector('input');
+  key.value = 'ArrowLeft';
+  await act(async () => { Simulate.blur(key, {target: key}); });
+  assert.deepEqual(f.session.getDraft().data, {ArrowLeft: 'rehearsal.backAction'});
+  assert.deepEqual([...container.querySelectorAll('label')].map(label => label.textContent), ['キー', '値']);
+});
+
 test('remount preserves the session draft and business validation errors', async t => {
   const f = fixture({validateData: () => [{message: 'Choose another label.', path: '.label'}]});
   const container = document.createElement('div');
