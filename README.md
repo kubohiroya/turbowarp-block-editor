@@ -103,10 +103,10 @@ pnpm test
 `pnpm test` は型宣言を含むビルド後、コアと標準フォームのテストを実行します。
 パッケージは ESM です。ブラウザには ES2022 の組み込み API が必要です。
 標準フォームの React / ReactDOM peer は 16.14 / 17 / 18。GUI は既存の 16.14 を共有します。
-初回の実験版は `@kubohiroya/turbowarp-extension-data-editor@0.1.0` です。固定SchemaのSource/Form編集は `0.2.0` で追加しました。今回の配布版 `0.2.1` は、既定OFFの固定入力契約・標準field transaction・固定フォームとGUI接続も含みます。
+初回の実験版は `@kubohiroya/turbowarp-extension-data-editor@0.1.0` です。固定SchemaのSource/Form編集は `0.2.0`、既定OFFの固定入力契約・標準field transaction・固定フォームとGUI接続は `0.2.1` で追加しました。配布版 `0.2.2` は、編集見出しのブロック名・アイコン、項目の削除メニュー・追加ボタン、key-valueの2行表示を含みます。
 
 ```sh
-npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.1
+npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.2
 ```
 
 配布物・改名時の互換性・公開手順は[パッケージ配布](docs/package-distribution.md)を参照してください。

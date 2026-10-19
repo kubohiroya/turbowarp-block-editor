@@ -1,6 +1,6 @@
 {
   "name": "@kubohiroya/turbowarp-extension-data-editor",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Custom editor sessions and UI for structured data handled by TurboWarp extensions",
   "type": "module",
   "sideEffects": [
@@ -98,11 +98,5 @@
   },
   "publishConfig": {
     "access": "public"
-  },
-  "gitHead": "485f0e550e622235624b5e9176820161aeeba252",
-  "x-turbowarp-source": {
-    "revision": "485f0e550e622235624b5e9176820161aeeba252",
-    "revisionRole": "base-commit",
-    "sourceState": "working-tree-release-overlay"
   }
 }
