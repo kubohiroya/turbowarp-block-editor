@@ -1,6 +1,6 @@
 # 固定入力・native host・フォーム（S3-1〜S3-3）
 
-この実装は固定入力の型・Schema検査・同期prepared境界と、明示的に有効化する標準field transactionを追加する。固定フォームとGUIフラグの接続をローカルで追加し、拡張側の本登録・配布は後続工程へ残す。既存SOURCE編集、`apiVersion: 1`、既存8 exportsとCSS buildは維持する。
+この実装は固定入力の型・Schema検査・同期prepared境界と、明示的に有効化する標準field transactionを追加する。固定フォームとGUIの既定OFFフラグへ接続する。各拡張は正本Schema・codec・登録を所有し、共通基盤に特定用途のSchemaを内蔵しない。既存SOURCE編集、`apiVersion: 1`、既存8 exportsとCSS buildは維持する。
 
 ## 有効化と互換性
 
@@ -34,7 +34,7 @@ owner設定型は既存`SchemaValidationContext<C>`のJSON設定制約に従い�
 
 hostはcommitの実書込み直前にも全identity・読取依存・登録寿命を再確認し、readonly変更を全件拒否する責務を持つ。registry経由のsessionは、commit待機中に登録が解除されたらrequestの`signal`をabortする。hostは実書込み直前にもsignalを確認し、失効時には無変更で拒否する。購読はcommit完了/拒否時に解除する。S3-2の標準field hostは全field適用・同期VMイベント・undo/redo・dirty・event groupをまとめてcommit/rollbackする。mockに加えて、固定した実ScratchBlocksとVM adapterのfixtureで保存と途中例外を確認する。headless native fixtureは実GUIやnative pickerのE2Eと区別する。S3-3では実GUIと23展開fixtureのモデル・UIを検証し、各owner製品の全境界・旧runtime比較はS3-4、新artifactの依存閉包はS3-5で検証する。
 
-切戻しはサービスのopt-inを外すことで新契約を公開しない状態に戻せる。旧host/旧登録の型・実行経路は維持する。今回のローカル差分は公開artifactでも依存pinでもなく、版を更新・公開しない。
+切戻しはサービスのopt-inを外すことで新契約を公開しない状態に戻せる。旧host/旧登録の型・実行経路は維持する。0.2.1配布物の`gitHead`と`x-turbowarp-source`は元Git SHAを示し、版更新等を含むworking-tree release overlayをcleanなrelease commitと区別する。
 
 
 ## S3-2の標準field host
@@ -51,7 +51,7 @@ commit直前にproject/target、親・shadow・field・VM、読取依存、登�
 
 固定入力のChangeは同期配送中に`recordUndo: false`でVMとlistenerへ渡し、全検査成功後に同じeventを`recordUndo: true`としてundo履歴へ追加する。redoのclearも成功時まで保留する。これにより失敗・project切替時に旧履歴を復元するための書戻しを避け、外部操作が持つ現在の履歴を保持する。旧SOURCEのevent配送は変更しない。保存対象と同じfieldへの外部Changeが再入した場合は外部値を残し、最初の外部eventのundo起点をこの保存開始前のrawに対応させる。未commit値をundoで復活させない。外部の色変更ではそのrawと表示状態も保持する。
 
-正本branch policyのないgroupとfixed descendantsの集合保存は拒否する。Descendants ONでもfixed rootはsingle sessionで開き、旧SOURCE aggregateへfixed childが混在する場合はfail closedを維持する。owner境界・依存pin更新・C3配布完了は後続工程であり、このローカル実装へ含めない。
+正本branch policyのないgroupとfixed descendantsの集合保存は拒否する。Descendants ONでもfixed rootはsingle sessionで開き、旧SOURCE aggregateへfixed childが混在する場合はfail closedを維持する。ownerの正本Schema・境界検査・依存固定は拡張側の責務であり、共通側の試験を製品の実測の代用にしない。
 
 
 ## S3-3の有限policyとUI
@@ -66,12 +66,12 @@ callbackを含まない`branchRules`をregistryの正本に保持する。sessio
 
 失敗して同scopeのsessionが開いている間はdraftを保持する。保存成功・取消・dispose・project/target/登録失効では破棄し、再openは現在のrawから読む。optional host `subscribeInvalidation(reference,declaration,listener)`はproject generation/target/実block/VM/登録scopeの失効を通知する。pending保存はsignalをabortし、他scopeへbufferを復活させない。通常の同target値変更は保存時に競合として拒否し、そのdialogのdraftを保持する。
 
-GUI・commonの試験では16フラグ分類、日英・focus/keyboard、23展開fixtureをcommonのモデル・UIで確認する。両Asset各6/Bubble10/common1の適用先を区別し、common fixtureを各owner製品の実測に代用しない。実ownerのSchema正本・全境界・旧runtime比較はS3-4、pin/lock/実解決を一致させるC3閉包はS3-5へ残す。ローカルGUI検証でartifact overlayを使う場合は元実体を保全し、declared pin/lockと実際のtest解決先の差を明記する。
+GUI・commonの試験では16フラグ分類、日英・focus/keyboard、23展開fixtureをcommonのモデル・UIで確認する。両Asset各6/Bubble10/common1の適用先を区別し、common fixtureを各owner製品の実測に代用しない。実ownerのSchema正本・全境界・旧runtime比較はS3-4、pin/lock/実解決を一致させる閉包はS3-5の別証拠で確認する。ローカルGUI検証でartifact overlayを使う場合は元実体を保全し、declared pin/lockと実際のtest解決先の差を明記する。
 
 ## E2Eの対象と明示profile
 
-`pnpm test:e2e:block-editor`は既存SOURCE経路・reload・light/darkの6件を実行する。Pagesと公開後検証もこの既定profileを使い、`site/source.json`の既存GUI/core pinはS3-3では維持する。
+`pnpm test:e2e:block-editor`は既存SOURCE経路・reload・light/darkの6件を実行する。Pagesと公開後検証もこの既定profileを使う。`site/source.json`では選定した最新GUI/coreの元Git SHAを固定し、使用するnpm版・配布物hash・working-treeの区分も別に照合する。Pages公開は別の明示承認を要する。
 
 S3-3のfixed対応GUIとcommon artifactを明示した検証先には、`pnpm test:e2e:fixed-inputs`で固定入力21件を実行する。既存6件も合わせる場合は`E2E_FIXED_INPUTS=1 pnpm test:e2e:block-editor`で27件を選択する。ローカル検証先は`E2E_GUI_ROOT`、外部検証先は`E2E_BASE_URL`と完全SHAの`E2E_EXPECT_GUI_REVISION` / `E2E_EXPECT_CORE_REVISION`で指定する。fixed profileは対応を期待する対象にだけ明示し、対象が未対応なら検査失敗とする。機能不足を実行時skipに置き換えない。
 
-`pnpm test:e2e:native`はmacOSの既存OS picker用editor 2件を維持し、fixed profileを併記しても対象を増やさない。固定入力の実Blockly dropdown操作は21件側の検証で、OS pickerとは別に数える。公開siteのfixed対応pinへの切替と公開後fixed検証の導入はS3-5で行う。
+`pnpm test:e2e:native`はmacOSの既存OS picker用editor 2件を維持し、fixed profileを併記しても対象を増やさない。固定入力の実Blockly dropdown操作は21件側の検証で、OS pickerとは別に数える。公開siteの変更はnpm公開から独立した承認を要し、実施時はdeployment SHA・元Git SHA・npm版・配布物の一致を確認してから公開後fixed検証を行う。
