@@ -144,7 +144,9 @@ for (const [theme, colours] of Object.entries(themes)) {
             const original = await canvas(page).textContent();
             await open(page, 'root');
             const shortcutKey = form(page).locator('input[id$="_shortcuts_ArrowRight-key"]');
-            const shortcut = form(page).locator('[data-block-editor-item]').filter({has: shortcutKey});
+            const shortcut = form(page).locator('[data-block-editor-item]').filter({
+                has: page.locator('input[id$="_shortcuts_ArrowRight-key"]')
+            });
             await shortcutKey.scrollIntoViewIfNeeded();
             await expect(shortcut.locator('label')).toHaveText(['キー', '値']);
             await expect(shortcut.locator('input')).toHaveCount(2);
