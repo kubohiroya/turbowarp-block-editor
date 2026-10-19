@@ -6,6 +6,7 @@ const valid = () => ({name: 'Valid name',
     amount: 2,
     mode: 'a',
     notes: 'OK notes',
+    shortcuts: {ArrowRight: 'rehearsal.skipAction'},
     nested: {valid: 'Keep this unchanged', invalid: 'OK'},
     group: {valid: 'Keep this group value', other: 'Another property'},
     items: [{label: 'First valid item'}, {label: 'Second valid item'}]});
@@ -25,6 +26,7 @@ const register = (Scratch, {id, colour}) => {
             amount: {type: 'integer', title: 'Amount', minimum: 1, maximum: 10},
             mode: {type: 'string', title: 'Mode', enum: ['a', 'b']},
             notes: {type: 'string', title: 'Notes', pattern: '^OK'},
+            shortcuts: {type: 'object', title: 'Shortcuts', additionalProperties: {type: 'string'}},
             nested: {type: 'object',
                 title: 'Nested settings',
                 properties: {

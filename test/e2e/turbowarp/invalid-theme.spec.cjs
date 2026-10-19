@@ -143,6 +143,26 @@ for (const [theme, colours] of Object.entries(themes)) {
             await load(page, baseURL, theme, true);
             const original = await canvas(page).textContent();
             await open(page, 'root');
+            const shortcutKey = form(page).locator('input[id$="_shortcuts_ArrowRight-key"]');
+            const shortcut = form(page).locator('[data-block-editor-item]').filter({has: shortcutKey});
+            await shortcutKey.scrollIntoViewIfNeeded();
+            await expect(shortcut.locator('label')).toHaveText(['キー', '値']);
+            await expect(shortcut.locator('input')).toHaveCount(2);
+            await expect(shortcutKey).toHaveValue('ArrowRight');
+            await expect(shortcut.getByLabel('値', {exact: true})).toHaveValue('rehearsal.skipAction');
+            await expect(shortcut).toHaveCSS('border-top-style', 'solid');
+            const inline = await shortcut.locator('[data-block-editor-pair-row]').evaluateAll(rows => rows.every(row => {
+                const label = row.querySelector('label').getBoundingClientRect();
+                const input = row.querySelector('input').getBoundingClientRect();
+                return Math.abs((label.top + label.bottom) - (input.top + input.bottom)) < 2;
+            }));
+            expect(inline).toBe(true);
+            await shortcut.getByRole('button', {name: '項目のメニュー', exact: true}).click();
+            await expect(shortcut.getByRole('menuitem')).toBeVisible();
+            await shortcut.getByRole('menuitem').press('Escape');
+            await expect(shortcut.getByRole('menu')).toHaveCount(0);
+            await expect(dialog(page)).toBeVisible();
+            await testInfo.attach(`${theme}-key-value.png`, {body: await page.screenshot(), contentType: 'image/png'});
             evidence.stage('theme-initial-invalid');
             for (const path of paths) await expectInvalid(field(form(page), path), colours);
             for (const [id, path] of [['grand', 'nested_valid'], ['grand', 'items_0_label'],
