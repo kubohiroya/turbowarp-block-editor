@@ -103,10 +103,10 @@ pnpm test
 `pnpm test` は型宣言を含むビルド後、コアと標準フォームのテストを実行します。
 パッケージは ESM です。ブラウザには ES2022 の組み込み API が必要です。
 標準フォームの React / ReactDOM peer は 16.14 / 17 / 18。GUI は既存の 16.14 を共有します。
-初回の実験版は `@kubohiroya/turbowarp-extension-data-editor@0.1.0` です。固定SchemaのSource/Form編集を追加する今回の配布版は `0.2.0` です。
+初回の実験版は `@kubohiroya/turbowarp-extension-data-editor@0.1.0` です。固定SchemaのSource/Form編集は `0.2.0` で追加しました。今回の配布版 `0.2.1` は、既定OFFの固定入力契約・標準field transaction・固定フォームとGUI接続も含みます。
 
 ```sh
-npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.0
+npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.1
 ```
 
 配布物・改名時の互換性・公開手順は[パッケージ配布](docs/package-distribution.md)を参照してください。
@@ -117,9 +117,8 @@ npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.0
 [GUIの起動・制約・検証手順](docs/block-editor.md) に従ってください。
 既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
 
-現在の GUI 適用範囲は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列です。
-reporter、メニュー、独自 validator 付きフィールドは書き換えません。
-`.sb3` の実保存と標準 `project_url` 経路での再読込を確認済みです。OS のファイル選択による再読込、アイコンがないブロックへの追加表示、翻訳・全テーマは後続の確認項目です。
+既存のSOURCE経路は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列を扱います。この経路でreporter、メニュー、独自validator付きfieldを書き換えません。固定入力経路は対応hostと明示opt-inで静的menu・数値・色を扱い、reporterや動的menuを評価・置換しません。
+`.sb3` の保存、`project_url` とOSのファイル選択による再読込、日英表示とテーマの検証手順・実行範囲は[GUI接続E2E](docs/block-editor-e2e.md)と[固定入力の契約](docs/fixed-input-contracts.md)を参照してください。
 
 ## フラグとロールバック
 
@@ -143,7 +142,7 @@ GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs`
 
 同期owner検証には`/schema`の`validateSchemaInput`を利用できます。明示bundleフォームは`/rjsf`の`createSchemaBundleEditor` / `registerSchemaBundle`で登録します。context providerは呼出しごとに時刻・設定を渡します。表示上の対応範囲と既存APIの扱いは[Schema基盤](docs/schema.md)を参照してください。
 
-現在のowner横断検証は**14契約・8 package**です。[Template分離後の再検証手順](docs/template-fixture-separation.ja.md#current-verification)で、Templateを含まないisolation indexと2つの検証commandを確認してください。段階2では、この14本番契約と新規予定の9固定契約を区別して計画します。旧16契約・9 packageの結果と当時の開始条件は[段階1の履歴](docs/schema-stage1.ja.md)として保持します。
+既存SOURCE契約の導入時に採取した横断検証記録は**14契約・8 package**です。[Template分離後の再検証手順](docs/template-fixture-separation.ja.md#current-verification)で、Templateを含まないisolation indexと2つの検証commandを確認してください。この導入時記録では14本番契約と9固定契約を区別しています。固定入力の実装・GUI接続は末尾の契約節を参照してください。旧16契約・9 packageの結果と当時の開始条件は[段階1の履歴](docs/schema-stage1.ja.md)として保持します。
 
 ## Optional editing examples
 
@@ -153,4 +152,4 @@ Prepared source editing is an optional host capability. See [the source/form con
 
 ## 固定入力とGUI接続（S3-1〜S3-3）
 
-固定入力の型・Schema検査・同期prepared契約を追加しています。`createBlockEditorService({fixedInputs: true})`の明示時だけ新しい登録APIを提供し、対応hostがない場合は開けません。lower-level hostの`enableFixedInputs: true`で標準fieldの読取・原子的保存を利用できます。固定フォームとGUIの既定OFFフラグ接続をローカルで追加しています。各拡張への登録は後続工程です。[固定入力の契約と後続工程](docs/fixed-input-contracts.md)を参照してください。公開済み0.2.0の機能と、今回の未公開差分は区別してください。
+固定入力の型・Schema検査・同期prepared契約を追加しています。`createBlockEditorService({fixedInputs: true})`の明示時だけ新しい登録APIを提供し、対応hostがない場合は開けません。lower-level hostの`enableFixedInputs: true`で標準fieldの読取・原子的保存を利用できます。固定フォームとGUIの既定OFFフラグ接続も含みます。各拡張は正本Schema・codec・登録を所有します。[固定入力の契約](docs/fixed-input-contracts.md)を参照してください。配布物には元Git SHAと版更新を含むworking-tree release overlayの区分を記録しています。
