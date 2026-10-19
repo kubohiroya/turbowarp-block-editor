@@ -28,6 +28,8 @@ import {decodeSource, encodeSource, sameData} from './codec.js';
 import type {SourceFormat} from './codec.js';
 import {EditorRegistry} from './registry.js';
 import {EDITOR_API_VERSION} from './types.js';
+import {AddItemButton, ArrayItem, ItemMenu, additionalItemTemplate, numberedObjectTemplate,
+  valueFieldTemplate} from './rjsf-templates.js';
 import type {
   BlockSnapshot, EditorDefinition, JsonObject, JsonValue, ValidationIssue
 } from './types.js';
@@ -39,8 +41,12 @@ function moduleExports<T>(namespace: T): T {
     ? fallback as T : namespace;
 }
 const Form = moduleExports(RjsfCore).default as unknown as React.ComponentType<FormProps<unknown>>;
-const {getDefaultFormState} = moduleExports(RjsfUtils);
+const {getDefaultFormState, ADDITIONAL_PROPERTY_FLAG} = moduleExports(RjsfUtils);
 const {customizeValidator} = moduleExports(RjsfAjv);
+const defaultTemplates = moduleExports(RjsfCore).getDefaultRegistry().templates;
+const ObjectItems = numberedObjectTemplate(defaultTemplates.ObjectFieldTemplate, ADDITIONAL_PROPERTY_FLAG);
+const AdditionalItem = additionalItemTemplate(ADDITIONAL_PROPERTY_FLAG);
+const ValueField = valueFieldTemplate(defaultTemplates.FieldTemplate, ADDITIONAL_PROPERTY_FLAG);
 let nextViewId = 0;
 
 export interface SchemaEditorOptions {
@@ -258,6 +264,13 @@ function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
         const state = context.getState();
         const props = {
           schema, uiSchema, validator, idPrefix,
+          templates: {
+            ArrayFieldItemTemplate: ArrayItem,
+            ObjectFieldTemplate: ObjectItems,
+            WrapIfAdditionalTemplate: AdditionalItem,
+            FieldTemplate: ValueField,
+            ButtonTemplates: {AddButton: AddItemButton, RemoveButton: ItemMenu}
+          },
           formData: dataFor(context.getDraft()),
           // Defaults belong to read(), not subsequent renders or remounts.
           experimental_defaultFormStateBehavior: {

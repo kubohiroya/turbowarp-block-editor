@@ -152,6 +152,107 @@
     margin-bottom: 1rem;
 }
 
+.body :global([data-block-editor-item]) {
+    box-sizing: border-box;
+    min-width: 0;
+    margin: 0.75rem 0;
+    padding: 1rem;
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+}
+
+.body :global([data-block-editor-item-heading]),
+.body :global([data-block-editor-item-actions]) {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.body :global([data-block-editor-item-heading]) {
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+    font-weight: bold;
+}
+
+.body :global([data-block-editor-item]) input,
+.body :global([data-block-editor-item]) select,
+.body :global([data-block-editor-item]) textarea {
+    box-sizing: border-box;
+}
+
+.body :global([data-block-editor-pair-row]) {
+    display: grid;
+    grid-template-columns: 3rem minmax(0, 1fr);
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.body :global([data-block-editor-pair-row]) > label {
+    grid-column: 1;
+    margin: 0;
+}
+
+.body :global([data-block-editor-pair-row]) > :not(label) {
+    grid-column: 2;
+    min-width: 0;
+}
+
+.body :global([data-block-editor-pair-row]) input:not([type="checkbox"]):not([type="radio"]),
+.body :global([data-block-editor-pair-row]) select,
+.body :global([data-block-editor-pair-row]) textarea {
+    margin-top: 0;
+}
+
+.body :global([data-block-editor-item-actions]) button,
+.body :global([data-block-editor-item-menu]) button,
+.body :global([data-block-editor-add-item]) {
+    min-height: 2.25rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+    color: var(--block-editor-text, #333);
+    background: var(--block-editor-button, white);
+    cursor: pointer;
+    font: inherit;
+}
+
+.body :global([data-block-editor-item-menu]) {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.body :global([data-block-editor-item-menu]) :global([role="menu"]) {
+    position: absolute;
+    inset-inline-end: 0;
+    top: 100%;
+    z-index: 1;
+    min-width: max-content;
+    padding: 0.25rem;
+    background: var(--block-editor-background, white);
+    border: 1px solid var(--block-editor-border, rgba(0, 0, 0, 0.15));
+    border-radius: var(--block-editor-radius, 0.5rem);
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+}
+
+.body :global([data-block-editor-item-menu]) :global([role="menuitem"]) {
+    width: 100%;
+    border: 0;
+    text-align: start;
+}
+
+.body :global([data-block-editor-item-actions]) button:disabled,
+.body :global([data-block-editor-add-item]):disabled {
+    opacity: 0.5;
+    cursor: default;
+}
+
+.body :global([data-block-editor-item-menu]) button:focus-visible,
+.body :global([data-block-editor-add-item]):focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: 2px;
+}
+
 /* The adapter marks only controls belonging to the field's own RJSF errors. */
 .body :global(.rjsf) input:global([data-block-editor-invalid="true"]),
 .body :global(.rjsf) select:global([data-block-editor-invalid="true"]),
