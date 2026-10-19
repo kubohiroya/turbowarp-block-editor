@@ -1,4 +1,4 @@
-const {test, expect} = require('./fixtures.cjs');
+const {test, expect, editorDialog} = require('./fixtures.cjs');
 const fixture = require('./fixed-project.cjs');
 
 const wording = {
@@ -10,7 +10,7 @@ const wording = {
         error: '保存する前に値を確認してください。', readOnly: 'この入力は編集できません。', unverified: '式の実行時の有効性は未検証です。',
         inactive: '非表示の編集内容はこの画面で保持されます。非表示のまま保存しても反映されません。', picker: 'COLOR 色を選択'}
 };
-const dialog = (page, lang) => page.getByRole('dialog', {name: wording[lang].title, exact: true});
+const dialog = editorDialog;
 const load = async (page, baseURL, lang, enabled = true, flagOverrides = {}) => {
     const url = new URL('editor.html', baseURL);
     url.search = new URLSearchParams({lang, blockEditorDialogs: '1', blockEditorSourceForms: '1', blockEditorDescendants: '1',
@@ -35,6 +35,7 @@ const raw = page => page.evaluate(() => {
 const open = async (page, lang) => {
     const icon = page.getByRole('button', {name: wording[lang].title, exact: true});
     await icon.focus();await page.keyboard.press('Enter');await expect(dialog(page, lang)).toBeVisible();
+    await expect(dialog(page)).toHaveAccessibleName(lang === 'en' ? /^Edit fixed / : /^fixed .*を編集$/);
 };
 
 test('fixed flag OFF leaves native blocks usable without exposing a fixed editor', async ({page, baseURL, evidence}) => {

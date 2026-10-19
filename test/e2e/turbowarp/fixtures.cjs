@@ -101,4 +101,6 @@ const test = base.extend({
     }, {auto: true}]
 });
 
-module.exports = {test, expect};
+// The accessible title identifies the block and changes with its appearance metadata.
+const editorDialog = page => page.getByRole('dialog').filter({has: page.locator('[data-block-editor-save]')});
+module.exports = {test, expect, editorDialog};

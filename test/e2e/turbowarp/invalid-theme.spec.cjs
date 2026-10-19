@@ -1,4 +1,4 @@
-const {test, expect} = require('./fixtures.cjs');
+const {test, expect, editorDialog} = require('./fixtures.cjs');
 const fixture = require('./theme-project.cjs');
 
 const themes = {
@@ -12,7 +12,7 @@ const themes = {
         background: 'rgb(30, 30, 30)'}
 };
 const paths = ['name', 'amount', 'mode', 'notes', 'nested_invalid'];
-const dialog = page => page.getByRole('dialog', {name: 'Edit block', exact: true});
+const dialog = editorDialog;
 const section = (page, id) => dialog(page).locator(`[data-block-editor-node="theme-${id}"]`);
 const form = (page, id = 'grand') => section(page, id).locator('.rjsf')
     .first();
@@ -55,6 +55,7 @@ const load = async (page, baseURL, theme, hierarchy) => {
 const open = async (page, id) => {
     await page.locator(`.blocklyBlockCanvas [data-id="theme-${id}"] > [data-block-editor-icon]`).click();
     await expect(dialog(page)).toBeVisible();
+    await expect(dialog(page)).toHaveAccessibleName(/^Edit Theme (group|item)/);
 };
 
 const errorFor = async control => {
@@ -204,13 +205,14 @@ for (const [theme, colours] of Object.entries(themes)) {
 
             const array = form(page).locator('.field-array')
                 .first();
-            await array.getByRole('button', {name: 'Remove', exact: true}).last()
-                .click();
+            await array.getByRole('button', {name: '項目のメニュー', exact: true}).last().click();
+            await expect(array.locator('.array-item')).toHaveCount(2);
+            await array.getByRole('menuitem', {name: '🗑️この項目を削除', exact: true}).click();
             await expect(array).toHaveAttribute('aria-invalid', 'true');
             await expect(array.locator('.error-detail')).toContainText('2');
             await expectValid(field(form(page), 'items_0_label'), colours);
             await expect(save(page)).toBeDisabled();
-            await array.getByRole('button', {name: 'Add', exact: true}).click();
+            await array.getByRole('button', {name: '➕項目を追加', exact: true}).click();
             await field(form(page), 'items_1_label').fill('Restored valid item');
             await expect(save(page)).toBeEnabled();
             expect(await readBlocks(page)).toEqual(measurements.before.blocks);
