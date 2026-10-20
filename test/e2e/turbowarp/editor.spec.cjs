@@ -2,7 +2,7 @@ const fs = require('node:fs/promises');
 const {createHash} = require('node:crypto');
 const JSZip = require('@turbowarp/jszip');
 const {selectNativeProject} = require('./native-picker.cjs');
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 
 const savedValue = {duration: 9, label: '最新版「秋」 & "scene"'};
 const iconSelector = '[data-block-editor-icon]';
@@ -178,11 +178,7 @@ test('専用エディターの検証・保存・キャンセルと実sb3の保�
             await reloaded.goto(url.href);
         }
         evidence.stage('extension-security');
-        const security = reloaded.getByRole('dialog', {name: '拡張機能セキュリティ', exact: true});
-        await expect(security).toBeVisible();
-        await expect(security.getByRole('textbox')).toHaveValue(source);
-        await security.getByRole('checkbox', {name: 'サンドボックスなしで実行する', exact: true}).check();
-        await security.getByRole('button', {name: '許可', exact: true}).click();
+        await approveProjectExtensions(reloaded, [source]);
         await expect(reloaded.locator(iconSelector)).toHaveCount(1);
         evidence.stage('restored-form');
         await openEditor(reloaded);

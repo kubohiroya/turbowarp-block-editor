@@ -103,4 +103,21 @@ const test = base.extend({
 
 // The accessible title identifies the block and changes with its appearance metadata.
 const editorDialog = page => page.getByRole('dialog').filter({has: page.locator('[data-block-editor-save]')});
-module.exports = {test, expect, editorDialog};
+const approveProjectExtensions = async (page, sources, locale = 'ja') => {
+    const security = page.locator('.twextsec-modal');
+    await expect(security).toBeVisible();
+    const rows = security.locator('article');
+    await expect(rows).toHaveCount(sources.length);
+    const observed = [];
+    for (let index = 0; index < sources.length; index++) {
+        const row = rows.nth(index);
+        await row.getByRole('button', {name:locale === 'ja' ? '詳細' : 'Details',exact:true}).click();
+        await expect(row.getByRole('textbox')).toBeVisible();
+        observed.push(await row.getByRole('textbox').inputValue());
+    }
+    expect(observed.sort()).toEqual([...sources].sort());
+    await security.getByRole('button', {name:locale === 'ja' ? 'サンドボックスなし' : 'Without sandbox',exact:true}).click();
+    await security.getByRole('button', {name:'OK',exact:true}).click();
+    await expect(security).toHaveCount(0);
+};
+module.exports = {test, expect, editorDialog, approveProjectExtensions};

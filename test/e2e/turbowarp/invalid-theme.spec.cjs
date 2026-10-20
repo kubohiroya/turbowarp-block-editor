@@ -1,4 +1,4 @@
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 const fixture = require('./theme-project.cjs');
 
 const themes = {
@@ -27,19 +27,7 @@ const load = async (page, baseURL, theme, hierarchy) => {
         ...(hierarchy ? {blockEditorDescendants: '1'} : {}),
         project_url: await fixture.project()});
     await page.goto(url.href);
-    const security = page.getByRole('dialog', {name: 'Extension Security', exact: true});
-    const approved = [];
-    for (let index = 0; index < fixture.sources.length; index++) {
-        await expect(security).toBeVisible();
-        const code = security.getByRole('textbox');
-        await expect.poll(() => code.inputValue()).not.toBe(approved.at(-1));
-        const actual = await code.inputValue();
-        expect(fixture.sources).toContain(actual);
-        approved.push(actual);
-        await security.getByRole('checkbox', {name: 'Run without sandbox', exact: true}).check();
-        await security.getByRole('button', {name: 'Allow', exact: true}).click();
-    }
-    expect(new Set(approved).size).toBe(2);
+    await approveProjectExtensions(page, fixture.sources, 'en');
     await expect(page.locator('[data-block-editor-icon]')).toHaveCount(3);
     await page.getByText('Settings', {exact: true}).click();
     const switchTo = page.getByText(theme === 'dark' ? 'Switch To Dark Mode' : 'Switch To Light Mode', {exact: true});
