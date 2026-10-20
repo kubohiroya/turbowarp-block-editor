@@ -21,7 +21,7 @@ export async function generatePages(output, revision, coreRevision, {siteRevisio
         await fs.copyFile(path.join(sourceRoot, 'site', file === 'language.js' ? 'language.cjs' : file), path.join(output, 'assets', file));
     }
     for (const [language, text] of Object.entries(content)) {
-        const editor = `../editor.html?blockEditorDialogs=1&amp;lang=${language}`;
+        const editor = `../editor.html?blockEditorDialogs=1&amp;blockEditorSourceForms=1&amp;blockEditorCommonLayout=1&amp;lang=${language}`;
         const plain = `../editor.html?lang=${language}`;
         const credits = text.credits.map(paragraph => `<p>${paragraph.replace('SOURCE', source).replace('CORE', core)}</p>`).join('\n');
         const html = `<!doctype html>
