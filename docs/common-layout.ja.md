@@ -111,3 +111,7 @@ Camera Source検証は正本Schema・uiSchema・実データfixtureを共通 `Bl
 - 2026-10-20 検証: 対象107テスト中105成功、環境指定を要する既存の型・GUI能力検査2件はskip。プロジェクト型検査、webpack4ビルド、公開layout型consumer、Chromium/React 16での両描画経路・非表示エラー・数値入力保持・キー操作・幅390pxで1列・一括保存・フラグOFFを確認。Camera Source #52とのローカル接続4ケース（Source: twcs/legacy/ROS、RJSF: twcs）も成功。
 - 2026-10-20 start（UI改善）: 利用者の指摘を受け、Schemaで確定する項目の操作抑制、余白・ラベル・タブ・グループ・グリッドの共通スタイルと、実データを使う再実行可能な画面検証を追加。既存の既定OFFフラグでまとめて切り戻せる。
 - 2026-10-20 done（UI改善・local）: 対象113テスト成功、型検査・webpack4ビルド成功。追加の表示ポリシー検証では参照／union／固定tuple／任意項目／不正な型／明示タイトル／条件分岐／フラグOFFを確認。Chromiumで両経路の実Camera Sourceフォーム、非表示エラーのフォーカス、保存1回・Cancelでcommitなし、幅390pxの1列と横overflowなしを確認。検証用モーダルの枠以外は配布コードのスタイルで撮影。実TurboWarpアプリへの反映・公開は別工程。
+
+## 0.3.0 の公開
+
+共通レイアウトとSchemaに沿った表示を0.3.0として公開する。既定OFFを維持し、問題時はホストの `commonLayout` をfalseにして再読込する。旧版へ戻す場合は0.2.2にexact pinする。保存データの移行は不要。
