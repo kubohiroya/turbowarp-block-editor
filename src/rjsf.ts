@@ -34,7 +34,8 @@ import type {SourceFormat} from './codec.js';
 import {EditorRegistry} from './registry.js';
 import {EDITOR_API_VERSION} from './types.js';
 import {AddItemButton, ArrayItem, ItemMenu, additionalItemTemplate, numberedObjectTemplate,
-  valueFieldTemplate, layoutObjectTemplate} from './rjsf-templates.js';
+  valueFieldTemplate, layoutObjectTemplate, compactDescriptionTemplate, compactArrayTitleTemplate, compactArrayTemplate,
+  compactCheckboxWidget} from './rjsf-templates.js';
 import type {
   BlockSnapshot, EditorDefinition, JsonObject, JsonValue, ValidationIssue
 } from './types.js';
@@ -52,6 +53,10 @@ const defaultTemplates = moduleExports(RjsfCore).getDefaultRegistry().templates;
 const ObjectItems = numberedObjectTemplate(layoutObjectTemplate(defaultTemplates.ObjectFieldTemplate), ADDITIONAL_PROPERTY_FLAG);
 const AdditionalItem = additionalItemTemplate(ADDITIONAL_PROPERTY_FLAG);
 const ValueField = valueFieldTemplate(defaultTemplates.FieldTemplate, ADDITIONAL_PROPERTY_FLAG);
+const Description = compactDescriptionTemplate(defaultTemplates.DescriptionFieldTemplate);
+const ArrayTitle = compactArrayTitleTemplate(defaultTemplates.ArrayFieldTitleTemplate);
+const ArrayBody = compactArrayTemplate(defaultTemplates.ArrayFieldTemplate);
+const Checkbox = compactCheckboxWidget(moduleExports(RjsfCore).getDefaultRegistry().widgets.CheckboxWidget!);
 let nextViewId = 0;
 
 export interface SchemaEditorOptions {
@@ -270,11 +275,15 @@ function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
         const state = context.getState();
         const props = {
           schema, uiSchema, validator, idPrefix,
+          widgets: {CheckboxWidget: Checkbox},
           templates: {
             ArrayFieldItemTemplate: ArrayItem,
+            ArrayFieldTitleTemplate: ArrayTitle,
+            ArrayFieldTemplate: ArrayBody,
             ObjectFieldTemplate: ObjectItems,
             WrapIfAdditionalTemplate: AdditionalItem,
             FieldTemplate: ValueField,
+            DescriptionFieldTemplate: Description,
             ButtonTemplates: {AddButton: AddItemButton, RemoveButton: ItemMenu}
           },
           formData: dataFor(context.getDraft()),

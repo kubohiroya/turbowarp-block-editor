@@ -6,7 +6,7 @@
 
 ホストがサービス生成時に `createBlockEditorService({commonLayout: true})` を渡す。既定は **OFF**。`src/config/feature-flags.ts` が値をコピーして固定し、extensionの登録情報ではONにできない。既存 `fixedInputs` フラグの既定値は変更しない。
 
-サービスを使わない場合も、ホストが `createSchemaEditor(options, {commonLayout: true})`、`createSchemaBundleEditor(options, {commonLayout: true})`、`createSourceEditor(options, {commonLayout: true})` と明示する。フラグOFFまたは表示定義なしでは従来の順序とコントロールを使う。
+サービスを使わない場合も、ホストが `createSchemaEditor(options, {commonLayout: true})`、`createSchemaBundleEditor(options, {commonLayout: true})`、`createSourceEditor(options, {commonLayout: true})` と明示する。フラグOFFは従来の表示・コントロールを使う。ONで表示定義がない場合は、項目順は従来どおりで、以下のSchemaに沿った入力UIと共通スタイルだけを適用する。不正なレイアウトのfallbackも配置のみを戻し、ON時の入力UIとスタイルは維持する。
 
 ## 宣言形式 v1
 
@@ -46,6 +46,21 @@ const uiSchema = {
 - `tablist`・`tab`・`tabpanel`、`aria-selected`・`aria-controls`・`aria-labelledby`、エディター間で一意のIDを設定する。左右キー・Home・Endで選択とフォーカスを移動する。IME中のキーとEscapeは横取りしない。保存中はタブ操作も無効にする。
 - RJSFの既存の項目番号、追加プロパティのキー編集、項目メニュー、追加・削除、エラー表示は既存テンプレートを使う。
 
+## Schemaに沿った入力UIと共通スタイル
+
+`commonLayout` がONの場合、両経路に同じ色・入力欄・タブ・グループ・グリッドのスタイルを同梱する。`src/form-presentation.tsx` がスタイルとラベル／説明表示、`src/schema-presentation.ts` が表示用の型判定を所有する。ホストの `--block-editor-*` 色指定を継承し、フラグOFFでは注入しない。スクリーンショット専用のCSSで入力欄を飾る実装にはしない。
+
+Source/Formは次の規則で、汎用JSONツリーから設定フォームへ切り替える。
+
+- `$ref`、`allOf`、`oneOf`／`anyOf`、`enum`／`const`、nullableの型制約を調べ、型が1種類に確定し現在の値と一致する場合だけ型選択を省く。選択中のunion分岐だけで型を固定しない。複雑な条件で型を証明できない場合、または保存済みデータの型が不正な場合は、修復用の型選択を残す。
+- 必須の既知プロパティは削除操作を出さない。任意項目の明示的な追加／値解除は「項目を管理」にまとめる。閉じたobjectでは自由なキー追加を出さず、追加プロパティを許すobjectでは補助メニューから追加できる。保存済みの未知キーは表示して保持し、閉じたSchemaに違反するキーも勝手に削除しない。
+- 固定長配列や閉じたtupleは不要な追加・削除・並べ替えを出さない。可変長配列の有効な操作は残す。明示追加時だけ型に合う空の値を作り、Schemaのdefaultを適用したり、マウント時に任意項目を生成したりしない。
+- `if/then/else` の条件がtype・const・enum・required・properties・論理結合・参照だけで判断できる場合は、その配列制約も表示へ反映する。Camera Sourceの歪みモデル `none` では係数追加を出さず、固定長モデルへ変更すると必要な追加を出す。未対応の条件は推測せず保守的に扱い、正本の検証を継続する。モデル変更だけで係数を生成・削除しない。
+- 型付きの1行文字列はtext input、複数行の値または `ui:widget: textarea` はtextarea、真偽値はcheckboxにする。固定値はreadonly表示。表示ラベルは `ui:title`、Schemaのtitleを優先し、fallbackのJSON PointerやcamelCaseキーは読みやすい項目名にする。保存キーは変えない。
+- 長い説明は開閉できる「説明」にまとめ、Source/Form切り替えは上部の切り替えボタンへ配置する。format／variantの変更やDiscardは「文書の操作」へまとめる。隠すのは操作の常時表示であり、修復・破棄の機能は維持する。
+
+RJSFは既存のSchema依存の構造操作を維持し、Field／Object／Array title・Descriptionテンプレートに同じラベル、説明、空配列表示を適用する。項目番号と追加プロパティのキー編集は既存実装を継続する。Source/Formの型判定やスタイルは正本Schema検証を置き換えず、保存直前のcanonical検証・原文パッチ・トランザクションは変更しない。
+
 ## RJSF公式ガイドと実装の対応
 
 使用中のRJSFは5.24.13、Reactは16.14。公式v5ガイドの以下に従い、フォーム全体を置き換えず **ObjectFieldTemplateに渡されたproperties.contentを配置し直す**。元のテンプレートにタイトル・description・追加操作を任せ、共通側がグループとタブを描画する。
@@ -63,7 +78,7 @@ v6のLayoutGridField/LayoutHeaderFieldは採用しない。Source/Formは再帰S
 
 ## 受け入れ基準・検証
 
-- [x] 既定OFF、起動時固定、定義なしと不正定義で従来描画。
+- [x] 既定OFF、起動時固定、定義なしと不正定義で従来の項目順にfallback。
 - [x] RJSF通常／BundleとSource/Formで同じJSON契約、未分類項目を保持。
 - [x] 隠れたパネルの入力とエラーを保持し、保存時に表示・フォーカス。
 - [x] 原文no-op、コメント、未知キー、未確定数値、Cancelと1回の保存を検証。
@@ -73,13 +88,17 @@ v6のLayoutGridField/LayoutHeaderFieldは採用しない。Source/Formは再帰S
 
 ```sh
 node node_modules/typescript/bin/tsc --noEmit
-node --test test/layout.test.mjs test/schema-editor.test.mjs test/schema-bundle-editor.test.mjs test/source-view.test.mjs test/source-prepared.test.mjs test/react-dialog.test.mjs test/webpack4.test.mjs
+node --test test/layout.test.mjs test/schema-presentation.test.mjs test/schema-editor.test.mjs test/schema-bundle-editor.test.mjs test/source-view.test.mjs test/source-prepared.test.mjs test/react-dialog.test.mjs test/webpack4.test.mjs
 node test/e2e/layout/browser.mjs
+# Optional: a built Camera Source checkout containing ./editor-metadata.
+node test/e2e/layout/camera-dialog.mjs /path/to/built/camera-source
 ```
 
 ブラウザ検証はローカルHTTPとPlaywright Chromiumを使用し、実装された両経路の画面を `test-results/layout/desktop.png`・`mobile.png` に保存する。モックアップではない。ただし、この検証用ページは実TurboWarp GUI・実カメラ・packaged作品のE2Eを代替しない。
 
 Playwright既定のブラウザがない環境では、`LAYOUT_CHROMIUM_EXECUTABLE` に検証対象のChromium実行ファイルを指定できる。
+
+Camera Source検証は正本Schema・uiSchema・実データfixtureを共通 `BlockEditorDialog` に渡す。Source/Form・RJSFのProfile／Camera画面を `test-results/layout/camera-{source,rjsf}-{profile-,}after.png`、幅390pxの画面を `camera-{source,rjsf}-mobile-after.png` に保存する。モーダル枠は検証用ホストで、フォームのスタイルと操作は同梱コードそのもの。Schema固定項目の操作抑制、非表示エラーへの誘導、保存1回、Cancel時にcommitなしも確認する。
 
 ## ロールバック
 
@@ -90,3 +109,5 @@ Playwright既定のブラウザがない環境では、`LAYOUT_CHROMIUM_EXECUTAB
 - start: `feat/editor/common-form-layout` で #49 を実装。Camera Source #52は独立branchで並行実装し、layout契約確定後に接続検証。
 - done: 共通契約・両描画経路・テスト・公式参照・ロールバックを追加。公開操作とGitHub Issueの更新は別途承認対象。
 - 2026-10-20 検証: 対象107テスト中105成功、環境指定を要する既存の型・GUI能力検査2件はskip。プロジェクト型検査、webpack4ビルド、公開layout型consumer、Chromium/React 16での両描画経路・非表示エラー・数値入力保持・キー操作・幅390pxで1列・一括保存・フラグOFFを確認。Camera Source #52とのローカル接続4ケース（Source: twcs/legacy/ROS、RJSF: twcs）も成功。
+- 2026-10-20 start（UI改善）: 利用者の指摘を受け、Schemaで確定する項目の操作抑制、余白・ラベル・タブ・グループ・グリッドの共通スタイルと、実データを使う再実行可能な画面検証を追加。既存の既定OFFフラグでまとめて切り戻せる。
+- 2026-10-20 done（UI改善・local）: 対象113テスト成功、型検査・webpack4ビルド成功。追加の表示ポリシー検証では参照／union／固定tuple／任意項目／不正な型／明示タイトル／条件分岐／フラグOFFを確認。Chromiumで両経路の実Camera Sourceフォーム、非表示エラーのフォーカス、保存1回・Cancelでcommitなし、幅390pxの1列と横overflowなしを確認。検証用モーダルの枠以外は配布コードのスタイルで撮影。実TurboWarpアプリへの反映・公開は別工程。

@@ -20,8 +20,8 @@ const layout = metadata([{tabs: [
 const schema = {type: 'object', properties: {name: {type: 'string', title: 'Name'},
   width: {type: 'number', minimum: 1, title: 'Width'}, height: {type: 'number', title: 'Height'}}, required: ['name', 'width'], additionalProperties: {type: 'string'}};
 const source = {repository: 'test', path: 'layout.mjs'};
-function bundle(document) {
-  return {identity: {ownerId: 'owner', contractId: 'layout', revision: '1', variantId: 'plain'}, dialect: 'draft-07',
+function bundle(document, dialect = 'draft-07') {
+  return {identity: {ownerId: 'owner', contractId: 'layout', revision: '1', variantId: 'plain'}, dialect,
     root: {retrievalUri: 'https://owner.invalid/layout', document, artifact: {role: 'canonical-schema', source}},
     resources: [], provenance: {canonicalSources: [source], generatedFiles: [], referenceSchemas: [], generationSources: []}};
 }
@@ -35,7 +35,7 @@ async function fixture(t, route, options = {}) {
   const definition = {apiVersion: 1, extensionId: 'owner', editorId: 'layout', opcodes: ['owner_layout']};
   if (route === 'source') service.api.registerSourceEditor({...definition,
     validationContext: () => ({consumerId: 'test', nowMs: 1, settings: null}), bindings: [{argument: 'SOURCE',
-      variants: [{variantId: 'plain', format: options.format ?? 'json', schemaBundle: bundle(schemaDocument), uiSchema}],
+      variants: [{variantId: 'plain', format: options.format ?? 'json', schemaBundle: bundle(schemaDocument, options.dialect), uiSchema}],
       decode: source => ({source, variantId: 'plain', format: options.format ?? 'json', data: options.format === 'yaml' ? parse(source) : JSON.parse(source)}),
       validateSource: source => ({source, result: {kind: 'valid', diagnostics: []}})
     }]});
@@ -159,4 +159,86 @@ for (const route of ['rjsf', 'bundle', 'source']) test(`${route}: nested hidden 
   assert.equal((await f.save()).status, 'invalid');
   assert.equal(f.tabs()[1].getAttribute('aria-selected'), 'true');assert.equal(f.tabs()[3].getAttribute('aria-selected'), 'true');
   assert.equal(document.activeElement === f.input('height'), true);
+});
+
+test('Source schema-shaped fields hide redundant controls without rewriting fixed or unknown values', async t => {
+  const schema = {type: 'object', properties: {cameraId: {type: 'string'}, enabled: {type: 'boolean'},
+    kind: {const: 'camera'}, matrix: {type: 'array', items: {type: 'number'}, minItems: 2, maxItems: 2}},
+    required: ['cameraId', 'enabled', 'kind', 'matrix'], additionalProperties: false};
+  const raw = '{ "cameraId":"left", "enabled":true, "kind":"camera", "matrix":[-0,1e0] }';
+  const f = await fixture(t, 'source', {schema, uiSchema: {}, raw});
+  assert.equal(f.container.querySelectorAll('[data-source-type-control]').length, 0);
+  assert.equal(f.container.querySelectorAll('button[aria-label^="Remove"],button[aria-label^="Add item"],input[aria-label^="New property"]').length, 0);
+  assert.equal(f.container.querySelector('[data-source-path="/cameraId"] label').textContent, 'Camera ID *');
+  assert.ok(f.container.querySelector('[data-source-path="/cameraId"] input[type="text"]'));
+  assert.equal(f.container.querySelector('[data-source-path="/kind"] input').readOnly, true);
+  assert.equal((await f.save()).changed, false);assert.equal(f.block.arguments.SOURCE.value, raw);
+  const off = await fixture(t, 'source', {schema, uiSchema: {}, raw, enabled: false});
+  assert.ok(off.container.querySelector('[data-source-type-control]'));
+  assert.ok(off.container.querySelector('button[aria-label="Remove /cameraId"]'));
+  assert.equal(off.container.querySelector('[data-editor-form]'), null);
+});
+
+test('Source optional fields remain explicitly addable/removable without defaults or losing invalid-number drafts', async t => {
+  const schema = {type: 'object', properties: {name: {type: 'string'}, count: {type: 'number', default: 99}}, required: ['name'], additionalProperties: false};
+  const f = await fixture(t, 'source', {schema, uiSchema: {}, raw: '{"name":"cam"}'});
+  assert.equal(f.container.querySelector('[data-source-path="/count"]'), null);
+  const add = [...f.container.querySelectorAll('button')].find(button => button.textContent === 'Countを追加');await f.click(add);
+  const count = () => f.container.querySelector('[data-source-path="/count"] input');assert.equal(count().value, '0');
+  await f.change(count(), '1e');assert.equal(f.session.getState().canSave, false);
+  assert.equal(f.container.querySelector('button[aria-label="Remove /name"]'), null);
+  await f.click(f.container.querySelector('button[aria-label="Remove /count"]'));
+  assert.equal(f.session.getState().canSave, true);
+  assert.equal((await f.save()).changed, false);assert.equal(f.requests.length, 0);
+});
+
+test('Source unions and invalid fixed-type data keep explicit repair controls; closed unknown keys remain removable', async t => {
+  const schema = {type: 'object', properties: {fixed: {type: 'number'}, union: {oneOf: [{type: 'number'}, {type: 'string'}]}}, required: ['fixed', 'union'], additionalProperties: false};
+  const f = await fixture(t, 'source', {schema, uiSchema: {}, raw: '{"fixed":"bad","union":2,"extra":"preserved"}'});
+  const fixed = f.container.querySelector('select[aria-label="Type /fixed"]');assert.ok(fixed);
+  assert.ok(f.container.querySelector('select[aria-label="Type /union"]'));
+  assert.equal(f.container.querySelector('[data-source-path="/extra"] input').value, 'preserved');
+  assert.equal((await f.save()).status, 'invalid');
+  await f.change(fixed, 'number');await f.click(f.container.querySelector('button[aria-label="Remove /extra"]'));
+  assert.equal(f.session.getState().canSave, true);assert.equal((await f.save()).status, 'saved');
+  assert.deepEqual(JSON.parse(f.block.arguments.SOURCE.value), {fixed: 0, union: 2});
+});
+
+test('Source fixed prefixItems and draft-07 tuples hide structure operations but retain editable values', async t => {
+  for (const [dialect, items] of [['2020-12', {prefixItems: [{type: 'number'}, {type: 'string'}], items: false}],
+    ['draft-07', {items: [{type: 'number'}, {type: 'string'}], additionalItems: false}]]) {
+    const f = await fixture(t, 'source', {schema: {type: 'array', ...items, minItems: 2}, uiSchema: {}, dialect, raw: '[1,"x"]'});
+    assert.equal(f.container.querySelectorAll('[data-source-type-control],button[aria-label^="Remove"],button[aria-label^="Add item"],button[aria-label^="Move up"]').length, 0);
+    const input = f.container.querySelector('[data-source-path="/0"] input');await f.change(input, '2');
+    assert.equal((await f.save()).status, 'saved');assert.deepEqual(JSON.parse(f.block.arguments.SOURCE.value), [2, 'x']);
+  }
+});
+
+for (const route of ['rjsf', 'bundle', 'source']) test(`${route}: checkbox labels respect explicit titles and required closed fields have no structure controls`, async t => {
+  const schema = {type: 'object', properties: {undistorted: {type: 'boolean'}, enabled: {type: 'boolean', title: 'カメラを有効にする'}, custom: {type: 'boolean'}}, required: ['undistorted', 'enabled', 'custom'], additionalProperties: false};
+  const f = await fixture(t, route, {schema, uiSchema: {custom: {'ui:title': 'keep my label'}}, raw: '{"undistorted":false,"enabled":true,"custom":true}'});
+  assert.equal(f.container.querySelectorAll('input[type="checkbox"]').length, 3);
+  assert.ok([...f.container.querySelectorAll('label')].some(label => label.textContent.trim() === 'Undistorted'));
+  assert.ok([...f.container.querySelectorAll('label')].some(label => label.textContent.trim() === 'カメラを有効にする'));
+  assert.ok([...f.container.querySelectorAll('label')].some(label => label.textContent.trim() === 'keep my label'));
+  assert.equal(f.container.querySelectorAll('[data-source-type-control],input[aria-label^="New property"],button[aria-label^="Remove"],[data-block-editor-add-item]').length, 0);
+  assert.equal((await f.save()).changed, false);
+});
+
+test('Source if/then array controls follow the selected model without synthesizing or discarding coefficients', async t => {
+  const schema = {type: 'object', properties: {model: {enum: ['none', 'fixed']}, coefficients: {type: 'array', items: {type: 'number'}}}, required: ['model', 'coefficients'], additionalProperties: false,
+    allOf: [{if: {properties: {model: {const: 'none'}}, required: ['model']}, then: {properties: {coefficients: {maxItems: 0}}}},
+      {if: {properties: {model: {const: 'fixed'}}, required: ['model']}, then: {properties: {coefficients: {minItems: 2, maxItems: 2}}}}]};
+  const f = await fixture(t, 'source', {schema, uiSchema: {}, raw: '{"model":"none","coefficients":[]}'});
+  const add = () => f.container.querySelector('button[aria-label="Add item /coefficients"]');
+  assert.equal(add(), null);
+  const model = f.container.querySelector('[data-source-path="/model"] select');await f.change(model, '"fixed"');
+  assert.equal(f.container.querySelectorAll('[data-source-path="/coefficients/0"]').length, 0);assert.equal(f.session.getState().canSave, false);
+  await f.click(add());await f.click(add());assert.equal(add(), null);assert.equal(f.session.getState().canSave, true);
+  assert.equal(f.container.querySelector('button[aria-label="Remove /coefficients/0"]'), null);
+  await f.change(model, '"none"');
+  assert.equal(f.container.querySelectorAll('[data-source-path="/coefficients/0"]').length, 1);assert.equal(f.session.getState().canSave, false);
+  await f.click(f.container.querySelector('button[aria-label="Remove /coefficients/1"]'));
+  await f.click(f.container.querySelector('button[aria-label="Remove /coefficients/0"]'));
+  assert.equal((await f.save()).changed, false);assert.equal(f.requests.length, 0);
 });

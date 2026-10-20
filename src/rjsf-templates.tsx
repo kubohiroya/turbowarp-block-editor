@@ -1,7 +1,8 @@
 import * as React from 'react';
 import {ObjectLayout, useCommonLayout} from './layout-view.js';
 import {resolveEditorLayout} from './layout.js';
-import type {ArrayFieldTemplateItemType, FieldTemplateProps, IconButtonProps, ObjectFieldTemplateProps,
+import {FormHelp, propertyLabel} from './form-presentation.js';
+import type {ArrayFieldTemplateItemType, ArrayFieldTemplateProps, ArrayFieldTitleProps, DescriptionFieldProps, FieldTemplateProps, IconButtonProps, ObjectFieldTemplateProps, WidgetProps,
   WrapIfAdditionalTemplateProps} from '@rjsf/utils';
 
 const ItemNumber = React.createContext(1);
@@ -17,21 +18,55 @@ function errorCount(value: unknown): number {
 export function layoutObjectTemplate(DefaultTemplate: React.ComponentType<ObjectFieldTemplateProps>) {
   return function LayoutObject(props: ObjectFieldTemplateProps): React.ReactElement {
     const enabled = useCommonLayout();
+    const title = enabled && !props.schema.title && !props.uiSchema?.['ui:title'] ? propertyLabel(props.title) : props.title;
+    const view = {...props, title};
     const knownFields = [...new Set([...Object.keys(props.schema.properties ?? {}), ...props.properties.map(property => property.name)])];
     const resolution = enabled ? resolveEditorLayout(props.uiSchema, knownFields) : {kind: 'absent'} as const;
-    if (resolution.kind === 'absent') return <DefaultTemplate {...props} />;
+    if (resolution.kind === 'absent') return <DefaultTemplate {...view} />;
     if (resolution.kind === 'invalid') return <><p role="status" data-layout-diagnostic="">レイアウトを適用できません: {resolution.diagnostic}</p><DefaultTemplate {...props} /></>;
     const content = <ObjectLayout key="__editor_layout__" ui={props.uiSchema} knownFields={knownFields} fallback={null} fields={props.properties.map(property => ({
       name: property.name, content: property.content, errors: errorCount(props.errorSchema?.[property.name])
     }))} />;
-    return <DefaultTemplate {...props} properties={[{name: '__editor_layout__', content, hidden: false, disabled: !!props.disabled, readonly: !!props.readonly}]} />;
+    return <DefaultTemplate {...view} properties={[{name: '__editor_layout__', content, hidden: false, disabled: !!props.disabled, readonly: !!props.readonly}]} />;
+  };
+}
+
+export function compactDescriptionTemplate(DefaultTemplate: React.ComponentType<DescriptionFieldProps>) {
+  return function CompactDescription(props: DescriptionFieldProps): React.ReactElement {
+    const enabled = useCommonLayout();
+    return enabled && typeof props.description === 'string' ? <FormHelp id={props.id} description={props.description} /> : <DefaultTemplate {...props} />;
+  };
+}
+
+export function compactArrayTitleTemplate(DefaultTemplate: React.ComponentType<ArrayFieldTitleProps>) {
+  return function CompactArrayTitle(props: ArrayFieldTitleProps): React.ReactElement {
+    const enabled = useCommonLayout();
+    if (!enabled || !props.title || props.schema.title || props.uiSchema?.['ui:title']) return <DefaultTemplate {...props} />;
+    return <DefaultTemplate {...props} title={propertyLabel(props.title)} />;
+  };
+}
+
+export function compactArrayTemplate(DefaultTemplate: React.ComponentType<ArrayFieldTemplateProps>) {
+  return function CompactArray(props: ArrayFieldTemplateProps): React.ReactElement {
+    const enabled = useCommonLayout();
+    return <><DefaultTemplate {...props} />{enabled && props.items.length === 0 && <p className="editor-form-hint">項目なし</p>}</>;
+  };
+}
+
+/** Boolean widgets own their visible label instead of using the surrounding FieldTemplate. */
+export function compactCheckboxWidget(DefaultWidget: React.ComponentType<WidgetProps>) {
+  return function CompactCheckbox(props: WidgetProps): React.ReactElement {
+    const enabled = useCommonLayout();
+    const label = enabled && !props.schema.title && !props.uiSchema?.['ui:title'] && !props.options.title ? propertyLabel(props.label) : props.label;
+    return <DefaultWidget {...props} label={label} />;
   };
 }
 
 /** Keep the property key out of the value's visible label. */
 export function valueFieldTemplate(DefaultTemplate: React.ComponentType<FieldTemplateProps>, flag: string) {
   return function ValueField(props: FieldTemplateProps): React.ReactElement {
-    if (!(flag in props.schema)) return <DefaultTemplate {...props} />;
+    const enabled = useCommonLayout();
+    if (!(flag in props.schema)) return <DefaultTemplate {...props} label={enabled && !props.schema.title && !props.uiSchema?.['ui:title'] ? propertyLabel(props.label) : props.label} />;
     return <PropertyKey.Provider value={props.label}>
       <DefaultTemplate {...props} label="値" />
     </PropertyKey.Provider>;

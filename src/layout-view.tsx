@@ -1,4 +1,5 @@
 import * as React from 'react';
+import {formStyles} from './form-presentation.js';
 import type {EditorLayoutItem} from './layout.js';
 import {resolveEditorLayout} from './layout.js';
 import type {EditorViewContext} from './types.js';
@@ -6,14 +7,14 @@ import type {EditorViewContext} from './types.js';
 const Environment = React.createContext({enabled: false, reveal: 0, disabled: false});
 export const useCommonLayout = (): boolean => React.useContext(Environment).enabled;
 let nextId = 0;
-const css = `.block-editor-layout-grid{display:grid;gap:1rem;grid-template-columns:repeat(var(--editor-columns),minmax(0,1fr))}.block-editor-layout-grid>*{min-width:0}.block-editor-layout-tabs>[role=tablist]{display:flex;flex-wrap:wrap;gap:.25rem}.block-editor-layout-tabs>[role=tablist]>[aria-selected=true]{font-weight:bold;text-decoration:underline}.block-editor-layout-tabs>[hidden]{display:none!important}@media(max-width:600px){.block-editor-layout-grid{grid-template-columns:minmax(0,1fr)}}`;
+
 
 /** One environment for the entire editor; saving reveals errors without changing the draft. */
 export function LayoutHost({enabled, context, children}: {enabled: boolean; context: EditorViewContext; children: React.ReactNode}): React.ReactElement {
   const [reveal, setReveal] = React.useState(0);
   const [status, setStatus] = React.useState(context.getState().status);
   const root = React.useRef<HTMLDivElement>(null);
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     let saving = context.getState().status === 'saving';
     let active = true;
     const stop = context.subscribe(() => {
@@ -38,7 +39,7 @@ export function LayoutHost({enabled, context, children}: {enabled: boolean; cont
     return () => clearTimeout(timer);
   }, [enabled, reveal]);
   return <Environment.Provider value={{enabled, reveal, disabled: status !== 'editing'}}>
-    {enabled ? <div ref={root}><style>{css}</style>{children}</div> : children}
+    {enabled ? <div ref={root} data-editor-form=""><style>{formStyles}</style>{children}</div> : children}
   </Environment.Provider>;
 }
 
@@ -53,7 +54,7 @@ function Items({items, fields}: {items: readonly EditorLayoutItem[]; fields: Rea
       return field ? <div key={index} data-layout-field={item.field} data-layout-error={!!field.errors}>{field.content}</div> : null;
     }
     if ('tabs' in item) return <Tabs key={index} tabs={item.tabs} fields={fields} />;
-    if ('group' in item) return <fieldset key={index}><legend>{item.group}</legend><Items items={item.items} fields={fields} /></fieldset>;
+    if ('group' in item) return <fieldset className="block-editor-layout-group" key={index}><legend>{item.group}</legend><Items items={item.items} fields={fields} /></fieldset>;
     return <div key={index} className="block-editor-layout-grid" style={{'--editor-columns': item.grid} as React.CSSProperties}><Items items={item.items} fields={fields} /></div>;
   })}</>;
 }
@@ -87,7 +88,7 @@ function Tabs({tabs, fields}: {tabs: Extract<EditorLayoutItem, {tabs: unknown}>[
             default: return;
           }
           event.preventDefault();event.stopPropagation();select(target);buttons.current[target]?.focus();
-        }}>{tab.label}{counts[index] ? <span aria-label={`エラー ${counts[index]} 件`}> ({counts[index]})</span> : null}</button>)}
+        }}>{tab.label}{counts[index] ? <span className="editor-form-error-badge" aria-label={`エラー ${counts[index]} 件`}>{counts[index]}</span> : null}</button>)}
     </div>
     {tabs.map((tab, index) => <div key={index} role="tabpanel" id={`${id}-panel-${index}`} aria-labelledby={`${id}-tab-${index}`}
       hidden={current !== index}><Items items={tab.items} fields={fields} /></div>)}
