@@ -95,7 +95,7 @@ for (const language of ['ja','en']) {
         await dialog(page).getByRole('button',{name:labels[language].yes,exact:true}).click();
         await expect(dialog(page)).toHaveCount(0);
         await expect.poll(() => new URL(page.url()).searchParams.has('project_url')).toBe(false);
-        expect(new URL(page.url()).searchParams.get('extensionSecurityBatch')).toBe('1');
+        expect(new URL(page.url()).searchParams.has('extensionSecurityBatch')).toBe(false);
         await expect.poll(() => page.evaluate(() => vm.runtime.targets.length)).toBeGreaterThan(0);
         expect(await executions(page)).toBe(0);
         expect(await page.evaluate(() => vm.extensionManager.isExtensionLoaded('securityfixture'))).toBe(false);
