@@ -52,7 +52,7 @@ module.exports = defineConfig({
                 browserName: 'chromium', userAgent: devices['Pixel 7'].userAgent
             }},
         {name: 'chromium-project-url',
-            testMatch: fixedInputs ? '*.spec.cjs' : ['editor.spec.cjs', 'invalid-theme.spec.cjs', 'extension-security.spec.cjs'],
+            testMatch: fixedInputs ? '*.spec.cjs' : ['editor.spec.cjs', 'invalid-theme.spec.cjs', 'extension-security.spec.cjs', 'preview-reload.spec.cjs'],
             use: {browserName: 'chromium'}}
     ],
     ...(process.env.E2E_BASE_URL ? {} : {webServer: {
