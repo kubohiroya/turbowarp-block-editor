@@ -14,6 +14,7 @@ GUI用ガイドの `src/`・`scripts/`・`site/`・`test/`・`.github/` はscrat
 ## 共通APIとアダプター
 
 - [APIとホスト契約](api.md)
+- [タブ・グループ・グリッドの共通レイアウト（既定OFF）](common-layout.ja.md)
 - [階層セッションの契約](descendants.md)
 - [TurboWarpアダプターAPI](turbowarp-adapter.md)
 - [webpack 4互換配布物と設定API](webpack4.md)

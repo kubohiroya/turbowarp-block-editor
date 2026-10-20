@@ -1,3 +1,5 @@
+import {captureFeatureFlags} from './config/feature-flags.js';
+import type {EditorFeatureFlags} from './config/feature-flags.js';
 import {compileSchemaBundle} from './schema-engine.js';
 import {snapshotJson, isJsonRecord} from './schema-json.js';
 import {stringify} from 'yaml';
@@ -57,7 +59,8 @@ function entryFor(draft: JsonObject, argument: string): JsonObject {
   return entry as JsonObject;
 }
 /** An additive path: legacy validate/createPatch deliberately refuse prepared definitions. */
-export function createSourceEditor<C = null>(options: SourceEditorOptions<C>): PreparedEditorDefinition {
+export function createSourceEditor<C = null>(options: SourceEditorOptions<C>, featureOptions: EditorFeatureFlags = {}): PreparedEditorDefinition {
+  const features = captureFeatureFlags(featureOptions);
   const {apiVersion, extensionId, editorId, validationContext: provider} = options;
   if (apiVersion !== 1 || typeof provider !== 'function' || !Array.isArray(options.bindings) || !options.bindings.length) {
     throw new TypeError('Invalid source editor options.');
@@ -125,7 +128,12 @@ export function createSourceEditor<C = null>(options: SourceEditorOptions<C>): P
         const path = `/${binding.argument.replace(/~/g, '~0').replace(/\//g, '~1')}`;
         try {
           const entry = entryFor(draft, binding.argument);
-          if (entry.invalidForm === true) {issues.push(issue('form-value-invalid', path));continue;}
+          if (entry.invalidForm === true) {
+            if (features.commonLayout && isJsonRecord(entry.invalidNumbers) && Object.keys(entry.invalidNumbers).length > 0) {
+              for (const pointer of Object.keys(entry.invalidNumbers)) issues.push(issue('form-value-invalid', path + pointer));
+            } else issues.push(issue('form-value-invalid', path));
+            continue;
+          }
           const slot = snapshot.arguments[binding.argument];
           if (slot?.kind !== 'literal' || typeof slot.value !== 'string') throw new TypeError();
           let candidate = entry.source as string;
@@ -162,7 +170,13 @@ export function createSourceEditor<C = null>(options: SourceEditorOptions<C>): P
               !Array.isArray(validation.result.diagnostics)) throw new TypeError();
           if (validation.result.kind !== 'valid') {
             if (!['invalid', 'execution-error', 'schema-error'].includes(validation.result.kind)) throw new TypeError();
-            issues.push(issue('owner-input-invalid', path));continue;
+            if (features.commonLayout && validation.result.diagnostics.length) {
+              for (const diagnostic of validation.result.diagnostics) {
+                const pointer = typeof diagnostic.dataPath === 'string' && diagnostic.dataPath.startsWith('/') ? diagnostic.dataPath : '';
+                issues.push(issue('owner-input-invalid', path + pointer));
+              }
+            } else issues.push(issue('owner-input-invalid', path));
+            continue;
           }
           if (validation.result.diagnostics.length) throw new TypeError();
           // Empty/no-op variants can be accepted by the owner without inventing a form variant.
@@ -171,7 +185,11 @@ export function createSourceEditor<C = null>(options: SourceEditorOptions<C>): P
           const validator = binding.validators.get(keyFor(document.format, document.variantId));
           if (validator) {
             const result = validator.validate(document.data, {consumerId: context.consumerId});
-            if (result.kind !== 'valid') {issues.push(issue('schema-data-invalid', path));continue;}
+            if (result.kind !== 'valid') {
+              if (features.commonLayout) for (const diagnostic of result.diagnostics) issues.push(issue('schema-data-invalid', path + ('dataPath' in diagnostic ? diagnostic.dataPath : '')));
+              else issues.push(issue('schema-data-invalid', path));
+              continue;
+            }
           } else if (entry.mode === 'form' || (candidate !== slot.value && !binding.sourceOnlyVariants?.some(v => v.variantId === document.variantId && v.format === document.format))) {
             issues.push(issue('variant-unrecognized', path));continue;
           }
@@ -180,6 +198,6 @@ export function createSourceEditor<C = null>(options: SourceEditorOptions<C>): P
       }
       return issues.length ? {kind: 'invalid', issues} : {kind: 'ready', changes};
     },
-    mount: (container, context) => mountSourceView(container, context, bindings)
+    mount: (container, context) => mountSourceView(container, context, bindings, features.commonLayout)
   });
 }

@@ -1,9 +1,32 @@
 import * as React from 'react';
+import {ObjectLayout, useCommonLayout} from './layout-view.js';
+import {resolveEditorLayout} from './layout.js';
 import type {ArrayFieldTemplateItemType, FieldTemplateProps, IconButtonProps, ObjectFieldTemplateProps,
   WrapIfAdditionalTemplateProps} from '@rjsf/utils';
 
 const ItemNumber = React.createContext(1);
 const PropertyKey = React.createContext<string | undefined>(undefined);
+
+function errorCount(value: unknown): number {
+  if (!value || typeof value !== 'object') return 0;
+  if (Array.isArray(value)) return value.length;
+  return Object.values(value).reduce<number>((count, child) => count + errorCount(child), 0);
+}
+
+/** Reuse the v5 object template's title, description and add-property controls. */
+export function layoutObjectTemplate(DefaultTemplate: React.ComponentType<ObjectFieldTemplateProps>) {
+  return function LayoutObject(props: ObjectFieldTemplateProps): React.ReactElement {
+    const enabled = useCommonLayout();
+    const knownFields = [...new Set([...Object.keys(props.schema.properties ?? {}), ...props.properties.map(property => property.name)])];
+    const resolution = enabled ? resolveEditorLayout(props.uiSchema, knownFields) : {kind: 'absent'} as const;
+    if (resolution.kind === 'absent') return <DefaultTemplate {...props} />;
+    if (resolution.kind === 'invalid') return <><p role="status" data-layout-diagnostic="">レイアウトを適用できません: {resolution.diagnostic}</p><DefaultTemplate {...props} /></>;
+    const content = <ObjectLayout key="__editor_layout__" ui={props.uiSchema} knownFields={knownFields} fallback={null} fields={props.properties.map(property => ({
+      name: property.name, content: property.content, errors: errorCount(props.errorSchema?.[property.name])
+    }))} />;
+    return <DefaultTemplate {...props} properties={[{name: '__editor_layout__', content, hidden: false, disabled: !!props.disabled, readonly: !!props.readonly}]} />;
+  };
+}
 
 /** Keep the property key out of the value's visible label. */
 export function valueFieldTemplate(DefaultTemplate: React.ComponentType<FieldTemplateProps>, flag: string) {

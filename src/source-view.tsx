@@ -1,5 +1,6 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import {LayoutHost, ObjectLayout, useCommonLayout} from './layout-view.js';
 import {createSourceCandidate, patchDecodedSource, readSourceDocument} from './source-editor.js';
 import {cloneJson} from './data.js';
 import type {CapturedBinding} from './source-editor.js';
@@ -7,6 +8,7 @@ import type {SchemaJsonObject, SchemaJsonValue} from './schema-types.js';
 import type {SourceDocument, SourceVariant} from './source-types.js';
 import type {EditorViewContext, JsonObject, JsonValue} from './types.js';
 
+const SourcePaths = React.createContext<readonly string[]>([]);
 type Node = Record<string, unknown>;
 const record = (value: unknown): value is Node => !!value && typeof value === 'object' && !Array.isArray(value);
 const pointer = (path: string, key: string): string => `${path}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`;
@@ -94,12 +96,14 @@ interface TreeProps {
   change(value: JsonValue, edit?: FormEdit): void;
 }
 function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChange}: TreeProps): React.ReactElement {
+  const errors = React.useContext(SourcePaths);
+  const commonLayout = useCommonLayout();
   const hints = resolveHints(variant, schema, value);
   const uiHints = record(ui) ? ui : {};
   const [newKey, setNewKey] = React.useState('');
   const change = (next: JsonValue, edit: FormEdit = {path}): void => onChange(next, edit);
   const choices = Array.isArray(hints.enum) ? hints.enum : Array.isArray(uiHints['ui:enum']) ? uiHints['ui:enum'] : undefined;
-  const label = typeof hints.title === 'string' ? hints.title : path || '/';
+  const label = commonLayout && typeof uiHints['ui:title'] === 'string' ? uiHints['ui:title'] : typeof hints.title === 'string' ? hints.title : path || '/';
   const props = {'aria-label': label};
   const type = typeOf(value);
   let field: React.ReactNode;
@@ -132,7 +136,9 @@ function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChang
     </div>)}<button type="button" aria-label={`Add item ${path || '/'}`} onClick={() => change([...value, null], {path: pointer(path, String(value.length))})}>Add item</button></div>;
   } else if (value !== null && typeof value === 'object') {
     const properties = record(hints.properties) ? hints.properties : {};
-    field = <div>{Object.entries(value).map(([key, child]) => <div key={key}>
+    const fields = Object.entries(value).map(([key, child]) => ({name: key,
+      errors: errors.filter(error => error === pointer(path, key) || error.startsWith(pointer(path, key) + '/')).length,
+      content: <div key={key}>
       <Tree invalidNumbers={invalidNumbers} value={child} path={pointer(path, key)} variant={variant} schema={propertyHint(hints, key)}
         ui={uiHints[key]} change={(next, edit) => {
           const copy = cloneJson(value);Object.defineProperty(copy, key, {value: next, enumerable: true, writable: true, configurable: true});change(copy, edit);
@@ -140,7 +146,8 @@ function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChang
       <button type="button" aria-label={`Remove ${pointer(path, key)}`} onClick={() => {
         const copy = cloneJson(value);delete copy[key];change(copy, {path: pointer(path, key)});
       }}>Remove</button>
-    </div>)}
+    </div>}));
+    field = <div><ObjectLayout ui={uiHints} knownFields={[...new Set([...Object.keys(properties), ...Object.keys(value)])]} fields={fields} fallback={fields.map(field => field.content)} />
       <label>Property <input aria-label={`New property ${path || '/'}`} value={newKey} onChange={e => setNewKey(e.target.value)} /></label>
       <select aria-label={`Known property ${path || '/'}`} value="" onChange={e => setNewKey(e.target.value)}>
         <option value="">Choose property</option>{Object.keys(properties).filter(key => !Object.hasOwn(value, key)).map(key => <option key={key}>{key}</option>)}
@@ -150,38 +157,45 @@ function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChang
       }}>Add property</button>
     </div>;
   } else field = <span>null</span>;
-  return <fieldset data-source-path={path}><legend>{label}</legend>
-    <select aria-label={`Type ${path || '/'}`} value={type} onChange={e => change(initial(e.target.value))}>
+  return <fieldset data-source-path={path} data-source-error={commonLayout && errors.includes(path)}><legend>{label}</legend>
+    <select data-source-type-control="" aria-label={`Type ${path || '/'}`} value={type} onChange={e => change(initial(e.target.value))}>
       {['object', 'array', 'string', 'number', 'boolean', 'null'].map(t => <option key={t}>{t}</option>)}
     </select>{field}
   </fieldset>;
 }
-function liveIssues<C>(draft: JsonObject, bindings: readonly CapturedBinding<C>[]): {message: string; path?: string}[] {
+function liveIssues<C>(draft: JsonObject, bindings: readonly CapturedBinding<C>[], commonLayout = false): {message: string; path?: string}[] {
   const issues: {message: string; path?: string}[] = [];
   const sources = draft.sources as JsonObject;
   for (const binding of bindings) {
     const entry = sources[binding.argument] as JsonObject;
     try {
-      if (entry.invalidForm === true) throw new TypeError();
+      if (entry.invalidForm === true) {
+        if (!commonLayout || !record(entry.invalidNumbers) || !Object.keys(entry.invalidNumbers).length) throw new TypeError();
+        for (const path of Object.keys((entry.invalidNumbers ?? {}) as JsonObject)) issues.push({message: 'Enter a valid JSON number.', path: pointer('', binding.argument) + path});
+      }
       const doc = record(entry.creating)
         ? {...entry.creating, data: entry.data} as unknown as SourceDocument
         : readSourceDocument(binding, entry.source as string);
       const validator = binding.validators.get(JSON.stringify([doc.format, doc.variantId]));
-      if (validator && validator.validate((entry.mode === 'form' ? entry.data : doc.data) as SchemaJsonValue).kind !== 'valid') {
-        issues.push({message: 'Value does not satisfy the schema.', path: `/${binding.argument}`});
+      if (validator) {
+        const result = validator.validate((entry.mode === 'form' ? entry.data : doc.data) as SchemaJsonValue);
+        if (result.kind !== 'valid') {
+          if (commonLayout) for (const diagnostic of result.diagnostics) issues.push({message: 'Value does not satisfy the schema.', path: pointer('', binding.argument) + ('dataPath' in diagnostic ? diagnostic.dataPath : '')});
+          else issues.push({message: 'Value does not satisfy the schema.', path: `/${binding.argument}`});
+        }
       }
     } catch {issues.push({message: 'Repair the invalid source or form value.', path: `/${binding.argument}`});}
   }
   return issues;
 }
-function SourceView<C>({context, bindings}: {context: EditorViewContext; bindings: readonly CapturedBinding<C>[]}): React.ReactElement {
+function SourceView<C>({context, bindings, commonLayout}: {context: EditorViewContext; bindings: readonly CapturedBinding<C>[]; commonLayout: boolean}): React.ReactElement {
   const [, redraw] = React.useState(0);
   const [creating, selectCreateVariant] = React.useState<Record<string, string>>({});
   React.useEffect(() => {
     const stop = context.subscribe(() => redraw(n => n + 1));
-    context.setValidationIssues(liveIssues(context.getDraft(), bindings));
+    context.setValidationIssues(liveIssues(context.getDraft(), bindings, commonLayout));
     return stop;
-  }, [context, bindings]);
+  }, [context, bindings, commonLayout]);
   const state = context.getState();
   if (state.status !== 'editing' && state.status !== 'saving') return <></>;
   const draft = context.getDraft();
@@ -191,7 +205,7 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
     const next = context.getDraft();const nextSources = next.sources as JsonObject;
     Object.defineProperty(nextSources, argument, {value: entry, enumerable: true, configurable: true, writable: true});
     context.setDraft(next);
-    context.setValidationIssues(liveIssues(next, bindings));
+    context.setValidationIssues(liveIssues(next, bindings, commonLayout));
   };
   return <div className="block-editor-source-forms">{bindings.map(binding => {
     const entry = sources[binding.argument] as JsonObject;
@@ -202,6 +216,9 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
       variant = binding.presentationVariants.find(v => v.format === document!.format && v.variantId === document!.variantId);
     } catch { /* The Source textarea remains available for repair. */ }
     if (record(entry.creating)) {const creation = entry.creating;variant = binding.presentationVariants.find(v => v.format === creation.format && v.variantId === creation.variantId);}
+    const argumentPath = pointer('', binding.argument);
+    const errorPaths = [...new Set(state.issues.flatMap(issue => issue.path?.startsWith(argumentPath + '/')
+      ? [issue.path.slice(argumentPath.length)] : []).concat(Object.keys((entry.invalidNumbers ?? {}) as JsonObject)))];
     return <fieldset key={binding.argument} disabled={disabled}><legend>{binding.label ?? binding.argument}</legend>
       <button type="button" aria-pressed={entry.mode === 'source'} onClick={() => {
         try {
@@ -227,7 +244,7 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
       }}>Form</button>
       {entry.mode === 'form' && <button type="button" onClick={() => update(binding.argument, {mode: 'source', source: entry.source!, sourceEdited: entry.sourceEdited ?? false})}>Discard form edits</button>}
       {entry.mode === 'form' && variant && Object.hasOwn(entry, 'data')
-        ? <Tree invalidNumbers={(entry.invalidNumbers ?? {}) as Record<string, string>} value={entry.data!} path="" schema={variant.schemaBundle.root.document} ui={variant.uiSchema as SchemaJsonObject | undefined}
+        ? <SourcePaths.Provider value={errorPaths}><Tree invalidNumbers={(entry.invalidNumbers ?? {}) as Record<string, string>} value={entry.data!} path="" schema={variant.schemaBundle.root.document} ui={variant.uiSchema as SchemaJsonObject | undefined}
           variant={variant} change={(data, edit = {path: ''}) => {
             const pending = (entry.invalidNumbers ?? {}) as Record<string, string>;
             const invalidNumbers: JsonObject = {};
@@ -247,14 +264,14 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
             }
             if (edit.invalidText !== undefined) Object.defineProperty(invalidNumbers, edit.path, {value: edit.invalidText, enumerable: true});
             update(binding.argument, {...entry, data, invalidNumbers, invalidForm: Object.keys(invalidNumbers).length > 0});
-          }} />
+          }} /></SourcePaths.Provider>
         : <textarea aria-label={`${binding.argument} Source`} value={entry.source as string} onChange={e => update(binding.argument, {mode: 'source', source: e.target.value, sourceEdited: true})} />}
       {entry.invalidForm === true && <p role="alert">Enter a valid JSON number.</p>}
     </fieldset>;
   })}</div>;
 }
 export function mountSourceView<C>(container: HTMLElement, context: EditorViewContext,
-  bindings: readonly CapturedBinding<C>[]): () => void {
-  ReactDOM.render(<SourceView context={context} bindings={bindings} />, container);
+  bindings: readonly CapturedBinding<C>[], commonLayout = false): () => void {
+  ReactDOM.render(<LayoutHost enabled={commonLayout} context={context}><SourceView context={context} bindings={bindings} commonLayout={commonLayout} /></LayoutHost>, container);
   return () => {ReactDOM.unmountComponentAtNode(container);};
 }

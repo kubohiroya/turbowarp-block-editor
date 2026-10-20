@@ -1,4 +1,9 @@
 import * as React from 'react';
+import {captureFeatureFlags} from './config/feature-flags.js';
+import type {EditorFeatureFlags} from './config/feature-flags.js';
+export type {EditorFeatureFlags} from './config/feature-flags.js';
+export type {EditorLayout, EditorLayoutItem} from './layout.js';
+import {LayoutHost} from './layout-view.js';
 import {createSourceEditor} from './source-editor.js';
 import {createFixedInputEditor} from './fixed-input-editor.js';
 import {captureFixedInputMessages, resolveFixedInputMessages, mountFixedInputView} from './fixed-input-view.js';
@@ -20,7 +25,7 @@ import type {FormProps, IChangeEvent} from '@rjsf/core';
 import type {RJSFSchema, UiSchema} from '@rjsf/utils';
 import {Ajv2020} from 'ajv/dist/2020.js';
 import {compileSchemaBundle, validateSchemaInput, toValidationIssues} from './schema.js';
-import type {SchemaBundle, SchemaValidationContext, SyncOwnerValidator} from './schema-types.js';
+import type {SchemaBundle, SchemaJsonObject, SchemaValidationContext, SyncOwnerValidator} from './schema-types.js';
 import {schemaView, fieldErrors} from './schema-view.js';
 import {snapshotJson} from './schema-json.js';
 import {cloneJson} from './data.js';
@@ -29,7 +34,7 @@ import type {SourceFormat} from './codec.js';
 import {EditorRegistry} from './registry.js';
 import {EDITOR_API_VERSION} from './types.js';
 import {AddItemButton, ArrayItem, ItemMenu, additionalItemTemplate, numberedObjectTemplate,
-  valueFieldTemplate} from './rjsf-templates.js';
+  valueFieldTemplate, layoutObjectTemplate} from './rjsf-templates.js';
 import type {
   BlockSnapshot, EditorDefinition, JsonObject, JsonValue, ValidationIssue
 } from './types.js';
@@ -44,7 +49,7 @@ const Form = moduleExports(RjsfCore).default as unknown as React.ComponentType<F
 const {getDefaultFormState, ADDITIONAL_PROPERTY_FLAG} = moduleExports(RjsfUtils);
 const {customizeValidator} = moduleExports(RjsfAjv);
 const defaultTemplates = moduleExports(RjsfCore).getDefaultRegistry().templates;
-const ObjectItems = numberedObjectTemplate(defaultTemplates.ObjectFieldTemplate, ADDITIONAL_PROPERTY_FLAG);
+const ObjectItems = numberedObjectTemplate(layoutObjectTemplate(defaultTemplates.ObjectFieldTemplate), ADDITIONAL_PROPERTY_FLAG);
 const AdditionalItem = additionalItemTemplate(ADDITIONAL_PROPERTY_FLAG);
 const ValueField = valueFieldTemplate(defaultTemplates.FieldTemplate, ADDITIONAL_PROPERTY_FLAG);
 let nextViewId = 0;
@@ -59,7 +64,7 @@ export interface SchemaEditorOptions {
   /** Defaults to JSON for compatibility with existing registrations. */
   readonly format?: SourceFormat;
   readonly schema: RJSFSchema;
-  readonly uiSchema?: JsonObject;
+  readonly uiSchema?: SchemaJsonObject;
   /** Optional business validation, always run after schema validation when saving. */
   validateData?(
     data: JsonValue, snapshot: BlockSnapshot
@@ -73,7 +78,7 @@ export interface SchemaBundleEditorOptions<C = null> extends Omit<SchemaEditorOp
   readonly ownerValidate?: SyncOwnerValidator<C>;
 }
 
-export function createSchemaBundleEditor<C>(options: SchemaBundleEditorOptions<C>): EditorDefinition {
+export function createSchemaBundleEditor<C>(options: SchemaBundleEditorOptions<C>, features: EditorFeatureFlags = {}): EditorDefinition {
   const {schemaBundle, validationContext: provider, ownerValidate, apiVersion, extensionId, editorId,
     opcodes, argument, format, uiSchema, validateData} = options;
   let bundle: SchemaBundle;
@@ -102,7 +107,7 @@ export function createSchemaBundleEditor<C>(options: SchemaBundleEditorOptions<C
   };
   return createSchemaEditorImpl({apiVersion, extensionId, editorId, opcodes, argument, schema,
     ...(format === undefined ? {} : {format}), ...(uiSchema === undefined ? {} : {uiSchema}),
-    ...(validateData === undefined ? {} : {validateData})}, {issuesFor, dialect: result.validator.dialect});
+    ...(validateData === undefined ? {} : {validateData})}, {issuesFor, dialect: result.validator.dialect}, captureFeatureFlags(features));
 }
 
 export interface BlockEditorRegistrationAPI {
@@ -131,10 +136,11 @@ export interface BlockEditorService {
 }
 
 /** A host owns the service's lifetime; this module never stores VM or workspace instances. */
-export function createBlockEditorService(options: {readonly fixedInputs: true; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: FixedBlockEditorRegistrationAPI};
-export function createBlockEditorService(options?: {readonly fixedInputs?: false; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI};
-export function createBlockEditorService(options: {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService;
-export function createBlockEditorService(options?: {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService {
+export function createBlockEditorService(options: EditorFeatureFlags & {readonly fixedInputs: true; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: FixedBlockEditorRegistrationAPI};
+export function createBlockEditorService(options?: EditorFeatureFlags & {readonly fixedInputs?: false; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService & {readonly api: SourceBlockEditorRegistrationAPI};
+export function createBlockEditorService(options: EditorFeatureFlags & {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService;
+export function createBlockEditorService(options?: EditorFeatureFlags & {readonly fixedInputs?: boolean; readonly fixedInputMessages?: FixedInputMessageSource}): BlockEditorService {
+  const features = captureFeatureFlags(options);
   if (options?.fixedInputs !== undefined && typeof options.fixedInputs !== 'boolean') throw new TypeError('Invalid fixed input capability option.');
   const messageSource = options?.fixedInputMessages;
   const fixedMessages = typeof messageSource === 'function' ? messageSource : captureFixedInputMessages(messageSource);
@@ -156,7 +162,7 @@ export function createBlockEditorService(options?: {readonly fixedInputs?: boole
     register: (definition: EditorDefinition | SchemaEditorOptions) => {
       const custom = definition as EditorDefinition;
       const editor = !custom.mount && Object.hasOwn(definition, 'schema')
-        ? createSchemaEditor(definition as SchemaEditorOptions) : custom;
+        ? createSchemaEditor(definition as SchemaEditorOptions, features) : custom;
       if (typeof editor.mount !== 'function') throw new TypeError('A block editor must provide mount().');
       const remove = registry.register(editor);
       notify();
@@ -168,10 +174,10 @@ export function createBlockEditorService(options?: {readonly fixedInputs?: boole
         notify();
       };
     },
-    registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition)),
-    registerSchemaBundle: <C,>(definition: SchemaBundleEditorOptions<C>) => api.register(createSchemaBundleEditor(definition)),
+    registerSchema: (definition: SchemaEditorOptions) => api.register(createSchemaEditor(definition, features)),
+    registerSchemaBundle: <C,>(definition: SchemaBundleEditorOptions<C>) => api.register(createSchemaBundleEditor(definition, features)),
     registerSourceEditor: <C,>(definition: SourceEditorOptions<C>) => {
-      const remove = registry.registerPrepared(createSourceEditor(definition));
+      const remove = registry.registerPrepared(createSourceEditor(definition, features));
       notify();
       let active = true;
       return () => {if (active) {active = false;remove();notify();}};
@@ -184,13 +190,13 @@ export function createBlockEditorService(options?: {readonly fixedInputs?: boole
 }
 
 /** Build an editor with JSON/YAML serialization, schema validation and the standard RJSF body. */
-export function createSchemaEditor(options: SchemaEditorOptions): EditorDefinition {
-  return createSchemaEditorImpl(options);
+export function createSchemaEditor(options: SchemaEditorOptions, features: EditorFeatureFlags = {}): EditorDefinition {
+  return createSchemaEditorImpl(options, undefined, captureFeatureFlags(features));
 }
 function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
   readonly issuesFor: (data: JsonValue) => readonly ValidationIssue[];
   readonly dialect: SchemaBundle['dialect'];
-}): EditorDefinition {
+}, features = captureFeatureFlags()): EditorDefinition {
   if (options.apiVersion !== EDITOR_API_VERSION || typeof options.argument !== 'string' || !options.argument) {
     throw new TypeError('A supported API version and JSON argument name are required.');
   }
@@ -198,7 +204,7 @@ function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
   const format = options.format ?? 'json';
   if (format !== 'json' && format !== 'yaml') throw new TypeError('Unsupported source format.');
   const schema = cloneJson(options.schema as JsonObject) as RJSFSchema;
-  const uiSchema = options.uiSchema ? cloneJson(options.uiSchema) as UiSchema<unknown> : {};
+  const uiSchema = options.uiSchema ? snapshotJson(options.uiSchema) as UiSchema<unknown> : {};
   const validateData = options.validateData;
   const validator = customizeValidator<unknown>({
     ...(bundle?.dialect === '2020-12' ? {AjvClass: Ajv2020} : {}),
@@ -291,7 +297,8 @@ function createSchemaEditorImpl(options: SchemaEditorOptions, bundle?: {
           }
         };
         // Suppress RJSF's own submit control; the host's shared footer owns saving.
-        ReactDOM.render(React.createElement(Form, props, React.createElement('span', {hidden: true})), container);
+        ReactDOM.render(React.createElement(LayoutHost, {enabled: features.commonLayout, context, children:
+          React.createElement(Form, props, React.createElement('span', {hidden: true}))}), container);
       };
       const schedule = () => {
         if (scheduled || !active) return;
