@@ -1,12 +1,17 @@
 import * as React from 'react';
 import * as ReactDOM from 'react-dom';
+import {LayoutHost, ObjectLayout, useCommonLayout} from './layout-view.js';
 import {createSourceCandidate, patchDecodedSource, readSourceDocument} from './source-editor.js';
 import {cloneJson} from './data.js';
+import {FormHelp, propertyLabel} from './form-presentation.js';
+import {jsonTypes, presentationInitial, presentationTypes, presentationCondition} from './schema-presentation.js';
 import type {CapturedBinding} from './source-editor.js';
 import type {SchemaJsonObject, SchemaJsonValue} from './schema-types.js';
 import type {SourceDocument, SourceVariant} from './source-types.js';
 import type {EditorViewContext, JsonObject, JsonValue} from './types.js';
 
+let nextFieldId = 0;
+const SourcePaths = React.createContext<readonly string[]>([]);
 type Node = Record<string, unknown>;
 const record = (value: unknown): value is Node => !!value && typeof value === 'object' && !Array.isArray(value);
 const pointer = (path: string, key: string): string => `${path}/${key.replace(/~/g, '~0').replace(/\//g, '~1')}`;
@@ -17,6 +22,7 @@ const initial = (type: string): JsonValue => {
 
 function mergeHints(left: Node, right: Node): Node {
   const result = {...left, ...right};
+  if (Array.isArray(left.required) && Array.isArray(right.required)) result.required = [...new Set([...left.required, ...right.required])];
   for (const field of ['properties', 'patternProperties']) {
     if (!record(left[field]) && !record(right[field])) continue;
     const a = record(left[field]) ? left[field] as Node : {};
@@ -41,27 +47,35 @@ function propertyHint(hints: Node, key: string): unknown {
   return matches.length > 1 ? {allOf: matches} : matches.length ? matches[0] : hints.additionalProperties;
 }
 
+function sourceReference(variant: SourceVariant, ref: string): unknown {
+  const hash = ref.indexOf('#');
+  const uri = hash < 0 ? ref : ref.slice(0, hash);
+  const resources = [variant.schemaBundle.root, ...variant.schemaBundle.resources];
+  const resource = uri ? resources.find(r => r.retrievalUri === uri || (record(r.document) && r.document.$id === uri)) : variant.schemaBundle.root;
+  let target: unknown = resource?.document;
+  const fragment = hash < 0 ? '' : decodeURIComponent(ref.slice(hash + 1));
+  if (fragment.startsWith('/')) for (const part of fragment.slice(1).split('/')) {
+    target = record(target) || Array.isArray(target) ? (target as Node)[part.replace(/~1/g, '/').replace(/~0/g, '~')] : undefined;
+  }
+  return !fragment || fragment.startsWith('/') ? target : undefined;
+}
+
 /** Presentation hints never replace canonical validation or remove schema constraints. */
-function resolveHints(variant: SourceVariant, schema: unknown, data: JsonValue, seen = new Set<unknown>()): Node {
+function resolveHints(variant: SourceVariant, schema: unknown, data: JsonValue, seen = new Set<unknown>(), conditional = false): Node {
   if (!record(schema) || seen.has(schema)) return {};
   seen.add(schema);
   let result = {...schema};
   if (typeof schema.$ref === 'string') {
-    const ref = schema.$ref;
-    const hash = ref.indexOf('#');
-    const uri = hash < 0 ? ref : ref.slice(0, hash);
-    const resources = [variant.schemaBundle.root, ...variant.schemaBundle.resources];
-    const resource = uri ? resources.find(r => r.retrievalUri === uri || (record(r.document) && r.document.$id === uri)) : variant.schemaBundle.root;
-    let target: unknown = resource?.document;
-    const fragment = hash < 0 ? '' : decodeURIComponent(ref.slice(hash + 1));
-    if (fragment.startsWith('/')) for (const part of fragment.slice(1).split('/')) {
-      target = record(target) || Array.isArray(target) ? (target as Node)[part.replace(/~1/g, '/').replace(/~0/g, '~')] : undefined;
-    }
-    if (!fragment || fragment.startsWith('/')) result = mergeHints(resolveHints(variant, target, data, seen), result);
+    result = mergeHints(resolveHints(variant, sourceReference(variant, schema.$ref), data, seen, conditional), result);
   }
   if (Array.isArray(schema.allOf)) for (const part of schema.allOf) {
-    const next = resolveHints(variant, part, data, seen);
+    const next = resolveHints(variant, part, data, seen, conditional);
     result = mergeHints(result, next);
+  }
+  if (conditional && Object.hasOwn(schema, 'if')) {
+    const matches = presentationCondition(schema.if, data, ref => sourceReference(variant, ref));
+    const branch = matches === true ? schema.then : matches === false ? schema.else : undefined;
+    if (branch !== undefined) result = mergeHints(result, resolveHints(variant, branch, data, seen, conditional));
   }
   const alternatives = schema.oneOf ?? schema.anyOf;
   if (Array.isArray(alternatives)) {
@@ -73,12 +87,12 @@ function resolveHints(variant: SourceVariant, schema: unknown, data: JsonValue, 
       }
       return true;
     });
-    if (choices.length === 1) result = mergeHints(result, resolveHints(variant, choices[0], data, seen));
+    if (choices.length === 1) result = mergeHints(result, resolveHints(variant, choices[0], data, seen, conditional));
   }
   if (!Array.isArray(result.enum)) {
     if (Object.hasOwn(result, 'const')) result.enum = [result.const];
     else if (Array.isArray(alternatives)) {
-      const enums = alternatives.map(part => resolveHints(variant, part, data, new Set(seen)));
+      const enums = alternatives.map(part => resolveHints(variant, part, data, new Set(seen), conditional));
       if (enums.length && enums.every(part => Array.isArray(part.enum))) {
         const values = enums.flatMap(part => part.enum as unknown[]);
         result.enum = [...new Map(values.map(value => [JSON.stringify(value), value])).values()];
@@ -89,29 +103,44 @@ function resolveHints(variant: SourceVariant, schema: unknown, data: JsonValue, 
 }
 interface FormEdit {path: string; invalidText?: string; removeIndex?: number; swap?: readonly [number, number]}
 interface TreeProps {
+  required?: boolean;
   value: JsonValue; path: string; schema: unknown; ui: unknown; variant: SourceVariant;
   invalidNumbers: Readonly<Record<string, string>>;
   change(value: JsonValue, edit?: FormEdit): void;
 }
-function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChange}: TreeProps): React.ReactElement {
-  const hints = resolveHints(variant, schema, value);
+function Tree({value, path, schema, ui, variant, invalidNumbers, required, change: onChange}: TreeProps): React.ReactElement {
+  const errors = React.useContext(SourcePaths);
+  const commonLayout = useCommonLayout();
+  const hints = resolveHints(variant, schema, value, new Set(), commonLayout);
   const uiHints = record(ui) ? ui : {};
   const [newKey, setNewKey] = React.useState('');
+  const [id] = React.useState(() => `source-field-${++nextFieldId}`);
   const change = (next: JsonValue, edit: FormEdit = {path}): void => onChange(next, edit);
   const choices = Array.isArray(hints.enum) ? hints.enum : Array.isArray(uiHints['ui:enum']) ? uiHints['ui:enum'] : undefined;
-  const label = typeof hints.title === 'string' ? hints.title : path || '/';
-  const props = {'aria-label': label};
+  const key = path.slice(path.lastIndexOf('/') + 1).replace(/~1/g, '/').replace(/~0/g, '~');
+  const label = commonLayout && typeof uiHints['ui:title'] === 'string' ? uiHints['ui:title'] : typeof hints.title === 'string' ? hints.title : commonLayout ? propertyLabel(key) : path || '/';
   const type = typeOf(value);
+  const allowed = presentationTypes(schema, ref => sourceReference(variant, ref));
+  const fixedType = allowed.size === 1 && allowed.has(type);
+  const readonly = commonLayout && (hints.readOnly === true || uiHints['ui:readonly'] === true || uiHints['ui:disabled'] === true);
+  const props = {'aria-label': label, ...(commonLayout ? {id, disabled: readonly, 'aria-describedby': typeof hints.description === 'string' ? `${id}-help` : undefined} : {})};
+  const typeControl = !commonLayout || !fixedType ? <select data-source-type-control="" aria-label={`Type ${path || '/'}`} disabled={readonly} value={type} onChange={e => change(initial(e.target.value))}>
+    {(commonLayout && allowed.size ? [...new Set([type, ...allowed])] : jsonTypes).map(t => <option key={t}>{t}</option>)}
+  </select> : null;
+  const seed = (hint: unknown): JsonValue => cloneJson(presentationInitial(hint) as JsonValue);
   let field: React.ReactNode;
   if (choices) {
     const serialized = JSON.stringify(value);
     const options = choices.map(item => JSON.stringify(item));
     if (!options.includes(serialized)) options.unshift(serialized);
-    field = <select {...props} value={serialized} onChange={e => change(JSON.parse(e.target.value) as JsonValue)}>
-      {options.map(item => <option key={item} value={item}>{item}</option>)}
-    </select>;
+    field = commonLayout && options.length === 1 ? <input {...props} readOnly value={typeof value === 'string' ? value : serialized} />
+      : <select {...props} value={serialized} onChange={e => change(JSON.parse(e.target.value) as JsonValue)}>
+        {options.map(item => <option key={item} value={item}>{commonLayout && typeof JSON.parse(item) === 'string' ? JSON.parse(item) : item}</option>)}
+      </select>;
   } else if (typeof value === 'string') {
-    field = <textarea {...props} value={value} onChange={e => change(e.target.value)} />;
+    field = commonLayout && uiHints['ui:widget'] !== 'textarea' && !value.includes('\n')
+      ? <input {...props} type="text" value={value} onChange={e => change(e.target.value)} />
+      : <textarea {...props} value={value} onChange={e => change(e.target.value)} />;
   } else if (typeof value === 'number') {
     field = <input {...props} type="text" inputMode="decimal" value={invalidNumbers[path] ?? String(value)} onChange={e => {
       const text = e.target.value;
@@ -121,67 +150,103 @@ function Tree({value, path, schema, ui, variant, invalidNumbers, change: onChang
   } else if (typeof value === 'boolean') {
     field = <input {...props} type="checkbox" checked={value} onChange={e => change(e.target.checked)} />;
   } else if (Array.isArray(value)) {
-    field = <div>{value.map((child, index) => <div key={index}>
+    const itemHint = (index: number): unknown => Array.isArray(hints.prefixItems) ? hints.prefixItems[index] ?? hints.items : Array.isArray(hints.items) ? hints.items[index] ?? hints.additionalItems : hints.items;
+    const tuple = Array.isArray(hints.prefixItems) || Array.isArray(hints.items);
+    const canRemove = !commonLayout || value.length > (typeof hints.minItems === 'number' ? hints.minItems : 0);
+    const canAdd = !commonLayout || (itemHint(value.length) !== false && (typeof hints.maxItems !== 'number' || value.length < hints.maxItems));
+    field = <div>{commonLayout && value.length === 0 && <p className="editor-form-hint">項目なし</p>}{value.map((child, index) => <div key={index} className={commonLayout ? 'editor-form-array-item' : undefined}>
       <Tree invalidNumbers={invalidNumbers} value={child} path={pointer(path, String(index))} variant={variant}
-        schema={Array.isArray(hints.prefixItems) ? hints.prefixItems[index] ?? hints.items : Array.isArray(hints.items) ? hints.items[index] : hints.items}
-        ui={uiHints.items} change={(next, edit) => {const copy = [...value];copy[index] = next;change(copy, edit);}} />
-      <button type="button" aria-label={`Remove ${pointer(path, String(index))}`} onClick={() => change(value.filter((_, i) => i !== index), {path, removeIndex: index})}>Remove</button>
-      <button type="button" disabled={index === 0} aria-label={`Move up ${pointer(path, String(index))}`} onClick={() => {
+        schema={itemHint(index)} ui={uiHints.items} change={(next, edit) => {const copy = [...value];copy[index] = next;change(copy, edit);}} />
+      {canRemove && <button type="button" aria-label={`Remove ${pointer(path, String(index))}`} onClick={() => change(value.filter((_, i) => i !== index), {path, removeIndex: index})}>Remove</button>}
+      {(!commonLayout || !tuple && value.length > 1) && <button type="button" disabled={index === 0} aria-label={`Move up ${pointer(path, String(index))}`} onClick={() => {
         const copy = [...value];[copy[index - 1], copy[index]] = [copy[index]!, copy[index - 1]!];change(copy, {path, swap: [index - 1, index]});
-      }}>↑</button>
-    </div>)}<button type="button" aria-label={`Add item ${path || '/'}`} onClick={() => change([...value, null], {path: pointer(path, String(value.length))})}>Add item</button></div>;
+      }}>↑</button>}
+    </div>)}{canAdd && <button type="button" aria-label={`Add item ${path || '/'}`} onClick={() => change([...value, commonLayout ? seed(resolveHints(variant, itemHint(value.length), null)) : null], {path: pointer(path, String(value.length))})}>Add item</button>}</div>;
   } else if (value !== null && typeof value === 'object') {
     const properties = record(hints.properties) ? hints.properties : {};
-    field = <div>{Object.entries(value).map(([key, child]) => <div key={key}>
-      <Tree invalidNumbers={invalidNumbers} value={child} path={pointer(path, key)} variant={variant} schema={propertyHint(hints, key)}
-        ui={uiHints[key]} change={(next, edit) => {
-          const copy = cloneJson(value);Object.defineProperty(copy, key, {value: next, enumerable: true, writable: true, configurable: true});change(copy, edit);
-        }} />
-      <button type="button" aria-label={`Remove ${pointer(path, key)}`} onClick={() => {
-        const copy = cloneJson(value);delete copy[key];change(copy, {path: pointer(path, key)});
-      }}>Remove</button>
-    </div>)}
-      <label>Property <input aria-label={`New property ${path || '/'}`} value={newKey} onChange={e => setNewKey(e.target.value)} /></label>
-      <select aria-label={`Known property ${path || '/'}`} value="" onChange={e => setNewKey(e.target.value)}>
-        <option value="">Choose property</option>{Object.keys(properties).filter(key => !Object.hasOwn(value, key)).map(key => <option key={key}>{key}</option>)}
-      </select>
-      <button type="button" disabled={!newKey || Object.hasOwn(value, newKey)} onClick={() => {
-        const copy = cloneJson(value);Object.defineProperty(copy, newKey, {value: null, enumerable: true, writable: true, configurable: true});change(copy, {path: pointer(path, newKey)});setNewKey('');
-      }}>Add property</button>
+    const requiredKeys = new Set(Array.isArray(hints.required) ? hints.required : []);
+    const optional = Object.keys(properties).filter(name => !requiredKeys.has(name));
+    const missing = Object.keys(properties).filter(name => !Object.hasOwn(value, name));
+    const remove = (name: string): void => {const copy = cloneJson(value);delete copy[name];change(copy, {path: pointer(path, name)});};
+    const add = (name: string): void => {
+      const hint = resolveHints(variant, propertyHint(hints, name), null);
+      const copy = cloneJson(value);Object.defineProperty(copy, name, {value: seed(hint), enumerable: true, writable: true, configurable: true});
+      change(copy, {path: pointer(path, name)});setNewKey('');
+    };
+    const fields = Object.entries(value).map(([name, child]) => ({name,
+      errors: errors.filter(error => error === pointer(path, name) || error.startsWith(pointer(path, name) + '/')).length,
+      content: <div key={name}>
+        <Tree invalidNumbers={invalidNumbers} value={child} path={pointer(path, name)} variant={variant} schema={propertyHint(hints, name)}
+          required={requiredKeys.has(name)} ui={uiHints[name]} change={(next, edit) => {
+            const copy = cloneJson(value);Object.defineProperty(copy, name, {value: next, enumerable: true, writable: true, configurable: true});change(copy, edit);
+          }} />
+        {(!commonLayout || !Object.hasOwn(properties, name) && !requiredKeys.has(name)) && <button type="button" aria-label={`Remove ${pointer(path, name)}`} onClick={() => remove(name)}>Remove</button>}
+      </div>}));
+    const dynamic = hints.additionalProperties !== false || record(hints.patternProperties);
+    field = <div><ObjectLayout ui={uiHints} knownFields={[...new Set([...Object.keys(properties), ...Object.keys(value)])]} fields={fields} fallback={fields.map(item => item.content)} />
+      {commonLayout ? <>
+        {(missing.length > 0 || optional.some(name => Object.hasOwn(value, name))) && <details className="editor-form-tools"><summary>項目を管理</summary>
+          {missing.map(name => <button type="button" key={name} onClick={() => add(name)}>{propertyLabel(name)}を追加</button>)}
+          {optional.filter(name => Object.hasOwn(value, name)).map(name => <label key={name}>{propertyLabel(name)}<button type="button" aria-label={`Remove ${pointer(path, name)}`} onClick={() => remove(name)}>値を解除</button></label>)}
+        </details>}
+        {dynamic && <details className="editor-form-tools"><summary>追加のプロパティ</summary>
+          <label htmlFor={`${id}-key`}>項目名</label><input id={`${id}-key`} aria-label={`New property ${path || '/'}`} value={newKey} onChange={e => setNewKey(e.target.value)} />
+          <button type="button" disabled={!newKey || Object.hasOwn(value, newKey) || propertyHint(hints, newKey) === false} onClick={() => add(newKey)}>Add property</button>
+        </details>}
+      </> : <>
+        <label>Property <input aria-label={`New property ${path || '/'}`} value={newKey} onChange={e => setNewKey(e.target.value)} /></label>
+        <select aria-label={`Known property ${path || '/'}`} value="" onChange={e => setNewKey(e.target.value)}>
+          <option value="">Choose property</option>{missing.map(name => <option key={name}>{name}</option>)}
+        </select>
+        <button type="button" disabled={!newKey || Object.hasOwn(value, newKey)} onClick={() => {
+          const copy = cloneJson(value);Object.defineProperty(copy, newKey, {value: null, enumerable: true, writable: true, configurable: true});change(copy, {path: pointer(path, newKey)});setNewKey('');
+        }}>Add property</button>
+      </>}
     </div>;
   } else field = <span>null</span>;
-  return <fieldset data-source-path={path}><legend>{label}</legend>
-    <select aria-label={`Type ${path || '/'}`} value={type} onChange={e => change(initial(e.target.value))}>
-      {['object', 'array', 'string', 'number', 'boolean', 'null'].map(t => <option key={t}>{t}</option>)}
-    </select>{field}
+  const containerProps = {'data-source-path': path, 'data-source-error': commonLayout && errors.includes(path)};
+  if (commonLayout && !Array.isArray(value) && !record(value)) return <div {...containerProps} className="editor-form-field">
+    {typeof value === 'boolean' && !choices ? <label className="editor-form-toggle" htmlFor={id}>{field}<span>{label}</span></label> : <><label htmlFor={id}>{label}{required && <span className="required"> *</span>}</label>{field}</>}
+    {typeControl}<FormHelp description={hints.description} id={`${id}-help`} />
+    {invalidNumbers[path] !== undefined && <p className="editor-form-invalid" role="alert">有効な数値を入力してください。</p>}
+  </div>;
+  return <fieldset {...containerProps} className={commonLayout ? 'editor-form-section' : undefined} disabled={readonly}>
+    <legend>{label}</legend>{commonLayout && <FormHelp description={hints.description} />}{typeControl}{field}
   </fieldset>;
 }
-function liveIssues<C>(draft: JsonObject, bindings: readonly CapturedBinding<C>[]): {message: string; path?: string}[] {
+function liveIssues<C>(draft: JsonObject, bindings: readonly CapturedBinding<C>[], commonLayout = false): {message: string; path?: string}[] {
   const issues: {message: string; path?: string}[] = [];
   const sources = draft.sources as JsonObject;
   for (const binding of bindings) {
     const entry = sources[binding.argument] as JsonObject;
     try {
-      if (entry.invalidForm === true) throw new TypeError();
+      if (entry.invalidForm === true) {
+        if (!commonLayout || !record(entry.invalidNumbers) || !Object.keys(entry.invalidNumbers).length) throw new TypeError();
+        for (const path of Object.keys((entry.invalidNumbers ?? {}) as JsonObject)) issues.push({message: 'Enter a valid JSON number.', path: pointer('', binding.argument) + path});
+      }
       const doc = record(entry.creating)
         ? {...entry.creating, data: entry.data} as unknown as SourceDocument
         : readSourceDocument(binding, entry.source as string);
       const validator = binding.validators.get(JSON.stringify([doc.format, doc.variantId]));
-      if (validator && validator.validate((entry.mode === 'form' ? entry.data : doc.data) as SchemaJsonValue).kind !== 'valid') {
-        issues.push({message: 'Value does not satisfy the schema.', path: `/${binding.argument}`});
+      if (validator) {
+        const result = validator.validate((entry.mode === 'form' ? entry.data : doc.data) as SchemaJsonValue);
+        if (result.kind !== 'valid') {
+          if (commonLayout) for (const diagnostic of result.diagnostics) issues.push({message: 'Value does not satisfy the schema.', path: pointer('', binding.argument) + ('dataPath' in diagnostic ? diagnostic.dataPath : '')});
+          else issues.push({message: 'Value does not satisfy the schema.', path: `/${binding.argument}`});
+        }
       }
     } catch {issues.push({message: 'Repair the invalid source or form value.', path: `/${binding.argument}`});}
   }
   return issues;
 }
-function SourceView<C>({context, bindings}: {context: EditorViewContext; bindings: readonly CapturedBinding<C>[]}): React.ReactElement {
+function SourceView<C>({context, bindings, commonLayout}: {context: EditorViewContext; bindings: readonly CapturedBinding<C>[]; commonLayout: boolean}): React.ReactElement {
   const [, redraw] = React.useState(0);
   const [creating, selectCreateVariant] = React.useState<Record<string, string>>({});
-  React.useEffect(() => {
+  React.useLayoutEffect(() => {
     const stop = context.subscribe(() => redraw(n => n + 1));
-    context.setValidationIssues(liveIssues(context.getDraft(), bindings));
+    context.setValidationIssues(liveIssues(context.getDraft(), bindings, commonLayout));
     return stop;
-  }, [context, bindings]);
+  }, [context, bindings, commonLayout]);
   const state = context.getState();
   if (state.status !== 'editing' && state.status !== 'saving') return <></>;
   const draft = context.getDraft();
@@ -191,7 +256,7 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
     const next = context.getDraft();const nextSources = next.sources as JsonObject;
     Object.defineProperty(nextSources, argument, {value: entry, enumerable: true, configurable: true, writable: true});
     context.setDraft(next);
-    context.setValidationIssues(liveIssues(next, bindings));
+    context.setValidationIssues(liveIssues(next, bindings, commonLayout));
   };
   return <div className="block-editor-source-forms">{bindings.map(binding => {
     const entry = sources[binding.argument] as JsonObject;
@@ -202,8 +267,10 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
       variant = binding.presentationVariants.find(v => v.format === document!.format && v.variantId === document!.variantId);
     } catch { /* The Source textarea remains available for repair. */ }
     if (record(entry.creating)) {const creation = entry.creating;variant = binding.presentationVariants.find(v => v.format === creation.format && v.variantId === creation.variantId);}
-    return <fieldset key={binding.argument} disabled={disabled}><legend>{binding.label ?? binding.argument}</legend>
-      <button type="button" aria-pressed={entry.mode === 'source'} onClick={() => {
+    const argumentPath = pointer('', binding.argument);
+    const errorPaths = [...new Set(state.issues.flatMap(issue => issue.path?.startsWith(argumentPath + '/')
+      ? [issue.path.slice(argumentPath.length)] : []).concat(Object.keys((entry.invalidNumbers ?? {}) as JsonObject)))];
+    const sourceButton = <button type="button" aria-pressed={entry.mode === 'source'} onClick={() => {
         try {
           if (entry.invalidForm === true) throw new TypeError();
           const source = record(entry.creating)
@@ -212,8 +279,11 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
             ? patchDecodedSource(document, entry.data!, source => readSourceDocument(binding, source)) : entry.source as string;
           const next: JsonObject = {...entry, mode: 'source', source, invalidForm: false, invalidNumbers: {}};delete next.creating;update(binding.argument, next);
         } catch {context.setValidationIssues([{message: 'This edit cannot preserve the source. Repair the Source explicitly.'}]);}
-      }}>Source</button>
-      <select aria-label={`${binding.argument} New format and variant`} value={selectedCreation} onChange={e => selectCreateVariant({...creating, [binding.argument]: e.target.value})}>
+      }}>Source</button>;
+    const formButton = <button type="button" disabled={!variant} aria-pressed={entry.mode === 'form'} onClick={() => {
+        if (document || entry.creating) update(binding.argument, {...entry, mode: 'form', data: Object.hasOwn(entry, 'data') ? entry.data! : document!.data as JsonValue});
+      }}>Form</button>;
+    const creationTools = <><select aria-label={`${binding.argument} New format and variant`} value={selectedCreation} onChange={e => selectCreateVariant({...creating, [binding.argument]: e.target.value})}>
         <option value="">Choose new format and variant</option>{binding.presentationVariants.map(v => <option key={JSON.stringify([v.format,v.variantId])} value={JSON.stringify([v.format,v.variantId])}>{v.format} / {v.variantId}</option>)}
       </select>
       <button type="button" disabled={!selectedCreation} onClick={() => {
@@ -221,13 +291,16 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
         const chosen = binding.presentationVariants.find(v => v.format === format && v.variantId === variantId)!;
         const root = chosen.schemaBundle.root.document;const type = record(root) && typeof root.type === 'string' ? root.type : 'null';
         update(binding.argument, {mode: 'form', source: entry.source!, sourceEdited: true, creating: {format, variantId}, data: initial(type)});
-      }}>Create document (replace source)</button>
-      <button type="button" disabled={!variant} aria-pressed={entry.mode === 'form'} onClick={() => {
-        if (document || entry.creating) update(binding.argument, {...entry, mode: 'form', data: Object.hasOwn(entry, 'data') ? entry.data! : document!.data as JsonValue});
-      }}>Form</button>
-      {entry.mode === 'form' && <button type="button" onClick={() => update(binding.argument, {mode: 'source', source: entry.source!, sourceEdited: entry.sourceEdited ?? false})}>Discard form edits</button>}
+      }}>Create document (replace source)</button></>;
+    const discard = entry.mode === 'form' && <button type="button" onClick={() => update(binding.argument, {mode: 'source', source: entry.source!, sourceEdited: entry.sourceEdited ?? false})}>Discard form edits</button>;
+    return <fieldset key={binding.argument} disabled={disabled} className={commonLayout ? 'editor-form-binding' : undefined}>
+      {(!commonLayout || binding.label || bindings.length > 1) && <legend>{binding.label ?? binding.argument}</legend>}
+      {commonLayout ? <div className="editor-form-toolbar"><div className="editor-form-modes">{sourceButton}{formButton}</div>
+        <details className="editor-form-tools"><summary>文書の操作</summary>{creationTools}{discard}</details>
+      </div> : <>{sourceButton}{creationTools}{formButton}{discard}</>}
+
       {entry.mode === 'form' && variant && Object.hasOwn(entry, 'data')
-        ? <Tree invalidNumbers={(entry.invalidNumbers ?? {}) as Record<string, string>} value={entry.data!} path="" schema={variant.schemaBundle.root.document} ui={variant.uiSchema as SchemaJsonObject | undefined}
+        ? <SourcePaths.Provider value={errorPaths}><Tree invalidNumbers={(entry.invalidNumbers ?? {}) as Record<string, string>} value={entry.data!} path="" schema={variant.schemaBundle.root.document} ui={variant.uiSchema as SchemaJsonObject | undefined}
           variant={variant} change={(data, edit = {path: ''}) => {
             const pending = (entry.invalidNumbers ?? {}) as Record<string, string>;
             const invalidNumbers: JsonObject = {};
@@ -247,14 +320,14 @@ function SourceView<C>({context, bindings}: {context: EditorViewContext; binding
             }
             if (edit.invalidText !== undefined) Object.defineProperty(invalidNumbers, edit.path, {value: edit.invalidText, enumerable: true});
             update(binding.argument, {...entry, data, invalidNumbers, invalidForm: Object.keys(invalidNumbers).length > 0});
-          }} />
+          }} /></SourcePaths.Provider>
         : <textarea aria-label={`${binding.argument} Source`} value={entry.source as string} onChange={e => update(binding.argument, {mode: 'source', source: e.target.value, sourceEdited: true})} />}
       {entry.invalidForm === true && <p role="alert">Enter a valid JSON number.</p>}
     </fieldset>;
   })}</div>;
 }
 export function mountSourceView<C>(container: HTMLElement, context: EditorViewContext,
-  bindings: readonly CapturedBinding<C>[]): () => void {
-  ReactDOM.render(<SourceView context={context} bindings={bindings} />, container);
+  bindings: readonly CapturedBinding<C>[], commonLayout = false): () => void {
+  ReactDOM.render(<LayoutHost enabled={commonLayout} context={context}><SourceView context={context} bindings={bindings} commonLayout={commonLayout} /></LayoutHost>, container);
   return () => {ReactDOM.unmountComponentAtNode(container);};
 }
