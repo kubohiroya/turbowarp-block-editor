@@ -6,13 +6,13 @@ GUIフォークにはエディターAPIへの接続を置き、サイト・公�
 ## 公開物と固定ソース
 
 - 入口: https://kubohiroya.github.io/turbowarp-extension-data-editor/
-- 日本語 `/ja/`、英語 `/en/`、拡張版 `editor.html?blockEditorDialogs=1`、通常版 `editor.html`。
+- 日本語 `/ja/`、英語 `/en/`、拡張版 `editor.html?blockEditorDialogs=1&blockEditorSourceForms=1&blockEditorCommonLayout=1`、通常版 `editor.html`。
 - `site/source.json` にGUIのrepository/完全SHAと、GUI lockfileで取得するnpm配布物のcore完全SHAを固定します。
 - `build-info.json` の `revision` はGUI SHA、`coreRevision` は実配布物のcore SHA、`siteRevision` はサイト生成・公開を所有する共通SHAです。3つを混同しません。
 - 移行は公開配置だけを変更し、既存npm製品版の差替えや未公開Schema機能の導入は行いません。新しい製品版へ切替えるときはGUI lockfileとcore pinを合わせます。
 
 日英の実HTML、言語の手動選択とnavigator.languages、Octocatリンク、本家TurboWarp/Scratchへのクレジットと独自拡張の説明を維持します。
-Pagesは静的配信のため、サーバーのAccept-Language交渉は使いません。フラグ `blockEditorDialogs` は既定OFFです。
+Pagesは静的配信のため、サーバーのAccept-Language交渉は使いません。`blockEditorDialogs`・`blockEditorSourceForms`・`blockEditorCommonLayout`は起動時固定・既定OFFです。拡張版リンクだけ3フラグを指定し、通常版リンクは指定しません。
 GUIのGPL LICENSEを取得したGUIソースから同梱し、GUIとcoreの公開ソースへの完全SHAリンクを残します。
 
 ## ビルド
@@ -22,7 +22,7 @@ GUIのGPL LICENSEを取得したGUIソースから同梱し、GUIとcoreの公�
 ```sh
 pnpm install --frozen-lockfile
 cd /absolute/path/scratch-gui
-npm ci --ignore-scripts --no-audit --no-fund
+npm ci --no-audit --no-fund
 node scripts/prepublish.mjs
 cd /absolute/path/turbowarp-extension-data-editor
 E2E_GUI_ROOT=/absolute/path/scratch-gui node scripts/site/build.mjs
@@ -62,3 +62,5 @@ OSネイティブファイル選択は対話可能なmacOSで行う既存手順�
 新サイト不具合は共通mainのGUI/core pinを前の検証済み値へ戻し、通常CIとゲート経由で再公開します。
 失敗時にゲートを解除しません。公開を止める場合は共通pages workflowを無効化します。
 GUIのコードと既定OFFの機能フラグ、sb3保存形式には公開配置による変更を加えません。
+
+GUIのgit固定security-dialog依存はprepareでdist/webpack4.cssを生成するため、GUI CIと同じ通常npm ciを使います。coreのbuild-info revision、GUI pin、成功CIの照合を維持し、配布物が未生成の状態で公開しません。

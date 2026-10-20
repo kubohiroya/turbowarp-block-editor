@@ -32,7 +32,9 @@ test('generated language HTML has source credits, opt-in and rollback links, and
         assert.equal(document.documentElement.lang, language);
         const links = [...document.querySelectorAll('a')].map(a => new URL(a.href));
         assert.ok(links.some(url => url.hostname === 'turbowarp.org'));
-        assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && url.searchParams.get('blockEditorDialogs') === '1'));
+        for (const flag of ['blockEditorDialogs', 'blockEditorSourceForms', 'blockEditorCommonLayout']) {
+            assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && url.searchParams.get(flag) === '1'));
+        }
         assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && !url.searchParams.has('blockEditorDialogs')));
         assert.ok(links.some(url => url.href === `https://github.com/kubohiroya/scratch-gui/tree/${revision}`));
         assert.ok(links.some(url => url.href === `https://github.com/kubohiroya/turbowarp-extension-data-editor/tree/${coreRevision}`));
