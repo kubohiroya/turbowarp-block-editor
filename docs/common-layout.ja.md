@@ -115,3 +115,11 @@ Camera Source検証は正本Schema・uiSchema・実データfixtureを共通 `Bl
 ## 0.3.0 の公開
 
 共通レイアウトとSchemaに沿った表示を0.3.0として公開する。既定OFFを維持し、問題時はホストの `commonLayout` をfalseにして再読込する。旧版へ戻す場合は0.2.2にexact pinする。保存データの移行は不要。
+
+## 0.3.1 の説明表示修正（#53）
+
+RJSF と Source/Form 共通で、未指定・空文字・空白だけの description は表示しない。短い本文はそのまま表示し、長い本文は「説明を表示」の折りたたみと開閉マーカーから確認できる。Source/Form の aria-describedby も空の説明を参照しない。説明の有無でデータや保存処理は変わらない。
+
+既定OFFの commonLayout を維持。切戻しはフラグOFF、または共通フォーム0.3.0と対応する GUI/site のピンへ戻して再デプロイする。保存データの移行は不要。
+
+検証: 型を含むビルド、layout/source-view の50テスト成功。公開 Camera Source 0.18.0 のメタデータを用い、Chromium の両描画経路で説明なし項目の非表示・実本文の開閉・編集・保存・Cancel・非表示エラーのフォーカス・モバイル表示を確認。

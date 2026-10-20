@@ -8,8 +8,8 @@ export function propertyLabel(key: string): string {
 }
 
 export function FormHelp({description, id}: {description: unknown; id?: string}): React.ReactElement | null {
-  if (typeof description !== 'string' || !description) return null;
-  return description.length > 130 ? <details className="editor-form-help" id={id}><summary>説明</summary><p>{description}</p></details>
+  if (typeof description !== 'string' || !description.trim()) return null;
+  return description.length > 130 ? <details className="editor-form-help" id={id}><summary>説明を表示</summary><p>{description}</p></details>
     : <p className="editor-form-hint" id={id}>{description}</p>;
 }
 
@@ -32,7 +32,8 @@ export const formStyles = `
 [data-editor-form] button{font:inherit;cursor:pointer;border:1px solid var(--editor-line);border-radius:6px;background:var(--block-editor-input,white);color:inherit;padding:6px 10px;margin:0}
 [data-editor-form] button:disabled{cursor:default;opacity:.5}
 [data-editor-form] .editor-form-hint,[data-editor-form] .editor-form-help{color:var(--editor-muted);font-size:12px;line-height:1.5;margin:5px 0 10px}
-[data-editor-form] .editor-form-help>summary{cursor:pointer;width:fit-content;font-weight:500}
+[data-editor-form] .editor-form-help>summary{display:list-item;list-style:disclosure-closed inside;cursor:pointer;width:fit-content;font-weight:500}
+[data-editor-form] .editor-form-help[open]>summary{list-style-type:disclosure-open}
 [data-editor-form] .editor-form-help p{margin:8px 0}
 [data-editor-form] .block-editor-layout-tabs>[role=tablist]{display:flex;gap:4px;flex-wrap:wrap;padding:5px;background:var(--block-editor-subtle,var(--block-editor-background,#f1f4f9));border:1px solid var(--editor-line);border-radius:9px;margin:4px 0 20px}
 [data-editor-form] .block-editor-layout-tabs>[role=tablist]>button{border:0;border-radius:6px;background:transparent;color:var(--editor-muted);padding:8px 18px;margin:0;font-weight:550;text-decoration:none;min-width:76px}
