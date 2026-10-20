@@ -123,7 +123,7 @@ function Tree({value, path, schema, ui, variant, invalidNumbers, required, chang
   const allowed = presentationTypes(schema, ref => sourceReference(variant, ref));
   const fixedType = allowed.size === 1 && allowed.has(type);
   const readonly = commonLayout && (hints.readOnly === true || uiHints['ui:readonly'] === true || uiHints['ui:disabled'] === true);
-  const props = {'aria-label': label, ...(commonLayout ? {id, disabled: readonly, 'aria-describedby': typeof hints.description === 'string' ? `${id}-help` : undefined} : {})};
+  const props = {'aria-label': label, ...(commonLayout ? {id, disabled: readonly, 'aria-describedby': typeof hints.description === 'string' && hints.description.trim() ? `${id}-help` : undefined} : {})};
   const typeControl = !commonLayout || !fixedType ? <select data-source-type-control="" aria-label={`Type ${path || '/'}`} disabled={readonly} value={type} onChange={e => change(initial(e.target.value))}>
     {(commonLayout && allowed.size ? [...new Set([type, ...allowed])] : jsonTypes).map(t => <option key={t}>{t}</option>)}
   </select> : null;

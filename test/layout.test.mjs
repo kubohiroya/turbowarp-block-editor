@@ -242,3 +242,27 @@ test('Source if/then array controls follow the selected model without synthesizi
   await f.click(f.container.querySelector('button[aria-label="Remove /coefficients/0"]'));
   assert.equal((await f.save()).changed, false);assert.equal(f.requests.length, 0);
 });
+
+for (const route of ['rjsf', 'bundle', 'source']) test(`${route}: absent and blank descriptions render no help while real descriptions remain available`, async t => {
+  const descriptions = {missing: undefined, empty: '', spaces: ' \t\n　', short: 'Short field help.', long: 'Long field help. '.repeat(12)};
+  const nested = {type: 'object', description: ' \n ', properties: Object.fromEntries(Object.entries(descriptions).map(([key, description]) =>
+    [key, {type: key === 'long' ? 'boolean' : 'string', ...(description === undefined ? {} : {description})}]))};
+  const schema = {type: 'object', description: '', properties: {nested, flag: {type: 'boolean', description: '\t '}}};
+  const raw = JSON.stringify({nested: {missing: 'a', empty: 'b', spaces: 'c', short: 'd', long: true}, flag: false});
+  const f = await fixture(t, route, {schema, raw, uiSchema: {}});
+  const help = [...f.container.querySelectorAll('.editor-form-hint, .editor-form-help')];
+  assert.equal(help.length, 2);
+  assert.equal(help[0].textContent, descriptions.short);
+  assert.equal(help[1].querySelector('summary').textContent, '説明を表示');
+  assert.equal(help[1].querySelector('p').textContent, descriptions.long);
+  assert.equal(help[1].open, false);
+  help[1].open = true;
+  assert.ok(help[1].textContent.includes(descriptions.long));
+  if (route === 'source') {
+    for (const key of ['missing', 'empty', 'spaces']) assert.equal(f.container.querySelector(`[data-source-path="/nested/${key}"] input`).hasAttribute('aria-describedby'), false);
+    const input = f.container.querySelector('[data-source-path="/nested/short"] input');
+    assert.equal(document.getElementById(input.getAttribute('aria-describedby')).textContent, descriptions.short);
+  }
+  assert.equal((await f.save()).changed, false);
+  assert.equal(f.block.arguments.SOURCE.value, raw);
+});

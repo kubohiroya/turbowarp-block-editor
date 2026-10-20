@@ -49,6 +49,15 @@ try {
     await page.getByRole('tab', {name: 'Profile', exact: true}).waitFor();
     await page.getByRole('dialog').screenshot({path: `test-results/layout/camera-${route}-profile-after.png`});
     await page.getByRole('tab', {name: 'Camera', exact: true}).click();
+    assert.equal(await page.locator('[data-layout-field="fx"] .editor-form-hint, [data-layout-field="fx"] .editor-form-help').count(), 0);
+    assert.ok(await page.locator('.editor-form-help').count() > 0);
+    assert.equal(await page.locator('.editor-form-help').evaluateAll(elements => elements.every(element =>
+      element.querySelector('summary')?.textContent === '説明を表示' && !!element.querySelector('p')?.textContent.trim())), true);
+    const explanation = page.locator('.editor-form-help').first();
+    await explanation.locator('summary').click();
+    assert.equal(await explanation.locator('p').isVisible(), true);
+    await page.getByRole('dialog').screenshot({path: `test-results/layout/camera-${route}-description-open.png`});
+    await explanation.locator('summary').click();
     if (route === 'source') {
       assert.equal(await page.locator('[data-source-type-control]').count(), 0);
       assert.equal(await page.getByRole('button', {name: 'Remove /image/width', exact: true}).count(), 0);
@@ -78,5 +87,5 @@ try {
     await page.setViewportSize({width: 1050, height: 1500});
   }
   assert.deepEqual(errors, []);
-  console.log('PASS: actual Camera Source metadata + common dialog, both paths, schema controls, screenshots, hidden errors/focus, save, cancel');
+  console.log('PASS: actual Camera Source metadata + common dialog, both paths, absent descriptions hidden, real descriptions expandable, schema controls, screenshots, hidden errors/focus, save, cancel');
 } finally {await browser?.close();await new Promise(resolve => server.close(resolve));}
