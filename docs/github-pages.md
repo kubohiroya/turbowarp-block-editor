@@ -6,13 +6,13 @@ GUIフォークにはエディターAPIへの接続を置き、サイト・公�
 ## 公開物と固定ソース
 
 - 入口: https://kubohiroya.github.io/turbowarp-extension-data-editor/
-- 日本語 `/ja/`、英語 `/en/`、拡張版 `editor.html?blockEditorDialogs=1&blockEditorSourceForms=1&blockEditorCommonLayout=1`、通常版 `editor.html`。
+- 日本語 `/ja/`、英語 `/en/`、標準Editor `editor.html`。
 - `site/source.json` にGUIのrepository/完全SHAと、GUI lockfileで取得するnpm配布物のcore完全SHAを固定します。
 - `build-info.json` の `revision` はGUI SHA、`coreRevision` は実配布物のcore SHA、`siteRevision` はサイト生成・公開を所有する共通SHAです。3つを混同しません。
 - 移行は公開配置だけを変更し、既存npm製品版の差替えや未公開Schema機能の導入は行いません。新しい製品版へ切替えるときはGUI lockfileとcore pinを合わせます。
 
 日英の実HTML、言語の手動選択とnavigator.languages、Octocatリンク、本家TurboWarp/Scratchへのクレジットと独自拡張の説明を維持します。
-Pagesは静的配信のため、サーバーのAccept-Language交渉は使いません。`blockEditorDialogs`・`blockEditorSourceForms`・`blockEditorCommonLayout`は起動時固定・既定OFFです。拡張版リンクだけ3フラグを指定し、通常版リンクは指定しません。
+Pagesは静的配信のため、サーバーのAccept-Language交渉は使いません。対象の編集機能は標準で有効で、公開リンクには有効化用URLスイッチを付けません。
 GUIのGPL LICENSEを取得したGUIソースから同梱し、GUIとcoreの公開ソースへの完全SHAリンクを残します。
 
 ## ビルド

@@ -9,11 +9,11 @@ const iconSelector = '[data-block-editor-icon]';
 const modal = editorDialog;
 const label = page => modal(page).getByRole('textbox', {name: 'Scene label*', exact: true});
 const duration = page => modal(page).getByRole('spinbutton', {name: 'Duration (seconds)*', exact: true});
-const save = page => modal(page).getByRole('button', {name: '保存', exact: true});
+const save = page => modal(page).locator('[data-block-editor-save]');
 const cancel = page => modal(page).getByRole('button', {name: 'キャンセル', exact: true});
 
-const start = async (page, enabled = true) => {
-    await page.goto(`editor.html?lang=ja${enabled ? '&blockEditorDialogs=1' : ''}`);
+const start = async page => {
+    await page.goto('editor.html?lang=ja');
     await expect(page.getByRole('button', {name: '拡張機能を追加', exact: true})).toBeVisible();
 };
 
@@ -172,13 +172,12 @@ test('専用エディターの検証・保存・キャンセルと実sb3の保�
             const url = new URL('editor.html', baseURL);
             url.search = new URLSearchParams({
                 lang: 'ja',
-                blockEditorDialogs: '1',
                 project_url: `data:application/octet-stream;base64,${bytes.toString('base64')}`
             });
             await reloaded.goto(url.href);
         }
         evidence.stage('extension-security');
-        await approveProjectExtensions(reloaded, [source]);
+        await approveProjectExtensions(reloaded, [source], 'ja');
         await expect(reloaded.locator(iconSelector)).toHaveCount(1);
         evidence.stage('restored-form');
         await openEditor(reloaded);
@@ -216,11 +215,13 @@ test('専用エディターの検証・保存・キャンセルと実sb3の保�
     }
 });
 
-test('通常起動では専用エディターが既定OFF', async ({page, baseURL, evidence}) => {
-    evidence.stage('default-off');
-    await start(page, false);
+test('通常起動で専用エディターを利用できる', async ({page, baseURL, evidence}) => {
+    evidence.stage('standard-default');
+    await start(page);
     await loadSample(page, baseURL);
-    await expect(page.locator(iconSelector)).toHaveCount(0);
-    await expect(page.getByRole('button', {name: 'ブロックを編集', exact: true})).toHaveCount(0);
+    await expect(page.locator(iconSelector)).toHaveCount(1);
+    await openEditor(page);
+    await expect(modal(page)).toBeVisible();
+    await cancel(page).click();
     await expect(modal(page)).toHaveCount(0);
 });

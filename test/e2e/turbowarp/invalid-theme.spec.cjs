@@ -20,11 +20,9 @@ const field = (scope, path) => scope.locator(`input[id$="_${path}"], textarea[id
 const save = page => dialog(page).locator('[data-block-editor-save]');
 const canvas = page => page.locator('.blocklySvg > .blocklyWorkspace > .blocklyBlockCanvas').first();
 
-const load = async (page, baseURL, theme, hierarchy) => {
+const load = async (page, baseURL, theme) => {
     const url = new URL('editor.html', baseURL);
     url.search = new URLSearchParams({lang: 'en',
-        blockEditorDialogs: '1',
-        ...(hierarchy ? {blockEditorDescendants: '1'} : {}),
         project_url: await fixture.project()});
     await page.goto(url.href);
     await approveProjectExtensions(page, fixture.sources, 'en');
@@ -128,7 +126,7 @@ for (const [theme, colours] of Object.entries(themes)) {
         const measurements = {theme, ...evidence.deployment(), url: baseURL};
         try {
             evidence.stage('theme-project');
-            await load(page, baseURL, theme, true);
+            await load(page, baseURL, theme);
             const original = await canvas(page).textContent();
             await open(page, 'root');
             const shortcutKey = form(page).locator('input[id$="_shortcuts_ArrowRight-key"]');
@@ -146,6 +144,13 @@ for (const [theme, colours] of Object.entries(themes)) {
                 const input = row.querySelector('input').getBoundingClientRect();
                 return Math.abs((label.top + label.bottom) - (input.top + input.bottom)) < 2;
             }));
+            await testInfo.attach('pair-geometry.json', {body: JSON.stringify(await shortcut.locator('[data-block-editor-pair-row]').evaluateAll(rows => rows.map(row => {
+                const label = row.querySelector('label');const input = row.querySelector('input');
+                return {label: label.getBoundingClientRect().toJSON(), input: input.getBoundingClientRect().toJSON(),
+                    labelStyle: {margin: getComputedStyle(label).margin, alignSelf: getComputedStyle(label).alignSelf},
+                    inputStyle: {margin: getComputedStyle(input).margin, alignSelf: getComputedStyle(input).alignSelf},
+                    rowStyle: {display: getComputedStyle(row).display, alignItems: getComputedStyle(row).alignItems}};
+            }))), contentType: 'application/json'});
             expect(inline).toBe(true);
             await shortcut.getByRole('button', {name: '項目のメニュー', exact: true}).click();
             await expect(shortcut.getByRole('menuitem')).toBeVisible();
@@ -239,10 +244,10 @@ for (const [theme, colours] of Object.entries(themes)) {
                 .click();
 
             evidence.stage('theme-single');
-            await load(page, baseURL, theme, false);
+            await load(page, baseURL, theme);
             await open(page, 'grand');
-            await expect(dialog(page).locator('[data-block-editor-node]')).toHaveCount(0);
-            const single = dialog(page).locator('.rjsf');
+            await expect(dialog(page).locator('[data-block-editor-node]')).toHaveCount(1);
+            const single = form(page);
             for (const path of paths) await expectInvalid(field(single, path), colours);
             await expect(save(page)).toBeDisabled();
             await correct(single);

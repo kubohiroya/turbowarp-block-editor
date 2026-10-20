@@ -38,25 +38,20 @@ const open = async (page, language) => {
     await page.goto(`${language}/`);
     const href = await page.locator('a.button[href*="editor.html"]').first().getAttribute('href');
     const target = new URL(href,page.url());
-    expect(target.searchParams.get('extensionSecurityBatch')).toBe('1');
+    expect(target.searchParams.has('extensionSecurityBatch')).toBe(false);
     target.searchParams.set('project_url',await projectURL());
     await page.goto(target.href);
     await expect(dialog(page)).toBeVisible();
     await expect(dialog(page).locator('.twextsec-info')).toContainText(name);
 };
 
-test('direct editor URLs default to shared security and explicit zero preserves rollback', async ({page,baseURL,evidence}) => {
+test('direct editor URLs use shared security without adding a startup switch', async ({page,baseURL,evidence}) => {
     evidence.stage('shared-security-direct-startup');
     const target = new URL('editor.html',baseURL);
     target.search = new URLSearchParams({lang:'ja',project_url:await projectURL()});
     await page.goto(target.href);
     await expect(dialog(page)).toBeVisible();
-    expect(new URL(page.url()).searchParams.get('extensionSecurityBatch')).toBe('1');
-    expect(await executions(page)).toBe(0);
-    target.searchParams.set('extensionSecurityBatch','0');
-    await page.goto(target.href);
-    await expect(page.getByRole('checkbox',{name:'サンドボックスなしで実行する',exact:true})).toBeVisible();
-    await expect(dialog(page)).toHaveCount(0);
+    expect(new URL(page.url()).searchParams.has('extensionSecurityBatch')).toBe(false);
     expect(await executions(page)).toBe(0);
 });
 
@@ -100,7 +95,7 @@ for (const language of ['ja','en']) {
         await dialog(page).getByRole('button',{name:labels[language].yes,exact:true}).click();
         await expect(dialog(page)).toHaveCount(0);
         await expect.poll(() => new URL(page.url()).searchParams.has('project_url')).toBe(false);
-        expect(new URL(page.url()).searchParams.get('extensionSecurityBatch')).toBe('1');
+        expect(new URL(page.url()).searchParams.has('extensionSecurityBatch')).toBe(false);
         await expect.poll(() => page.evaluate(() => vm.runtime.targets.length)).toBeGreaterThan(0);
         expect(await executions(page)).toBe(0);
         expect(await page.evaluate(() => vm.extensionManager.isExtensionLoaded('securityfixture'))).toBe(false);

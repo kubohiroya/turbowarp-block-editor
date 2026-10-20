@@ -123,10 +123,10 @@ test('explicit fixed-input E2E profile selects all fixed cases without capabilit
             spec.tests.map(entry => ({...entry, file: spec.file, title: spec.title})));
     };
     const combined = run([]);
-    assert.equal(combined.length, 32);
-    assert.equal(combined.filter(entry => entry.file === 'fixed-inputs.spec.cjs').length, 21);
+    assert.equal(combined.length, 16);
+    assert.equal(combined.filter(entry => entry.file === 'fixed-inputs.spec.cjs').length, 5);
     const fixed = run(['--project=chromium-project-url', 'fixed-inputs.spec.cjs']);
-    assert.equal(fixed.length, 21);
+    assert.equal(fixed.length, 5);
     for (const entry of fixed) {
         assert.equal(entry.file, 'fixed-inputs.spec.cjs');
         assert.equal(entry.projectName, 'chromium-project-url');

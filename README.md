@@ -76,7 +76,7 @@ GUI ホストは画面と VM を同期し、保存を Undo/Redo 各1回にまと
 `/turbowarp` の `attachTurboWarpBlockEditors()` にホストのScratchBlocks / VM / workspace、
 登録サービスと画面コールバックを渡すと、アイコン装飾・セッション起動・VM同期・一括保存を接続します。
 `enabled` / `descendants` は省略時OFF、戻り値は `refresh()` / 冪等な `dispose()` です。
-GUIには起動時フラグ・ライフサイクル・Modal/翻訳/テーマの接続を残します。
+GUIにはライフサイクル・Modal/翻訳/テーマの接続を残します。
 詳細は [TurboWarp アダプターAPI](docs/turbowarp-adapter.md) を参照してください。
 
 ## 子孫をまとめる階層セッション
@@ -87,8 +87,7 @@ GUIには起動時フラグ・ライフサイクル・Modal/翻訳/テーマの�
 既存の API v1 の本文を再利用し、親子孫・複数枝の下書きと検証結果を保持して、全変更を1回でホストへ渡します。
 未登録の中間ノードを構造として保持し、非表示ノードも検証します。構造・値・登録の競合、上限超過、非同期処理中の無効化に対応します。
 
-上限は500ノード・深さ32。GUI は起動時固定・既定 OFF の `blockEditorDescendants` と基盤フラグで選択し、
-フラグ OFF／未対応ホストでは既存の単一編集を使う設計です。
+上限は500ノード・深さ32。GUIは階層編集を標準で提供し、未対応ホストでは既存の単一編集を使います。
 詳細と業務非依存サンプルは [階層セッションの契約](docs/descendants.md) を参照してください。
 実 GUI の探索・階層モーダル・一括 Undo/Redo・`.sb3` 結合確認は scratch-gui #2 での接続が必要です。
 
@@ -119,15 +118,14 @@ npm install --save-exact @kubohiroya/turbowarp-extension-data-editor@0.2.2
 [GUIの起動・制約・検証手順](docs/block-editor.md) に従ってください。
 既存の拡張アイコンをクリックすると、標準モーダルで下書きを編集できます。
 
-既存のSOURCE経路は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列を扱います。この経路でreporter、メニュー、独自validator付きfieldを書き換えません。固定入力経路は対応hostと明示opt-inで静的menu・数値・色を扱い、reporterや動的menuを評価・置換しません。
+既存のSOURCE経路は、配置済みブロックの通常の text shadow に保存された JSON/YAML 文字列を扱います。この経路でreporter、メニュー、独自validator付きfieldを書き換えません。固定入力経路は対応hostで静的menu・数値・色を扱い、reporterや動的menuを評価・置換しません。
 `.sb3` の保存、`project_url` とOSのファイル選択による再読込、日英表示とテーマの検証手順・実行範囲は[GUI接続E2E](docs/block-editor-e2e.md)と[固定入力の契約](docs/fixed-input-contracts.md)を参照してください。
 
-## フラグとロールバック
+## 標準動作とロールバック
 
-GUI の `src/lib/tw-feature-flags.js` で起動時固定の `blockEditorDialogs` を読み取り、既定 OFF とします。
-`?blockEditorDialogs=1` の場合だけ登録 API と UI 接続を初期化します。
-標準フォームは機能有効時の既定の描画方法であり、機能フラグ自体を既定 ON にしません。
-フラグを外して再読込すれば従来の操作へ戻せます。
+対応GUIはダイアログ、ソースフォーム、共通レイアウト、固定入力、子孫編集、一括セキュリティ確認を標準で提供します。
+通常の `editor.html?lang=ja` で利用でき、有効化用URLスイッチは不要です。低水準APIのhost能力交渉は維持します。
+切戻しはGUIの変更と公開ページのGUI pinを一組でrevertします。
 確定値は既存引数へ保存し、UI・下書き・関数・revision をプロジェクトデータへ追加しません。
 
 ## webpack 4 / E2E

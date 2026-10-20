@@ -17,24 +17,11 @@ export async function generatePages(output, revision, coreRevision, {siteRevisio
     const core = `https://github.com/kubohiroya/turbowarp-extension-data-editor/tree/${coreRevision}`;
     const site = `https://github.com/kubohiroya/turbowarp-extension-data-editor/tree/${siteRevision}`;
     await fs.mkdir(path.join(output, 'assets'), {recursive: true});
-    for (const file of ['style.css', 'language.js', 'redirect.js', 'site.js', 'security.js', 'github.svg', 'octicons-LICENSE.txt']) {
+    for (const file of ['style.css', 'language.js', 'redirect.js', 'site.js', 'github.svg', 'octicons-LICENSE.txt']) {
         await fs.copyFile(path.join(sourceRoot, 'site', file === 'language.js' ? 'language.cjs' : file), path.join(output, 'assets', file));
     }
-    // Public startup policy runs before host bundles read their fixed flags.
-    const editorPath = path.join(output, 'editor.html');
-    try {
-        const html = await fs.readFile(editorPath, 'utf8');
-        if (!html.includes('data-extension-security-startup')) {
-            if (!/<head(?:\s[^>]*)?>/i.test(html)) throw new Error('Editor HTML has no head for startup policy');
-            await fs.writeFile(editorPath, html.replace(/<head(?:\s[^>]*)?>/i,
-                '$&<script src="./assets/security.js" data-extension-security-startup></script>'));
-        }
-    } catch (error) {
-        if (error.code !== 'ENOENT') throw error;
-    }
     for (const [language, text] of Object.entries(content)) {
-        const editor = `../editor.html?extensionSecurityBatch=1&amp;blockEditorDialogs=1&amp;blockEditorSourceForms=1&amp;blockEditorCommonLayout=1&amp;lang=${language}`;
-        const plain = `../editor.html?extensionSecurityBatch=1&amp;lang=${language}`;
+        const editor = `../editor.html?lang=${language}`;
         const credits = text.credits.map(paragraph => `<p>${paragraph.replace('SOURCE', source).replace('CORE', core)}</p>`).join('\n');
         const html = `<!doctype html>
 <html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -47,7 +34,7 @@ export async function generatePages(output, revision, coreRevision, {siteRevisio
 <main id="main"><section class="hero"><div><p class="eyebrow">${escape(text.eyebrow)}</p><h1>${text.heading}</h1>
 <p class="intro">${escape(text.intro)}</p><span class="badge">${escape(text.badge)}</span>
 <div class="actions"><a class="button" href="${editor}">${escape(text.open)}</a><a class="button secondary" href="#try">${escape(text.try)}</a></div>
-<p class="small">${escape(text.note)}<br><a href="${plain}">${escape(text.plain)}</a></p></div>
+<p class="small">${escape(text.note)}</p></div>
 <div class="preview" role="img" aria-label="${escape(text.caption)}"><div class="preview-top"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div><div class="block"><span class="block-icon">▤</span>scene properties <span class="json">{&quot;duration&quot;: 2}</span></div>
 <div class="mock-dialog"><p class="mock-title">${escape(text.mockTitle)}</p><p class="mock-label">${escape(text.mockLabel)}</p><div class="mock-input">${escape(text.mockValue)}</div><p class="mock-label">${escape(text.mockDuration)}</p><div class="mock-input">2</div><div class="mock-footer"><span>${escape(text.cancel)}</span><span class="save">${escape(text.save)}</span></div></div><p class="caption">${escape(text.caption)}</p></div></section>
 <section class="section"><h2>${escape(text.featuresHeading)}</h2><div class="features">${text.features.map(([title, description], index) => `<article><span class="number">0${index + 1}</span><h3>${escape(title)}</h3><p>${escape(description)}</p></article>`).join('')}</div></section>
