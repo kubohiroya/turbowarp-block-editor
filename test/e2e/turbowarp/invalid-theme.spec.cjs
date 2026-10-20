@@ -1,6 +1,5 @@
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 const fixture = require('./theme-project.cjs');
-const {approveProjectExtensions} = require('./project-security.cjs');
 
 const themes = {
     light: {red: 'rgb(198, 40, 40)',
@@ -26,7 +25,7 @@ const load = async (page, baseURL, theme) => {
     url.search = new URLSearchParams({lang: 'en',
         project_url: await fixture.project()});
     await page.goto(url.href);
-    await approveProjectExtensions(page, fixture.sources);
+    await approveProjectExtensions(page, fixture.sources, 'en');
     await expect(page.locator('[data-block-editor-icon]')).toHaveCount(3);
     await page.getByText('Settings', {exact: true}).click();
     const switchTo = page.getByText(theme === 'dark' ? 'Switch To Dark Mode' : 'Switch To Light Mode', {exact: true});

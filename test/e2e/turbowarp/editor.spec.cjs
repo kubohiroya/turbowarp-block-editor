@@ -1,9 +1,8 @@
 const fs = require('node:fs/promises');
-const {approveProjectExtensions} = require('./project-security.cjs');
 const {createHash} = require('node:crypto');
 const JSZip = require('@turbowarp/jszip');
 const {selectNativeProject} = require('./native-picker.cjs');
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 
 const savedValue = {duration: 9, label: '最新版「秋」 & "scene"'};
 const iconSelector = '[data-block-editor-icon]';

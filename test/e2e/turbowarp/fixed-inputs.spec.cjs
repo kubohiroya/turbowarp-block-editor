@@ -1,6 +1,5 @@
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 const fixture = require('./fixed-project.cjs');
-const {approveProjectExtensions} = require('./project-security.cjs');
 
 const wording = {
     en: {title: 'Edit block', security: 'Extension Security', checkbox: 'Run without sandbox', allow: 'Allow', save: 'Save', cancel: 'Cancel',

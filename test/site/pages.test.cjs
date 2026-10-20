@@ -23,7 +23,10 @@ test('generated language HTML has source credits, ordinary editor links, and sub
     const revision = 'a'.repeat(40);
     const coreRevision = 'b'.repeat(40);
     await writeFile(path.join(output, 'LICENSE'), 'GPL fixture');
+    await writeFile(path.join(output, 'editor.html'), '<html><head><script src="gui.js"></script></head><body></body></html>');
     await generatePages(output, revision, coreRevision);
+    const editor = new JSDOM(await readFile(path.join(output, 'editor.html'), 'utf8'));
+    editor.window.close();
     for (const language of ['ja', 'en']) {
         const dom = new JSDOM(await readFile(path.join(output, language, 'index.html'), 'utf8'), {
             url: `https://example.test/scratch-gui/${language}/`
@@ -31,8 +34,11 @@ test('generated language HTML has source credits, ordinary editor links, and sub
         const document = dom.window.document;
         assert.equal(document.documentElement.lang, language);
         const links = [...document.querySelectorAll('a')].map(a => new URL(a.href));
+        const editorLinks = links.filter(url => url.pathname === '/scratch-gui/editor.html');
+        assert.ok(editorLinks.length > 0);
+        assert.ok(editorLinks.every(url => !url.searchParams.has('extensionSecurityBatch')));
         assert.ok(links.some(url => url.hostname === 'turbowarp.org'));
-        for (const flag of ['blockEditorDialogs', 'blockEditorSourceForms', 'blockEditorCommonLayout']) {
+        for (const flag of ['blockEditorDialogs', 'blockEditorSourceForms', 'blockEditorCommonLayout', 'blockEditorFixedInputs', 'blockEditorDescendants', 'extensionSecurityBatch']) {
             assert.ok(links.filter(url => url.pathname === '/scratch-gui/editor.html').every(url => !url.searchParams.has(flag)));
         }
         assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && !url.searchParams.has('blockEditorDialogs')));
