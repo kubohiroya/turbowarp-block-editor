@@ -17,12 +17,24 @@ export async function generatePages(output, revision, coreRevision, {siteRevisio
     const core = `https://github.com/kubohiroya/turbowarp-extension-data-editor/tree/${coreRevision}`;
     const site = `https://github.com/kubohiroya/turbowarp-extension-data-editor/tree/${siteRevision}`;
     await fs.mkdir(path.join(output, 'assets'), {recursive: true});
-    for (const file of ['style.css', 'language.js', 'redirect.js', 'site.js', 'github.svg', 'octicons-LICENSE.txt']) {
+    for (const file of ['style.css', 'language.js', 'redirect.js', 'site.js', 'security.js', 'github.svg', 'octicons-LICENSE.txt']) {
         await fs.copyFile(path.join(sourceRoot, 'site', file === 'language.js' ? 'language.cjs' : file), path.join(output, 'assets', file));
     }
+    // Public startup policy runs before host bundles read their fixed flags.
+    const editorPath = path.join(output, 'editor.html');
+    try {
+        const html = await fs.readFile(editorPath, 'utf8');
+        if (!html.includes('data-extension-security-startup')) {
+            if (!/<head(?:\s[^>]*)?>/i.test(html)) throw new Error('Editor HTML has no head for startup policy');
+            await fs.writeFile(editorPath, html.replace(/<head(?:\s[^>]*)?>/i,
+                '$&<script src="./assets/security.js" data-extension-security-startup></script>'));
+        }
+    } catch (error) {
+        if (error.code !== 'ENOENT') throw error;
+    }
     for (const [language, text] of Object.entries(content)) {
-        const editor = `../editor.html?blockEditorDialogs=1&amp;blockEditorSourceForms=1&amp;blockEditorCommonLayout=1&amp;lang=${language}`;
-        const plain = `../editor.html?lang=${language}`;
+        const editor = `../editor.html?extensionSecurityBatch=1&amp;blockEditorDialogs=1&amp;blockEditorSourceForms=1&amp;blockEditorCommonLayout=1&amp;lang=${language}`;
+        const plain = `../editor.html?extensionSecurityBatch=1&amp;lang=${language}`;
         const credits = text.credits.map(paragraph => `<p>${paragraph.replace('SOURCE', source).replace('CORE', core)}</p>`).join('\n');
         const html = `<!doctype html>
 <html lang="${language}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">

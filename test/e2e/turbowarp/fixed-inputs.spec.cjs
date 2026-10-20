@@ -1,4 +1,4 @@
-const {test, expect, editorDialog} = require('./fixtures.cjs');
+const {test, expect, editorDialog, approveProjectExtensions} = require('./fixtures.cjs');
 const fixture = require('./fixed-project.cjs');
 
 const wording = {
@@ -16,13 +16,7 @@ const load = async (page, baseURL, lang, enabled = true, flagOverrides = {}) => 
     url.search = new URLSearchParams({lang, blockEditorDialogs: '1', blockEditorSourceForms: '1', blockEditorDescendants: '1',
         ...(enabled ? {blockEditorFixedInputs: '1'} : {}), ...flagOverrides, project_url: await fixture.project()});
     await page.goto(url.href);
-    // The project URL uses the normal host confirmation, including its unsandboxed checkbox.
-    const security = page.getByRole('dialog').filter({has: page.getByRole('textbox')});
-    await expect(security).toBeVisible();
-    await expect(security.getByRole('textbox')).toHaveValue(fixture.source);
-    await security.getByRole('checkbox', {name: wording[lang].checkbox, exact: true}).check();
-    await security.getByRole('button', {name: /^(Allow|許可する|許可)$/}).click();
-    await expect(security).toHaveCount(0);
+    await approveProjectExtensions(page, [fixture.source], lang);
     await expect(page.locator('.blocklyBlockCanvas [data-id="fixed-root"]')).toHaveCount(1);
 };
 const raw = page => page.evaluate(() => {
