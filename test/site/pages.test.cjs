@@ -16,7 +16,7 @@ test('language selection respects saved choice, ordered supported browser locale
     assert.equal(selectLanguage(['en-US'], 'unknown'), 'en');
 });
 
-test('generated language HTML has source credits, opt-in and rollback links, and subpath-safe assets', async t => {
+test('generated language HTML has source credits, ordinary editor links, and subpath-safe assets', async t => {
     const output = await mkdtemp(path.join(os.tmpdir(), 'tw-pages-'));
     t.after(() => rm(output, {recursive: true, force: true}));
     const {generatePages} = await import('../../scripts/site/generate-pages.mjs');
@@ -33,7 +33,7 @@ test('generated language HTML has source credits, opt-in and rollback links, and
         const links = [...document.querySelectorAll('a')].map(a => new URL(a.href));
         assert.ok(links.some(url => url.hostname === 'turbowarp.org'));
         for (const flag of ['blockEditorDialogs', 'blockEditorSourceForms', 'blockEditorCommonLayout']) {
-            assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && url.searchParams.get(flag) === '1'));
+            assert.ok(links.filter(url => url.pathname === '/scratch-gui/editor.html').every(url => !url.searchParams.has(flag)));
         }
         assert.ok(links.some(url => url.pathname === '/scratch-gui/editor.html' && !url.searchParams.has('blockEditorDialogs')));
         assert.ok(links.some(url => url.href === `https://github.com/kubohiroya/scratch-gui/tree/${revision}`));

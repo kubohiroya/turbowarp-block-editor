@@ -1,5 +1,6 @@
 const {test, expect, editorDialog} = require('./fixtures.cjs');
 const fixture = require('./fixed-project.cjs');
+const {approveProjectExtensions} = require('./project-security.cjs');
 
 const wording = {
     en: {title: 'Edit block', security: 'Extension Security', checkbox: 'Run without sandbox', allow: 'Allow', save: 'Save', cancel: 'Cancel',
@@ -11,18 +12,11 @@ const wording = {
         inactive: '非表示の編集内容はこの画面で保持されます。非表示のまま保存しても反映されません。', picker: 'COLOR 色を選択'}
 };
 const dialog = editorDialog;
-const load = async (page, baseURL, lang, enabled = true, flagOverrides = {}) => {
+const load = async (page, baseURL, lang) => {
     const url = new URL('editor.html', baseURL);
-    url.search = new URLSearchParams({lang, blockEditorDialogs: '1', blockEditorSourceForms: '1', blockEditorDescendants: '1',
-        ...(enabled ? {blockEditorFixedInputs: '1'} : {}), ...flagOverrides, project_url: await fixture.project()});
+    url.search = new URLSearchParams({lang, project_url: await fixture.project()});
     await page.goto(url.href);
-    // The project URL uses the normal host confirmation, including its unsandboxed checkbox.
-    const security = page.getByRole('dialog').filter({has: page.getByRole('textbox')});
-    await expect(security).toBeVisible();
-    await expect(security.getByRole('textbox')).toHaveValue(fixture.source);
-    await security.getByRole('checkbox', {name: wording[lang].checkbox, exact: true}).check();
-    await security.getByRole('button', {name: /^(Allow|許可する|許可)$/}).click();
-    await expect(security).toHaveCount(0);
+    await approveProjectExtensions(page, [fixture.source], lang);
     await expect(page.locator('.blocklyBlockCanvas [data-id="fixed-root"]')).toHaveCount(1);
 };
 const raw = page => page.evaluate(() => {
@@ -37,13 +31,6 @@ const open = async (page, lang) => {
     await icon.focus();await page.keyboard.press('Enter');await expect(dialog(page, lang)).toBeVisible();
     await expect(dialog(page)).toHaveAccessibleName(lang === 'en' ? /^Edit fixed / : /^fixed .*を編集$/);
 };
-
-test('fixed flag OFF leaves native blocks usable without exposing a fixed editor', async ({page, baseURL, evidence}) => {
-    evidence.stage('fixed-off');await load(page, baseURL, 'en', false);
-    expect(await page.evaluate(() => globalThis.__fixedFixtureAvailable)).toBe(false);
-    await expect(page.locator('[data-block-editor-icon]')).toHaveCount(0);
-    expect(await raw(page)).toMatchObject({mode: 'timeout', number: '10', timeout: '10', color: '#112233', evaluations: 0});
-});
 
 for (const lang of ['en', 'ja']) test(`fixed native fields validate and save with keyboard and actual ${lang} GUI messages`, async ({page, baseURL, evidence}) => {
     evidence.stage('fixed-controls');await load(page, baseURL, lang);
@@ -123,19 +110,14 @@ test('the production Blockly dropdown updates the VM and the next fixed form wit
     await dialog(page, 'en').getByRole('button', {name: 'Cancel', exact: true}).click();
 });
 
-for (let bits = 0; bits < 16; bits++) test(`real GUI startup flags ${bits.toString(2).padStart(4, '0')}`, async ({page, baseURL, evidence}) => {
-    const names = ['blockEditorDialogs', 'blockEditorSourceForms', 'blockEditorDescendants', 'blockEditorFixedInputs'];
-    const rawFlags = names.map((_, index) => Boolean(bits & (1 << index)));
-    const flags = Object.fromEntries(names.map((name, index) => [name, rawFlags[index] ? '1' : '0']));
-    evidence.stage(`fixed-browser-flag-matrix-${bits}`);await load(page, baseURL, 'en', true, flags);
-    const fixed = rawFlags[0] && rawFlags[3];
-    expect(await page.evaluate(() => globalThis.__fixedFixtureCapabilities)).toEqual({dialogs: rawFlags[0],
-        sourceForms: rawFlags[0] && rawFlags[1], fixedInputs: fixed});
-    await expect(page.locator('[data-block-editor-icon]')).toHaveCount(fixed ? 1 : 0);
-    if (fixed) {
-        await open(page, 'en');await expect(dialog(page, 'en').locator('[data-block-editor-node]')).toHaveCount(0);
-        await expect(dialog(page, 'en').getByRole('button', {name: 'Save', exact: true})).toBeVisible();
-        await dialog(page, 'en').getByRole('button', {name: 'Cancel', exact: true}).click();
-    }
+test('ordinary GUI startup exposes source and fixed editors without URL feature switches', async ({page, baseURL, evidence}) => {
+    evidence.stage('standard-capabilities');await load(page, baseURL, 'en');
+    expect(await page.evaluate(() => globalThis.__fixedFixtureCapabilities)).toEqual({dialogs: true,
+        sourceForms: true, fixedInputs: true});
+    expect(Array.from(new URL(page.url()).searchParams.keys()).sort()).toEqual(['lang', 'project_url']);
+    await expect(page.locator('[data-block-editor-icon]')).toHaveCount(1);
+    await open(page, 'en');
+    await expect(dialog(page, 'en').getByRole('button', {name: 'Save', exact: true})).toBeVisible();
+    await dialog(page, 'en').getByRole('button', {name: 'Cancel', exact: true}).click();
     expect((await raw(page)).evaluations).toBe(0);
 });
