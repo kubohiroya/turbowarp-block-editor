@@ -1,7 +1,7 @@
 const {createHash} = require('node:crypto');
 const {test, expect} = require('./fixtures.cjs');
 
-const sb3 = 'https://kubohiroya.github.io/turbowarp-kamishibai-app/downloads/kamishibai-4.0.0-rc.34.sb3';
+const sb3 = 'https://github.com/kubohiroya/turbowarp-kamishibai-app/releases/download/v4.0.0-rc.34/kamishibai-4.0.0-rc.34.sb3';
 const digest = '819607acffa978cee98096809f04de624fabec969cf09903cc75b44107595631';
 const buttonId = 'dsl4-preview-reload-status-button';
 const dialogId = 'dsl4-preview-reload-status-dialog';
@@ -81,15 +81,23 @@ test('published rc.34 reload controls avoid host toolbars and remain operable', 
     page.on('console', message => {
         if (message.type() === 'error') consoleErrors.push(message.text());
     });
+    const release = await page.request.get(sb3);
+    expect(release.ok()).toBeTruthy();
+    const releaseBytes = await release.body();
+    expect(createHash('sha256').update(releaseBytes).digest('hex')).toBe(digest);
+    // Deliver the unchanged release bytes through the host's native project_url loader.
+    // Keep this immutable-version regression independent of the rolling Pages download mirror.
+    const loadURL = new URL('rc34-reload-fixture.sb3',baseURL).href;
+    await page.route(loadURL, route => route.fulfill({body:releaseBytes,contentType:'application/octet-stream'}));
     const target = new URL('editor.html',baseURL);
-    target.search = new URLSearchParams({lang:'ja',project_url:sb3});
-    const download = page.waitForResponse(response => response.url() === sb3);
+    target.search = new URLSearchParams({lang:'ja',project_url:loadURL});
+    const download = page.waitForResponse(response => response.url() === loadURL);
     await page.goto(target.href);
     const response = await download;
     expect(response.ok()).toBeTruthy();
     const bytes = await response.body();
     expect(createHash('sha256').update(bytes).digest('hex')).toBe(digest);
-    await testInfo.attach('rc34-artifact.json',{body:JSON.stringify({url:sb3,size:bytes.length,sha256:digest}),
+    await testInfo.attach('rc34-artifact.json',{body:JSON.stringify({url:sb3,loadURL,method:'SHA-verified release bytes via native project_url loader',size:bytes.length,sha256:digest}),
         contentType:'application/json'});
     const security = page.locator('.twextsec-modal');
     await expect(security).toBeVisible();
