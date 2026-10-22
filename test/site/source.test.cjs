@@ -61,3 +61,40 @@ test('Pages permissions are isolated to deploy; CI and GUI freshness gates prece
         assert.equal(job.environment, undefined);
     }
 });
+
+test('pinned GUI verification can finish after ten seconds without skipping the final run checks', async t => {
+    const {checkGUI} = await mod;
+    let clock = 0;
+    t.mock.method(Date, 'now', () => clock);
+    const requests = [];
+    const run = {id: 7, run_number: 1, run_attempt: 3, workflow_id: 5, head_sha: sha, head_branch: 'develop', event: 'push',
+        repository: {full_name: pins.guiRepository}, head_repository: {full_name: pins.guiRepository},
+        status: 'completed', conclusion: 'success', html_url: 'https://github.com/kubohiroya/scratch-gui/actions/runs/7'};
+    const result = await checkGUI(pins, {now: () => clock, fetchImpl: async (url, options) => {
+        clock += 3_000;
+        requests.push(url);
+        assert.equal(options.headers.Authorization, undefined);
+        const value = url.includes('/workflows/node.js.yml')
+            ? {id: 5, path: '.github/workflows/node.js.yml', state: 'active'}
+            : url.includes('/workflows/5/runs?') ? {total_count: 1, workflow_runs: [run]} : run;
+        return {ok: true, json: async () => value};
+    }});
+    assert.equal(result.decision, 'accepted');
+    assert.ok(clock > 10_000);
+    assert.equal(requests.filter(url => url.includes('/workflows/5/runs?')).length, 2);
+    assert.equal(requests.filter(url => url.endsWith('/runs/7')).length, 2);
+});
+
+test('an unregistered pinned GUI CI still times out and refuses publication', async () => {
+    const {checkGUI} = await mod;
+    let clock = 0;
+    const reports = [];
+    await assert.rejects(checkGUI(pins, {now: () => clock, sleep: async ms => {clock += ms;},
+        report: state => reports.push(state), fetchImpl: async url => ({ok: true, json: async () =>
+            url.includes('/workflows/node.js.yml')
+                ? {id: 5, path: '.github/workflows/node.js.yml', state: 'active'}
+                : {total_count: 0, workflow_runs: []}})
+    }), /Timed out waiting for normal CI/);
+    assert.equal(reports.at(-1).decision, 'rejected');
+    assert.ok(clock >= 10_000 && clock <= 120_000);
+});
