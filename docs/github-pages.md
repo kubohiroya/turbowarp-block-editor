@@ -6,7 +6,8 @@ GUIフォークにはエディターAPIへの接続を置き、サイト・公�
 ## 公開物と固定ソース
 
 - 入口: https://kubohiroya.github.io/turbowarp-extension-data-editor/
-- 日本語 `/ja/`、英語 `/en/`、標準Editor `editor.html`。
+- 日本語 `/ja/`、英語 `/en/`、標準Editor `editor.html`。Docs・Samplesはこの正規URLを参照します。
+- GUIは共通のカメラ・再生操作列を含む `d75aff2e72816a4d2cf84f80889d5c60bfd9873b`へ更新し、coreは公開npm `0.3.2`の完全SHAを維持しています。
 - `site/source.json` にGUIのrepository/完全SHAと、GUI lockfileで取得するnpm配布物のcore完全SHAを固定します。
 - `build-info.json` の `revision` はGUI SHA、`coreRevision` は実配布物のcore SHA、`siteRevision` はサイト生成・公開を所有する共通SHAです。3つを混同しません。
 - 移行は公開配置だけを変更し、既存npm製品版の差替えや未公開Schema機能の導入は行いません。新しい製品版へ切替えるときはGUI lockfileとcore pinを合わせます。
@@ -56,11 +57,12 @@ OSネイティブファイル選択は対話可能なmacOSで行う既存手順�
 ## 移行とロールバック
 
 新サイトの公開と公開版E2Eが成功してから、GUI側のサイト資材・公開workflowを撤去します。
-旧 `https://kubohiroya.github.io/scratch-gui/` の既存配信は移行中に維持し、公開workflow撤去後は凍結した旧版として扱います。
+`https://kubohiroya.github.io/scratch-gui/` はGUI側の別配信です。そちらの更新だけでは正規Editorのpinは変わりません。
+Docs・Samplesからは共通リポジトリの正規Editorを参照し、GUI更新時は成功CI・公開coreの整合を確認して `site/source.json` の完全SHAを更新します。
 旧URLから新URLへの自動redirectを実現したとは扱いません。旧URLの廃止・redirect公開は別の明示判断で行います。
 
 新サイト不具合は共通mainのGUI/core pinを前の検証済み値へ戻し、通常CIとゲート経由で再公開します。
 失敗時にゲートを解除しません。公開を止める場合は共通pages workflowを無効化します。
-GUIのコードと既定OFFの機能フラグ、sb3保存形式には公開配置による変更を加えません。
+GUIのコード、低水準APIの能力交渉、sb3保存形式には公開配置による変更を加えません。標準ONの編集機能に有効化用URLスイッチは不要です。
 
 GUIのgit固定security-dialog依存はprepareでdist/webpack4.cssを生成するため、GUI CIと同じ通常npm ciを使います。coreのbuild-info revision、GUI pin、成功CIの照合を維持し、配布物が未生成の状態で公開しません。
