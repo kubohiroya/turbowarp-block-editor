@@ -24,12 +24,13 @@ export async function checkSource(env, {fetchImpl = fetch} = {}) {
     assert.equal((await response.json()).commit?.sha, env.GITHUB_SHA, 'Site source is stale');
     return env.GITHUB_SHA;
 }
-export async function checkGUI(pins, {fetchImpl = fetch, report = () => {}} = {}) {
+export async function checkGUI(pins, {fetchImpl = fetch, report = () => {}, now = Date.now, sleep} = {}) {
     sourcePins(pins);
     // Public source CI is observed without credentials or cross-repository writes.
     return requireSuccessfulCI({repository: pins.guiRepository, revision: pins.guiRevision,
         workflowFile: 'node.js.yml', branch: 'develop', event: 'push', token: '', api: 'https://api.github.com'}, {
-        timeoutMs: 10_000, intervalMs: 5_000, report,
+        // Verification needs five sequential API reads, including the final run/attempt recheck.
+        timeoutMs: 120_000, intervalMs: 5_000, report, now, sleep,
         fetchImpl: (url, options) => {
             const {Authorization, ...headers} = options.headers;
             return fetchImpl(url, {...options, headers});
