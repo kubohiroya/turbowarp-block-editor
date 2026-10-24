@@ -14,7 +14,7 @@ const source = `// Name: ${name}\n// ID: securityfixture\n// Description: ${desc
     'color1:"#5B67A5",color2:"#4D588C",color3:"#404874",' +
     'blocks:[{opcode:"value",blockType:Scratch.BlockType.REPORTER,text:"security fixture"}]};},value(){return 1;}});';
 
-const projectURL = async () => {
+const projectURL = async ({required = true} = {}) => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="480" height="360"></svg>';
     const assetId = createHash('md5').update(svg).digest('hex');
     const project = {targets: [{isStage:true,name:'Stage',variables:{},lists:{},broadcasts:{},comments:{},
@@ -22,7 +22,8 @@ const projectURL = async () => {
             shadow:false,topLevel:true,x:40,y:40}},currentCostume:0,
         costumes:[{name:'Blank',assetId,dataFormat:'svg',md5ext:`${assetId}.svg`,rotationCenterX:240,rotationCenterY:180}],
         sounds:[],volume:100,tempo:60,videoTransparency:50,videoState:'off',textToSpeechLanguage:null}],
-        monitors:[],extensions:['securityfixture'],extensionURLs:{securityfixture:`data:text/javascript,${encodeURIComponent(source)}`},
+        monitors:[],extensions:['securityfixture'],extensionURLs:{securityfixture:`data:text/javascript,${encodeURIComponent(
+            required ? source : source.replace('// Unsandboxed: required\n',''))}`},
         meta:{semver:'3.0.0',vm:'0.2.0',agent:'shared-security-fixture'}};
     const zip = new JSZip();
     zip.file('project.json',JSON.stringify(project));zip.file(`${assetId}.svg`,svg);
@@ -64,6 +65,17 @@ for (const language of ['ja','en']) {
         for (const value of ['securityfixture',description,'Fixture Author',license]) await expect(info).toContainText(value);
         await expect(info).not.toContainText('Nested description');
         await expect(dialog(page).locator('textarea')).toHaveCount(0);
+        expect(await dialog(page).locator('.twextsec-bulk button').evaluateAll(items=>items.map(item=>item.value)))
+            .toEqual(['deny','sandboxed','unsandboxed']);
+        expect(await dialog(page).locator('.twextsec-columns svg').evaluateAll(items=>items.map(item=>item.dataset.mode)))
+            .toEqual(['deny','sandboxed','unsandboxed']);
+        const blocked = dialog(page).locator('input[value="sandboxed"]');
+        await expect(blocked).toBeDisabled();
+        await expect(dialog(page).locator('.twextsec-bulk button[value="sandboxed"]')).toBeDisabled();
+        await expect(dialog(page).locator('.twextsec-info')).toContainText(language==='ja' ?
+            'この拡張はサンドボックス内では動作しません。' : 'This extension cannot run inside the sandbox.');
+        await expect(dialog(page).locator('label[data-mode="unsandboxed"]')).toContainText(
+            language==='ja' ? '動作に必要' : 'Required to run');
         expect(await executions(page)).toBe(0);
         const mode = dialog(page).getByRole('radio',{name:`${name}: ${labels[language].mode}`,exact:true});
         await mode.check();
@@ -101,3 +113,55 @@ for (const language of ['ja','en']) {
         expect(await page.evaluate(() => vm.extensionManager.isExtensionLoaded('securityfixture'))).toBe(false);
     });
 }
+
+test('extensions without a required mode can still run sandboxed', async ({page,baseURL,evidence}) => {
+    evidence.stage('shared-security-sandboxed');
+    const target = new URL('editor.html',baseURL);
+    target.search = new URLSearchParams({lang:'ja',project_url:await projectURL({required:false})});
+    await page.goto(target.href);
+    await expect(dialog(page).locator('.twextsec-info')).toContainText(name);
+    const sandboxed = dialog(page).getByRole('radio',{name:`${name}: サンドボックスあり`,exact:true});
+    await expect(sandboxed).toBeEnabled();
+    await expect(dialog(page).locator('.twextsec-required-mode')).toHaveCount(0);
+    await sandboxed.check();await dialog(page).getByRole('button',{name:'OK',exact:true}).click();
+    await expect(dialog(page)).toHaveCount(0);
+    await expect.poll(()=>page.evaluate(()=>vm.extensionManager.isExtensionLoaded('securityfixture'))).toBe(true);
+});
+
+test('denying a required extension still requires confirmation and never executes it', async ({page,evidence}) => {
+    evidence.stage('shared-security-required-denial');
+    await open(page,'ja');await dialog(page).locator('input[value="deny"]').check();
+    await dialog(page).getByRole('button',{name:'OK',exact:true}).click();
+    await expect(dialog(page).getByRole('alertdialog')).toContainText('作者が意図した動作');
+    await dialog(page).getByRole('button',{name:'いいえ',exact:true}).click();
+    await expect(dialog(page).locator('input[value="deny"]')).toBeChecked();
+    expect(await executions(page)).toBe(0);
+    await dialog(page).getByRole('button',{name:'OK',exact:true}).click();
+    await dialog(page).getByRole('button',{name:'はい',exact:true}).click();
+    await expect(dialog(page)).toHaveCount(0);
+    expect(await executions(page)).toBe(0);
+    expect(await page.evaluate(()=>vm.extensionManager.isExtensionLoaded('securityfixture'))).toBe(false);
+});
+
+test('narrow security dialog retains ordered choices, reasons and a reachable confirmation button', async ({page,evidence}) => {
+    evidence.stage('shared-security-narrow-modes');
+    await page.setViewportSize({width:390,height:600});await open(page,'ja');
+    expect(await dialog(page).locator('article input').evaluateAll(items=>items.map(item=>item.value)))
+        .toEqual(['deny','sandboxed','unsandboxed']);
+    await expect(dialog(page).locator('input[value="sandboxed"]')).toBeDisabled();
+    await expect(dialog(page).locator('.twextsec-required-mode')).toHaveText('動作に必要');
+    const deny=dialog(page).locator('input[value="deny"]');
+    await deny.check();await deny.press('ArrowRight');
+    await expect(dialog(page).locator('input[value="unsandboxed"]')).toBeChecked();
+    const ok = dialog(page).getByRole('button',{name:'OK',exact:true});
+    await expect(ok).toBeEnabled();const bounds=await ok.boundingBox();
+    expect(bounds.y+bounds.height).toBeLessThanOrEqual(600);
+    const modalBounds=await dialog(page).boundingBox();
+    expect(modalBounds.x).toBeGreaterThanOrEqual(0);
+    expect(modalBounds.x+modalBounds.width).toBeLessThanOrEqual(390);
+    for(const choice of await dialog(page).locator('article label[data-mode]').all()) {
+        const box=await choice.boundingBox();
+        expect(box.x).toBeGreaterThanOrEqual(modalBounds.x);
+        expect(box.x+box.width).toBeLessThanOrEqual(modalBounds.x+modalBounds.width);
+    }
+});
